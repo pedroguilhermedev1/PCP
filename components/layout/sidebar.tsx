@@ -156,11 +156,28 @@ export function Sidebar() {
   const { pendingNotifiedLembretes, forceRender } = useLembretes()
   const badgeCount = pendingNotifiedLembretes.length
 
+  const currentUser =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('pcp_user')
+      : null
+
+  const isAdmin = [
+    'pedro.queiroz',
+    'debora.mota',
+    'francisco.edson'
+  ].includes(currentUser || '')
+
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
     FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
     INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
     FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false
   }))
+
+  const visibleItems = isAdmin
+  ? sidebarItems
+  : sidebarItems.filter(item =>
+      item.title === 'FORMULÁRIOS'
+    )
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
@@ -231,7 +248,7 @@ export function Sidebar() {
         </div>
 
         <div className="p-3 flex-1 overflow-y-auto overflow-x-hidden">
-          {sidebarItems.map((group, i) => {
+          {visibleItems.map((group, i) => {
             if (group.type === 'link') {
               const isActive = pathname === group.href;
               return (
