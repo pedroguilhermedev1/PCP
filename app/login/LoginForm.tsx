@@ -23,11 +23,11 @@ export function LoginForm() {
     // allow the specific string 'debora.mota' to match 'debora.mora' as there is a typo seen in previous codes
     if ((validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') && password === '123@456') {
       localStorage.setItem('pcp_user', parsedUsername);
-      if (role === 'ADMIN' || parsedUsername === 'debora.mota') {
-        router.push('/compras/dashboard');
-      } else {
-        router.push('/compras/cronograma');
-      }
+      if (role === 'ADMIN') {
+  router.push('/compras/dashboard');
+} else {
+  router.push('/compras/formularios/arco');
+}
     } else {
       setError('Usuário ou senha inválidos.');
     }
