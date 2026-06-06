@@ -1,19 +1,23 @@
-export const OPERATIONAL_USERS = [
+export const ADMIN_USERS = [
   'admin',
+];
+
+export const OPERACIONAL_USERS = [
   'operacional',
 ];
 
-export function getUserRole() {
-  if (typeof window === 'undefined') return null;
+export function getUserRole(username?: string) {
+  if (!username) return null;
 
-  const user = localStorage.getItem('pcp_user');
+  const normalized = username.trim().toLowerCase();
 
-  if (!user) return null;
-
-  try {
-    const parsedUser = JSON.parse(user);
-    return parsedUser.role || 'admin';
-  } catch {
-    return 'admin';
+  if (ADMIN_USERS.includes(normalized)) {
+    return 'ADMIN';
   }
+
+  if (OPERACIONAL_USERS.includes(normalized)) {
+    return 'OPERACIONAL';
+  }
+
+  return null;
 }
