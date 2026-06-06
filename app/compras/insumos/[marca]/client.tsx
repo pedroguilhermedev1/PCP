@@ -1,0 +1,454 @@
+"use client";
+
+import { Box, Plus, LogIn, LogOut, Trash2, Edit, X, AlertCircle } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
+import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { EstoqueInsumosTable } from "@/components/estoque/EstoqueInsumosTable";
+import { toast } from "sonner";
+import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+
+function NovaMovimentacaoModal({ 
+  isOpen, 
+  onClose, 
+  tipo,
+  marca,
+  responsavel,
+  editItem
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  tipo: 'Entrada' | 'Saída';
+  marca: string;
+  responsavel: string;
+  editItem?: any | null;
+}) {
+  const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
+  const { insumos } = useEstoqueInsumos(cdTarget);
+
+  const { addMovimentacao, updateMovimentacao } = useInsumosMovimentacoes();
+
+  const [item, setItem] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [quantidade, setQuantidade] = useState<number | "">("");
+  const [setor, setSetor] = useState("");
+  const [solicitante, setSolicitante] = useState(responsavel);
+  const [justificativa, setJustificativa] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (editItem) {
+      setItem(editItem.item || "");
+      setCodigo(editItem.codigo || "");
+      setQuantidade(editItem.quantidade || "");
+      setSetor(editItem.setor || "");
+      setSolicitante(editItem.solicitante || responsavel);
+      setJustificativa(editItem.justificativa || "");
+    } else {
+      setItem("");
+      setCodigo("");
+      setQuantidade("");
+      setSetor("");
+      setSolicitante(responsavel);
+      setJustificativa("");
+    }
+  }, [editItem, responsavel]);
+
+  const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
+  const isPrivileged = responsavel.startsWith('pedro.queiroz') || responsavel.startsWith('francisco.edson');
+  const setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
+
+  useEffect(() => {
+    if (editItem && item === editItem.item && codigo === editItem.codigo) return;
+    const selected = insumos.find(i => i.item === item);
+    if (selected) {
+      setCodigo(selected.codigo);
+    } else {
+      setCodigo("");
+    }
+  }, [item, insumos, editItem, codigo]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    
+    if (!item || !quantidade) {
+      setErrorMsg("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (tipo === 'Saída' && (!setor || !justificativa || !solicitante)) {
+      setErrorMsg("Para saídas, preencha setor responsável, solicitante e justificativa.");
+      return;
+    }
+
+    if (editItem) {
+      updateMovimentacao(editItem.id, {
+        item,
+        codigo,
+        quantidade: Number(quantidade),
+        setor: tipo === 'Saída' ? setor : undefined,
+        solicitante: tipo === 'Saída' ? solicitante : undefined,
+        justificativa: tipo === 'Saída' ? justificativa : undefined
+      });
+      toast.success("Registro atualizado com sucesso.");
+    } else {
+      addMovimentacao({
+        responsavel,
+        marca,
+        tipo,
+        item,
+        codigo,
+        quantidade: Number(quantidade),
+        setor: tipo === 'Saída' ? setor : undefined,
+        solicitante: tipo === 'Saída' ? solicitante : undefined,
+        justificativa: tipo === 'Saída' ? justificativa : undefined
+      });
+      toast.success("Registro salvo com sucesso.");
+    }
+
+    setItem("");
+    setCodigo("");
+    setQuantidade("");
+    setSetor("");
+    setSolicitante("");
+    setJustificativa("");
+    
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-zinc-200">
+        <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
+          <h2 className="text-lg font-semibold text-zinc-800">{editItem ? 'Editar' : 'Nova'} {tipo} - {marca.toUpperCase()}</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+          {errorMsg && (
+            <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2 border border-red-100">
+              <AlertCircle className="w-4 h-4" /> {errorMsg}
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5 col-span-2">
+              <label className="text-sm font-medium text-zinc-700">Item / Material <span className="text-red-500">*</span></label>
+              <select 
+                required
+                value={item}
+                onChange={(e) => setItem(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+              >
+                <option value="" disabled>Selecione um item...</option>
+                {insumos.map(mat => (
+                  <option key={mat.id} value={mat.item}>{mat.item}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-zinc-700">Código</label>
+              <Input disabled value={codigo} placeholder="Automático" className="bg-zinc-50" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-zinc-700">Quantidade <span className="text-red-500">*</span></label>
+              <Input required type="number" min="1" value={quantidade} onChange={e => setQuantidade(e.target.value ? Number(e.target.value) : "")} />
+            </div>
+          </div>
+
+          {tipo === 'Saída' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-zinc-700">Setor Responsável <span className="text-red-500">*</span></label>
+                  <select 
+                    required 
+                    value={setor} 
+                    onChange={e => setSetor(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  >
+                    <option value="" disabled>Selecione...</option>
+                    {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-zinc-700">Solicitante</label>
+                  <Input disabled value={solicitante} className="bg-zinc-50" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-zinc-700">Justificativa <span className="text-red-500">*</span></label>
+                <textarea 
+                  required
+                  className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 resize-y"
+                  value={justificativa}
+                  onChange={e => setJustificativa(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="mt-4 flex gap-3 justify-end border-t border-zinc-100 pt-5">
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" className="bg-purple-700 hover:bg-purple-800 text-white">
+              Registrar {tipo}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export function InsumosModuleClient({ marca }: { marca: string }) {
+  const [activeTab, setActiveTab] = useState<'insumos' | 'entradas' | 'saidas'>('insumos');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
+  const [editItem, setEditItem] = useState<any | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  
+  const { movimentacoes, deleteMovimentacao } = useInsumosMovimentacoes();
+  
+  const [currentUser, setCurrentUser] = useState("");
+
+  useEffect(() => {
+    const user = localStorage.getItem('pcp_user');
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, []);
+
+  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+
+  // Utility to formalize the name
+  const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
+
+  const filteredMovs = useMemo(() => {
+    const list = movimentacoes.filter(m => m.marca === marca);
+    if (activeTab === 'entradas') return list.filter(m => m.tipo === 'Entrada').reverse();
+    if (activeTab === 'saidas') return list.filter(m => m.tipo === 'Saída').reverse();
+    return list;
+  }, [movimentacoes, marca, activeTab]);
+
+  return (
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <ConfirmDeleteModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={() => {
+          if (itemToDelete) {
+            deleteMovimentacao(itemToDelete);
+            toast.success("Registro excluído com sucesso.");
+          }
+        }}
+      />
+      <NovaMovimentacaoModal 
+        isOpen={modalOpen} 
+        onClose={() => {
+          setModalOpen(false);
+          setEditItem(null);
+        }} 
+        tipo={modalTipo} 
+        marca={marca} 
+        responsavel={currentUser || 'Usuário Indefinido'} 
+        editItem={editItem}
+      />
+      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
+            <Box className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Insumos - {formalMarca}</h1>
+            <p className="text-sm text-zinc-500">Gestão de materiais e insumos gerais.</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+        {/* Navegação / Tabs Internas */}
+        <div className="mb-6 border-b border-zinc-200">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab('insumos')}
+              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'insumos'
+                  ? 'border-purple-600 text-purple-700'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Box className="w-4 h-4" />
+                Insumos
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('entradas')}
+              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'entradas'
+                  ? 'border-purple-600 text-purple-700'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <LogIn className="w-4 h-4" />
+                Entradas
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('saidas')}
+              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'saidas'
+                  ? 'border-purple-600 text-purple-700'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <LogOut className="w-4 h-4" />
+                Saídas
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Couteúdo de cada Tab */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <h2 className="text-lg font-semibold text-purple-900">
+            {activeTab === 'insumos' && `Insumos em Estoque`}
+            {activeTab === 'entradas' && `Registro de Entradas`}
+            {activeTab === 'saidas' && `Registro de Saídas`}
+          </h2>
+          {activeTab !== 'insumos' && (
+            <Button onClick={() => {
+              setModalTipo(activeTab === 'entradas' ? 'Entrada' : 'Saída');
+              setModalOpen(true);
+            }}>
+              <Plus className="w-4 h-4 mr-2" />
+              {activeTab === 'entradas' && 'Nova Entrada'}
+              {activeTab === 'saidas' && 'Nova Saída'}
+            </Button>
+          )}
+        </div>
+        
+        {activeTab === 'insumos' ? (
+          <EstoqueInsumosTable marca={marca.toLowerCase()} />
+        ) : (
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
+                  <tr>
+                    <th className="px-6 py-4 font-semibold">Data / Hora</th>
+                    <th className="px-6 py-4 font-semibold">Código</th>
+                    <th className="px-6 py-4 font-semibold">Item</th>
+                    <th className="px-6 py-4 font-semibold text-center">Qtd</th>
+                    {activeTab === 'saidas' && (
+                      <th className="px-6 py-4 font-semibold">Setor</th>
+                    )}
+                    <th className="px-6 py-4 font-semibold">Responsável</th>
+                    {activeTab === 'saidas' && (
+                      <>
+                        <th className="px-6 py-4 font-semibold">Solicitante</th>
+                        <th className="px-6 py-4 font-semibold">Justificativa</th>
+                      </>
+                    )}
+                    {canEditOrDelete && (
+                      <th className="px-6 py-4 font-semibold text-right">Ações</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  {filteredMovs.length > 0 ? (
+                    filteredMovs.map(mov => (
+                      <tr key={mov.id} className="hover:bg-zinc-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-zinc-500">
+                          {format(new Date(mov.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </td>
+                        <td className="px-6 py-4 font-mono text-zinc-600">
+                          {mov.codigo || '-'}
+                        </td>
+                        <td className="px-6 py-4 font-medium text-zinc-900">
+                          {mov.item}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Badge variant="secondary" className="font-bold text-sm bg-zinc-100 text-zinc-800">
+                            {mov.quantidade}
+                          </Badge>
+                        </td>
+                        {activeTab === 'saidas' && (
+                          <td className="px-6 py-4 text-zinc-600">
+                            {mov.setor}
+                          </td>
+                        )}
+                        <td className="px-6 py-4 text-zinc-600">
+                          {mov.responsavel}
+                        </td>
+                        {activeTab === 'saidas' && (
+                          <>
+                            <td className="px-6 py-4 text-zinc-600">
+                              {mov.solicitante || '-'}
+                            </td>
+                            <td className="px-6 py-4 text-zinc-500 max-w-[150px] truncate" title={mov.justificativa}>
+                              {mov.justificativa || '-'}
+                            </td>
+                          </>
+                        )}
+                        {canEditOrDelete && (
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Add edit button mock to fulfill requirement for now */}
+                              <button 
+                                className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Editar"
+                                onClick={() => {
+                                  setEditItem(mov);
+                                  setModalTipo(mov.tipo);
+                                  setModalOpen(true);
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button 
+                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Excluir"
+                                onClick={() => setItemToDelete(mov.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 6 : 5) : (canEditOrDelete ? 9 : 8)} className="px-6 py-12 text-center text-zinc-500">
+                        <div className="flex flex-col items-center justify-center space-y-2">
+                          {activeTab === 'entradas' ? <LogIn className="w-8 h-8 text-zinc-300" /> : <LogOut className="w-8 h-8 text-zinc-300" />}
+                          <p>Nenhum registro de {activeTab} encontrado.</p>
+                          <p className="text-xs">As solicitações feitas na aba Formulários aparecerão aqui.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
