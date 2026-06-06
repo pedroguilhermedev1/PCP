@@ -1,9 +1,15 @@
 export const ADMIN_USERS = [
-  'admin',
+  'pedro.queiroz',
+  'debora.mota',
+  'francisco.edson',
 ];
 
 export const OPERACIONAL_USERS = [
-  'operacional',
+  'user01.arco',
+  'user02.arco',
+  'user03.arco',
+  'user04.arco',
+  'user05.arco',
 ];
 
 export function getUserRole(username?: string) {
