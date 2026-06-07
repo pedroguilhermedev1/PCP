@@ -18,6 +18,10 @@ export default function ComprasLayout({
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
 
+    console.log('====================');
+    console.log('Usuário atual:', user);
+    console.log('Path atual:', pathname);
+
     const admins = [
       'pedro.queiroz',
       'debora.mota',
@@ -25,6 +29,8 @@ export default function ComprasLayout({
     ];
 
     const isAdmin = admins.includes(user || '');
+
+    console.log('É admin?', isAdmin);
 
     if (!isAdmin) {
       const allowedRoutes = [
@@ -36,7 +42,10 @@ export default function ComprasLayout({
         pathname.startsWith(route)
       );
 
+      console.log('Tem acesso?', hasAccess);
+
       if (!hasAccess) {
+        console.log('REDIRECIONANDO...');
         router.push('/compras/cronograma');
       }
     }
