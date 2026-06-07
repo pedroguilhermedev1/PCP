@@ -4,8 +4,8 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: 'PDR - Gestão de Compras',
-  description: 'Sistema para centralizar e automatizar a gestão de compras e faturas.',
+  title: 'PCP Compras',
+  description: 'Sistema de gestão de compras.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
