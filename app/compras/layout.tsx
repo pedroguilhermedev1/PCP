@@ -1,5 +1,7 @@
 'use client';
 
+console.log('LAYOUT COMPRAS CARREGADO');
+
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
