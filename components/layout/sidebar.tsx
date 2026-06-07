@@ -167,12 +167,21 @@ export function Sidebar() {
     'francisco.edson'
   ].includes(currentUser || '')
 
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
-  FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
-  INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
-  FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false,
-  FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false
-}))
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+  FATURAS: false,
+  INSUMOS: false,
+  FORMULÁRIOS: false,
+  FORNECEDORES: false,
+})
+
+  useEffect(() => {
+  setExpandedGroups({
+    FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
+    INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
+    FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false,
+    FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false,
+  });
+}, [pathname]);
 
   const visibleItems = isAdmin
   ? sidebarItems
