@@ -168,10 +168,11 @@ export function Sidebar() {
   ].includes(currentUser || '')
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => ({
-    FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
-    INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
-    FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false
-  }))
+  FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
+  INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
+  FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false,
+  FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false
+}))
 
   const visibleItems = isAdmin
   ? sidebarItems
@@ -279,7 +280,7 @@ export function Sidebar() {
               );
             }
 
-            const isExpanded = expandedGroups[group.title] !== false && !isCollapsed;
+            const isExpanded = !!expandedGroups[group.title] && !isCollapsed;
             return (
               <div key={i} className="mb-4">
                 <button 
