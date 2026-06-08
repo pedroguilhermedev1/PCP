@@ -186,7 +186,7 @@ export function Sidebar() {
   const visibleItems = isAdmin
   ? sidebarItems
   : sidebarItems.filter(item =>
-      item.title === 'FORMULÁRIOS'
+      item.title === 'FORMULÁRIOS' || item.title === 'CRONOGRAMA'
     )
 
   useEffect(() => {
