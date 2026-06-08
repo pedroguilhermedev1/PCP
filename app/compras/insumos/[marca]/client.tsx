@@ -289,8 +289,6 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
         marca={marca} 
         responsavel={currentUser || 'Usuário Indefinido'} 
         editItem={editItem}
-        addMovimentacao={async () => {}}
-        updateMovimentacao={() => {}}
         insumos={insumos}
         refetch={refetch}
         refreshMovs={refresh}
