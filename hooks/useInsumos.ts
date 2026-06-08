@@ -79,20 +79,80 @@ export function useInsumosMovimentacoes() {
     return newMov;
   };
 
-  const deleteMovimentacao = (id: string) => {
+  const deleteMovimentacao = async (id: string) => {
+    const movToRevert = movimentacoes.find(m => m.id === id);
+
     setMovimentacoes(prev => {
       const updated = prev.filter(m => m.id !== id);
       localStorage.setItem('insumos_movimentacoes', JSON.stringify(updated));
       return updated;
     });
+
+    if (movToRevert) {
+      const cdTarget = (movToRevert.marca === 'sas' || movToRevert.marca === 'sae') ? `JDI-${movToRevert.marca.toUpperCase()}` : movToRevert.marca.toUpperCase();
+      try {
+        await fetch('/api/estoque', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cd: cdTarget,
+            item: movToRevert.item,
+            codigo: movToRevert.codigo,
+            tipo: movToRevert.tipo === 'Entrada' ? 'Saída' : 'Entrada',
+            quantidade: movToRevert.quantidade
+          })
+        });
+      } catch (e) {
+        console.error("Failed to revert remote stock on delete:", e);
+      }
+    }
   };
 
-  const updateMovimentacao = (id: string, updates: Partial<InsumoMovimentacao>) => {
+  const updateMovimentacao = async (id: string, updates: Partial<InsumoMovimentacao>) => {
+    const movToUpdate = movimentacoes.find(m => m.id === id);
+
     setMovimentacoes(prev => {
       const updated = prev.map(m => m.id === id ? { ...m, ...updates } : m);
       localStorage.setItem('insumos_movimentacoes', JSON.stringify(updated));
       return updated;
     });
+
+    if (movToUpdate) {
+      const oldCd = (movToUpdate.marca === 'sas' || movToUpdate.marca === 'sae') ? `JDI-${movToUpdate.marca.toUpperCase()}` : movToUpdate.marca.toUpperCase();
+      
+      try {
+        // Revert old movement
+        await fetch('/api/estoque', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cd: oldCd,
+            item: movToUpdate.item,
+            codigo: movToUpdate.codigo,
+            tipo: movToUpdate.tipo === 'Entrada' ? 'Saída' : 'Entrada',
+            quantidade: movToUpdate.quantidade
+          })
+        });
+
+        // Apply new movement
+        const newMov = { ...movToUpdate, ...updates };
+        const newCd = (newMov.marca === 'sas' || newMov.marca === 'sae') ? `JDI-${newMov.marca.toUpperCase()}` : newMov.marca.toUpperCase();
+        
+        await fetch('/api/estoque', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cd: newCd,
+            item: newMov.item,
+            codigo: newMov.codigo,
+            tipo: newMov.tipo,
+            quantidade: newMov.quantidade
+          })
+        });
+      } catch (e) {
+        console.error("Failed to sync remote stock on update:", e);
+      }
+    }
   };
 
   const clearMovimentacoes = () => {

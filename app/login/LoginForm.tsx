@@ -24,10 +24,10 @@ export function LoginForm() {
     if ((validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') && password === '123@456') {
       localStorage.setItem('pcp_user', parsedUsername);
       if (role === 'ADMIN') {
-  router.push('/compras/dashboard');
-} else {
-  router.push('/compras/formularios/arco');
-}
+        router.push('/compras/dashboard');
+      } else {
+        router.push('/compras/cronograma');
+      }
     } else {
       setError('Usuário ou senha inválidos.');
     }
