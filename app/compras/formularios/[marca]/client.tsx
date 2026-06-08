@@ -54,7 +54,9 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
     }
   }, [item, insumos]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     
@@ -68,29 +70,57 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
       return;
     }
 
-    addMovimentacao({
-      responsavel,
-      marca,
-      tipo,
-      item,
-      codigo,
-      quantidade: Number(quantidade),
-      setor: tipo === 'Saída' ? setor : undefined,
-      solicitante: tipo === 'Saída' ? solicitante : undefined,
-      justificativa: tipo === 'Saída' ? justificativa : undefined
-    });
+    setIsSubmitting(true);
+    
+    try {
+      // 1. Atualizar o estoque real no banco de dados (Supabase via API)
+      const res = await fetch('/api/estoque/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo,
+          cd: cdTarget,
+          quantidade_movimento: Number(quantidade),
+          tipo
+        })
+      });
 
-    setSuccessMsg(`Solicitação de ${tipo.toLowerCase()} registrada com sucesso em ${formalMarca}!`);
-    setTimeout(() => setSuccessMsg(""), 5000);
+      const data = await res.json();
 
-    // Reset form
-    setItem("");
-    setCodigo("");
-    setQuantidade("");
-    setSetor("");
-    setSolicitante("");
-    setJustificativa("");
-    setTipo("Entrada");
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao atualizar o estoque.');
+      }
+
+      // 2. Registrar a movimentação (histórico local)
+      addMovimentacao({
+        responsavel,
+        marca,
+        tipo,
+        item,
+        codigo,
+        quantidade: Number(quantidade),
+        setor: tipo === 'Saída' ? setor : undefined,
+        solicitante: tipo === 'Saída' ? solicitante : undefined,
+        justificativa: tipo === 'Saída' ? justificativa : undefined
+      });
+
+      setSuccessMsg(`Solicitação de ${tipo.toLowerCase()} registrada com sucesso em ${formalMarca}! Novo estoque: ${data.novo_estoque}`);
+      setTimeout(() => setSuccessMsg(""), 5000);
+
+      // Limpar formulário
+      setItem("");
+      setCodigo("");
+      setQuantidade("");
+      setSetor("");
+      setSolicitante("");
+      setJustificativa("");
+      setTipo("Entrada");
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Erro inesperado ao registrar movimentação.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -245,8 +275,8 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
               </div>
 
               <div className="pt-2">
-                <Button type="submit" className="w-full">
-                  Registrar Solicitação
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? 'Registrando...' : 'Registrar Solicitação'}
                 </Button>
               </div>
             </form>
