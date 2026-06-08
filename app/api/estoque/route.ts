@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   }
 
   const result = await supabase.from('estoque_insumos').insert([
-    { cd, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, dias_seguranca }
+    { cd, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd }
   ]);
 
   if (result.error) {
