@@ -269,9 +269,7 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
   const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
 
   const filteredMovs = useMemo(() => {
-    // Todos os que estão na lista já são do CD correto por causa do hook
-    // Vamos mostrar apenas os CONFIRMADOS no log, PENDENTES ficam no Formulário
-    const list = movimentacoes.filter(m => m.status === 'CONFIRMADO');
+    const list = movimentacoes;
     if (activeTab === 'entradas') return list.filter(m => m.tipo === 'Entrada').reverse();
     if (activeTab === 'saidas') return list.filter(m => m.tipo === 'Saída').reverse();
     return list;
@@ -385,6 +383,7 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
                     {activeTab === 'saidas' && (
                       <th className="px-6 py-4 font-semibold">Setor</th>
                     )}
+                    <th className="px-6 py-4 font-semibold">Status</th>
                     <th className="px-6 py-4 font-semibold">Responsável</th>
                     {activeTab === 'saidas' && (
                       <>
@@ -420,6 +419,14 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
                             {mov.setor}
                           </td>
                         )}
+                        <td className="px-6 py-4">
+                          <Badge className={
+                            mov.status === 'CONFIRMADO' ? 'bg-green-600' :
+                            mov.status === 'NEGADO' ? 'bg-red-600' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                          }>
+                            {mov.status || 'CONFIRMADO'}
+                          </Badge>
+                        </td>
                         <td className="px-6 py-4 text-zinc-600">
                           {mov.usuario}
                         </td>
