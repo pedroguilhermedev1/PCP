@@ -16,6 +16,20 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
 
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
 
+  const [responsavel, setResponsavel] = useState("");
+  const [tipo, setTipo] = useState<'Entrada' | 'Saída'>('Entrada');
+  const [codigo, setCodigo] = useState("");
+  const [item, setItem] = useState("");
+  const [quantidade, setQuantidade] = useState<number | "">("");
+  const [setor, setSetor] = useState("");
+  const [solicitante, setSolicitante] = useState("");
+  const [justificativa, setJustificativa] = useState("");
+  
+  const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
+
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) {
