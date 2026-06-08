@@ -19,7 +19,11 @@ function NovaMovimentacaoModal({
   tipo,
   marca,
   responsavel,
-  editItem
+  editItem,
+  addMovimentacao,
+  updateMovimentacao,
+  insumos,
+  refetch
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -27,11 +31,12 @@ function NovaMovimentacaoModal({
   marca: string;
   responsavel: string;
   editItem?: any | null;
+  addMovimentacao: (mov: any) => Promise<any>;
+  updateMovimentacao: (id: string, updates: any) => void;
+  insumos: any[];
+  refetch: () => void;
 }) {
   const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
-  const { insumos } = useEstoqueInsumos(cdTarget);
-
-  const { addMovimentacao, updateMovimentacao } = useInsumosMovimentacoes();
 
   const [item, setItem] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -42,22 +47,25 @@ function NovaMovimentacaoModal({
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
-    if (editItem) {
-      setItem(editItem.item || "");
-      setCodigo(editItem.codigo || "");
-      setQuantidade(editItem.quantidade || "");
-      setSetor(editItem.setor || "");
-      setSolicitante(editItem.solicitante || responsavel);
-      setJustificativa(editItem.justificativa || "");
-    } else {
-      setItem("");
-      setCodigo("");
-      setQuantidade("");
-      setSetor("");
-      setSolicitante(responsavel);
-      setJustificativa("");
+    if (isOpen) {
+      if (editItem) {
+        setItem(editItem.item || "");
+        setCodigo(editItem.codigo || "");
+        setQuantidade(editItem.quantidade || "");
+        setSetor(editItem.setor || "");
+        setSolicitante(editItem.solicitante || responsavel);
+        setJustificativa(editItem.justificativa || "");
+      } else {
+        setItem("");
+        setCodigo("");
+        setQuantidade("");
+        setSetor("");
+        setSolicitante(responsavel);
+        setJustificativa("");
+      }
+      setErrorMsg("");
     }
-  }, [editItem, responsavel]);
+  }, [isOpen, editItem, responsavel]);
 
   const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
   const isPrivileged = responsavel.startsWith('pedro.queiroz') || responsavel.startsWith('francisco.edson');
@@ -75,12 +83,20 @@ function NovaMovimentacaoModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     
     if (!item || !quantidade) {
       setErrorMsg("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    const selectedItemData = insumos.find(i => i.item === item);
+    const estoqueReal = selectedItemData ? selectedItemData.estoque_real : 0;
+
+    if (tipo === 'Saída' && Number(quantidade) > estoqueReal) {
+      setErrorMsg(`Quantidade indisponível. O estoque atual é de apenas ${estoqueReal} unidade(s).`);
       return;
     }
 
@@ -100,7 +116,7 @@ function NovaMovimentacaoModal({
       });
       toast.success("Registro atualizado com sucesso.");
     } else {
-      addMovimentacao({
+      await addMovimentacao({
         responsavel,
         marca,
         tipo,
@@ -113,6 +129,8 @@ function NovaMovimentacaoModal({
       });
       toast.success("Registro salvo com sucesso.");
     }
+
+    if (refetch) refetch();
 
     setItem("");
     setCodigo("");
@@ -162,7 +180,16 @@ function NovaMovimentacaoModal({
               <Input disabled value={codigo} placeholder="Automático" className="bg-zinc-50" />
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            {tipo === 'Saída' && (
+              <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                <label className="text-sm font-medium text-zinc-700">Estoque Atual</label>
+                <div className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-500 items-center font-bold">
+                  {item ? (insumos.find(i => i.item === item)?.estoque_real || 0) : "-"}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
               <label className="text-sm font-medium text-zinc-700">Quantidade <span className="text-red-500">*</span></label>
               <Input required type="number" min="1" value={quantidade} onChange={e => setQuantidade(e.target.value ? Number(e.target.value) : "")} />
             </div>
@@ -219,7 +246,10 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
   const [editItem, setEditItem] = useState<any | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
-  const { movimentacoes, deleteMovimentacao } = useInsumosMovimentacoes();
+  const { movimentacoes, deleteMovimentacao, addMovimentacao, updateMovimentacao } = useInsumosMovimentacoes();
+  
+  const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
+  const { insumos, loading, error, refetch } = useEstoqueInsumos(cdTarget);
   
   const [currentUser, setCurrentUser] = useState("");
 
@@ -264,6 +294,10 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
         marca={marca} 
         responsavel={currentUser || 'Usuário Indefinido'} 
         editItem={editItem}
+        addMovimentacao={addMovimentacao}
+        updateMovimentacao={updateMovimentacao}
+        insumos={insumos}
+        refetch={refetch}
       />
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -343,7 +377,7 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
         </div>
         
         {activeTab === 'insumos' ? (
-          <EstoqueInsumosTable marca={marca.toLowerCase()} />
+          <EstoqueInsumosTable marca={marca.toLowerCase()} insumos={insumos} loading={loading} error={error} refetch={refetch} />
         ) : (
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4">
             <div className="overflow-x-auto w-full">

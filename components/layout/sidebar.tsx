@@ -156,10 +156,11 @@ export function Sidebar() {
   const { pendingNotifiedLembretes, forceRender } = useLembretes()
   const badgeCount = pendingNotifiedLembretes.length
 
-  const currentUser =
-    typeof window !== 'undefined'
-      ? localStorage.getItem('pcp_user')
-      : null
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentUser(localStorage.getItem('pcp_user'));
+  }, []);
 
   const isAdmin = [
     'pedro.queiroz',

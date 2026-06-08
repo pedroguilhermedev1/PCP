@@ -25,8 +25,12 @@ export function useEstoqueInsumos(filtro_cd?: string) {
     setLoading(true);
     setError(null);
     try {
-      const url = cd ? `/api/estoque?cd=${encodeURIComponent(cd)}` : '/api/estoque';
-      const res = await fetch(url);
+      // Add a timestamp query parameter to bust any aggressive browser/Next.js caching
+      const timestamp = new Date().getTime();
+      const url = cd 
+        ? `/api/estoque?cd=${encodeURIComponent(cd)}&_t=${timestamp}` 
+        : `/api/estoque?_t=${timestamp}`;
+      const res = await fetch(url, { cache: 'no-store' });
       const result = await res.json();
 
       if (!res.ok) {

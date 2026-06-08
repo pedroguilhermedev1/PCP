@@ -128,10 +128,20 @@ function NovoInsumoModal({
   );
 }
 
-export function EstoqueInsumosTable({ marca }: { marca: string }) {
+export function EstoqueInsumosTable({ 
+  marca, 
+  insumos, 
+  loading, 
+  error, 
+  refetch 
+}: { 
+  marca: string; 
+  insumos: any[]; 
+  loading: boolean; 
+  error: string | null; 
+  refetch: () => void; 
+}) {
   const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
-  
-  const { insumos, loading, error, refetch } = useEstoqueInsumos(cdTarget);
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
