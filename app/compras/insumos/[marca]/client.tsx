@@ -422,7 +422,7 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
                         <td className="px-6 py-4">
                           <Badge className={
                             mov.status === 'CONFIRMADO' ? 'bg-green-600' :
-                            mov.status === 'NEGADO' ? 'bg-red-600' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                            mov.status === 'REJEITADO' ? 'bg-red-600' : 'bg-orange-500 hover:bg-orange-600 text-white'
                           }>
                             {mov.status || 'CONFIRMADO'}
                           </Badge>
