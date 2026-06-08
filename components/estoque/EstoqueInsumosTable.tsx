@@ -220,7 +220,14 @@ export function EstoqueInsumosTable({
                 const cmd = parseFloat(item.cmd) || 10;
                 const lt = parseFloat(item.lead_time) || 0;
                 const em = cmd * lt;
-                const ce = cmd > 0 ? (item.estoque_real / cmd).toFixed(1) : '∞';
+                
+                const coberturaNum = cmd > 0 ? (item.estoque_real / cmd) : Infinity;
+                const ce = cmd > 0 ? coberturaNum.toFixed(1) : '∞';
+
+                let dynamicStatus = 'OK';
+                if (coberturaNum <= lt) dynamicStatus = 'CRÍTICO';
+                else if (coberturaNum > lt && coberturaNum <= (lt + 3)) dynamicStatus = 'ALERTA';
+                else dynamicStatus = 'CONFORTÁVEL';
 
                 return (
                   <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
@@ -257,14 +264,14 @@ export function EstoqueInsumosTable({
                       <Badge 
                         className={cn(
                           "font-bold uppercase tracking-wider",
-                          item.status.toUpperCase() === 'CRÍTICO' 
+                          dynamicStatus === 'CRÍTICO' 
                             ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200" 
-                            : item.status.toUpperCase() === 'ALERTA'
+                            : dynamicStatus === 'ALERTA'
                               ? "bg-orange-100 text-orange-800 hover:bg-orange-200 border border-orange-200"
                               : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200"
                         )}
                       >
-                        {item.status}
+                        {dynamicStatus}
                       </Badge>
                     </td>
                   </tr>
