@@ -20,10 +20,9 @@ function NovaMovimentacaoModal({
   marca,
   responsavel,
   editItem,
-  addMovimentacao,
-  updateMovimentacao,
   insumos,
-  refetch
+  refetch,
+  refreshMovs
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -31,7 +30,6 @@ function NovaMovimentacaoModal({
   marca: string;
   responsavel: string;
   editItem?: any | null;
-  updateMovimentacao?: (id: string, updates: any) => void;
   insumos: any[];
   refetch: () => void;
   refreshMovs: () => void;
