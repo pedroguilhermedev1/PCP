@@ -41,17 +41,21 @@ export default async function DashboardPage() {
   const totalVencidas = faturasVencidas.reduce((acc, f) => acc + (f.valor || 0), 0);
 
   // Calculate Insumos Stats
-  const criticos = insumos.filter(i => (i.estoque_real || 0) <= (i.estoque_minimo || 0));
-  // Let's define Alerta as > minimo but <= minimo + 20%
-  const alertas = insumos.filter(i => {
-    const min = (i.estoque_minimo || 0);
-    const real = (i.estoque_real || 0);
-    return real > min && real <= min * 1.2;
-  });
-  const bons = insumos.filter(i => {
-    const min = (i.estoque_minimo || 0);
-    const real = (i.estoque_real || 0);
-    return real > min * 1.2;
+  let criticos = 0, alertas = 0, adequados = 0, confortaveis = 0;
+
+  insumos.forEach(i => {
+    const cmd = parseFloat(i.cmd) || 10;
+    const dias = parseFloat(i.dias_seguranca) || 3;
+    const lt = parseFloat(i.lead_time) || 0;
+    const real = i.estoque_real || 0;
+
+    const es = cmd * dias;
+    const pr = (cmd * lt) + es;
+
+    if (real < es) criticos++;
+    else if (real >= es && real < pr) alertas++;
+    else if (real >= pr && real < pr * 2) adequados++;
+    else confortaveis++;
   });
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -106,28 +110,36 @@ export default async function DashboardPage() {
                 <Package className="w-5 h-5 text-zinc-400" />
                 <h2 className="text-lg font-bold text-zinc-800">Insumos em Estoque</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 bg-red-50/30 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-red-600 mb-2">Estoque Crítico</p>
-                    <div className="text-4xl font-bold text-red-700">{criticos.length}</div>
-                    <p className="text-sm text-red-600/70 mt-2">Abaixo ou no nível mínimo</p>
+                    <p className="text-sm font-medium text-red-600 mb-2">Crítico</p>
+                    <div className="text-4xl font-bold text-red-700">{criticos}</div>
+                    <p className="text-sm text-red-600/70 mt-2">Abaixo do Est. Segurança</p>
                   </div>
                   <AlertTriangle className="w-8 h-8 text-red-500 opacity-20" />
                 </div>
+                <div className="bg-white rounded-xl shadow-sm border border-orange-200 p-6 bg-orange-50/30 flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-orange-600 mb-2">Em Atenção</p>
+                    <div className="text-4xl font-bold text-orange-700">{alertas}</div>
+                    <p className="text-sm text-orange-600/70 mt-2">Abaixo do Ressuprimento</p>
+                  </div>
+                  <AlertTriangle className="w-8 h-8 text-orange-500 opacity-20" />
+                </div>
                 <div className="bg-white rounded-xl shadow-sm border border-yellow-200 p-6 bg-yellow-50/30 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-yellow-600 mb-2">Em Alerta</p>
-                    <div className="text-4xl font-bold text-yellow-700">{alertas.length}</div>
-                    <p className="text-sm text-yellow-600/70 mt-2">Próximos do limite</p>
+                    <p className="text-sm font-medium text-yellow-600 mb-2">Adequado</p>
+                    <div className="text-4xl font-bold text-yellow-700">{adequados}</div>
+                    <p className="text-sm text-yellow-600/70 mt-2">Níveis estáveis</p>
                   </div>
-                  <AlertTriangle className="w-8 h-8 text-yellow-500 opacity-20" />
+                  <CheckCircle className="w-8 h-8 text-yellow-500 opacity-20" />
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-6 bg-emerald-50/30 flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-emerald-600 mb-2">Estoque Bom</p>
-                    <div className="text-4xl font-bold text-emerald-700">{bons.length}</div>
-                    <p className="text-sm text-emerald-600/70 mt-2">Níveis saudáveis</p>
+                    <p className="text-sm font-medium text-emerald-600 mb-2">Confortável</p>
+                    <div className="text-4xl font-bold text-emerald-700">{confortaveis}</div>
+                    <p className="text-sm text-emerald-600/70 mt-2">Estoque excedente seguro</p>
                   </div>
                   <CheckCircle className="w-8 h-8 text-emerald-500 opacity-20" />
                 </div>

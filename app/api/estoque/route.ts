@@ -40,13 +40,22 @@ export async function POST(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let { cd, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria } = body;
+  let { cd, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, dias_seguranca } = body;
 
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
+  cmd = parseFloat(cmd) || 10;
+  dias_seguranca = parseFloat(dias_seguranca) || 3;
+  const lt = parseFloat(lead_time) || 0;
   
   if (!status) {
-    status = estoque_real <= estoque_minimo ? 'CRÍTICO' : 'OK';
+    const es = cmd * dias_seguranca;
+    const pr = (cmd * lt) + es;
+
+    if (estoque_real < es) status = 'CRÍTICO';
+    else if (estoque_real >= es && estoque_real < pr) status = 'ATENÇÃO';
+    else if (estoque_real >= pr && estoque_real < pr * 2) status = 'ADEQUADO';
+    else status = 'CONFORTÁVEL';
   }
 
   const { data: existing } = await supabase.from('estoque_insumos').select('id').eq('codigo', codigo).limit(1);
@@ -55,7 +64,7 @@ export async function POST(request: Request) {
   }
 
   const result = await supabase.from('estoque_insumos').insert([
-    { cd, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria }
+    { cd, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, dias_seguranca }
   ]);
 
   if (result.error) {
@@ -101,8 +110,18 @@ export async function PATCH(request: Request) {
   }
 
   // Se a saída deixar negativo, a gente permite ou não? Vamos permitir e mudar status
-  const min = currentItem.estoque_minimo || 0;
-  const novoStatus = newReal <= min ? 'CRÍTICO' : 'OK';
+  const currentCmd = parseFloat(currentItem.cmd) || 10;
+  const currentDias = parseFloat(currentItem.dias_seguranca) || 3;
+  const currentLt = parseFloat(currentItem.lead_time) || 0;
+
+  const es = currentCmd * currentDias;
+  const pr = (currentCmd * currentLt) + es;
+
+  let novoStatus = 'OK';
+  if (newReal < es) novoStatus = 'CRÍTICO';
+  else if (newReal >= es && newReal < pr) novoStatus = 'ATENÇÃO';
+  else if (newReal >= pr && newReal < pr * 2) novoStatus = 'ADEQUADO';
+  else novoStatus = 'CONFORTÁVEL';
 
   // 3. Atualiza
   const { error: updateError } = await supabase
