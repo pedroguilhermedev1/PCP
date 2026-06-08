@@ -12,12 +12,7 @@ export default function Home() {
       router.push('/login');
       return;
     }
-    const role = getUserRole(user);
-    if (role === 'ADMIN') {
-      router.push('/compras/dashboard');
-    } else {
-      router.push('/compras/cronograma');
-    }
+    router.push('/compras/dashboard');
   }, [router]);
 
   return <div className="p-8 text-center text-zinc-500">Redirecionando...</div>;

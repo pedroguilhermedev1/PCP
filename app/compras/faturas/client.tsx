@@ -187,6 +187,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                       >
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
+                            <span className="text-xs text-zinc-400 font-bold">{f.identificador || 'S/ ID'}</span>
                             <span>{f.fornecedor}</span>
                           </div>
                         </TableCell>
@@ -279,6 +280,14 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                                   <div className="space-y-1">
                                     <span className="text-xs text-zinc-500 block">Tipo Doc</span>
                                     <span className="text-sm font-medium">{f.tipo_documento}</span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-zinc-500 block">Conta Contábil</span>
+                                    <span className="text-sm font-medium">{f.conta_contabil || '-'}</span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-xs text-zinc-500 block">Descrição Contábil</span>
+                                    <span className="text-sm font-medium">{f.descricao_contabil || '-'}</span>
                                   </div>
                                   <div className="space-y-1">
                                     <span className="text-xs text-zinc-500 block">Tipo Serv</span>

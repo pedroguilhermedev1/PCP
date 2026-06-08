@@ -6,6 +6,7 @@ export type Etapa = 'Integração' | 'HEFLO' | 'ERP' | 'V360' | 'Aguardando paga
 
 export interface Fatura {
   id: string;
+  identificador?: string;
 
   marca: string;
   categoria: 'Serviço' | 'Material';
@@ -14,6 +15,8 @@ export interface Fatura {
   cnpj: string;
   centro_custo: string;
   filial: string;
+  conta_contabil?: string;
+  descricao_contabil?: string;
   tipo_documento: string;
   tipo_servico: string;
   codigo_servico: string;

@@ -17,6 +17,12 @@ const sidebarItems = [
     icon: <LayoutDashboard className="w-5 h-5 flex-shrink-0" />,
   },
   {
+    type: 'link',
+    title: "RELATÓRIOS",
+    href: "/compras/relatorios",
+    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
+  },
+  {
     type: 'group',
     title: "FATURAS",
     icon: <ShoppingCart className="w-5 h-5 flex-shrink-0" />,
@@ -187,7 +193,7 @@ export function Sidebar() {
   const visibleItems = isAdmin
   ? sidebarItems
   : sidebarItems.filter(item =>
-      item.title === 'FORMULÁRIOS' || item.title === 'CRONOGRAMA'
+      item.title === 'DASHBOARD' || item.title === 'FORMULÁRIOS' || item.title === 'CRONOGRAMA'
     )
 
   useEffect(() => {

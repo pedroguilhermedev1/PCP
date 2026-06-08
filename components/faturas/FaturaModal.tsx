@@ -159,6 +159,17 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                   <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" />
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-zinc-100 pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Conta Contábil *</label>
+                  <Input value={formData.conta_contabil || ""} onChange={handleInputChange('conta_contabil')} placeholder="Ex: 1.1.2.01" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Descrição Contábil *</label>
+                  <Input value={formData.descricao_contabil || ""} onChange={handleInputChange('descricao_contabil')} placeholder="Descrição da conta" required />
+                </div>
+              </div>
             </section>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
