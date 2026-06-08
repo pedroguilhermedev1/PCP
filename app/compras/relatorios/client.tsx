@@ -95,7 +95,7 @@ export function RelatoriosClient() {
       return;
     }
     
-    let exportData = [];
+    let exportData: any[] = [];
     
     if (activeTab === 'fornecedores') {
       exportData = data.map(d => ({
