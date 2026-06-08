@@ -45,6 +45,7 @@ function NovaMovimentacaoModal({
   const [solicitante, setSolicitante] = useState(responsavel);
   const [justificativa, setJustificativa] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -85,10 +86,13 @@ function NovaMovimentacaoModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setErrorMsg("");
+    setIsSubmitting(true);
     
     if (!item || !quantidade) {
       setErrorMsg("Preencha todos os campos obrigatórios.");
+      setIsSubmitting(false);
       return;
     }
 
@@ -97,49 +101,57 @@ function NovaMovimentacaoModal({
 
     if (tipo === 'Saída' && Number(quantidade) > estoqueReal) {
       setErrorMsg(`Quantidade indisponível. O estoque atual é de apenas ${estoqueReal} unidade(s).`);
+      setIsSubmitting(false);
       return;
     }
 
     if (tipo === 'Saída' && (!setor || !justificativa || !solicitante)) {
       setErrorMsg("Para saídas, preencha setor responsável, solicitante e justificativa.");
+      setIsSubmitting(false);
       return;
     }
 
-    if (editItem) {
-      updateMovimentacao(editItem.id, {
-        item,
-        codigo,
-        quantidade: Number(quantidade),
-        setor: tipo === 'Saída' ? setor : undefined,
-        solicitante: tipo === 'Saída' ? solicitante : undefined,
-        justificativa: tipo === 'Saída' ? justificativa : undefined
-      });
-      toast.success("Registro atualizado com sucesso.");
-    } else {
-      await addMovimentacao({
-        responsavel,
-        marca,
-        tipo,
-        item,
-        codigo,
-        quantidade: Number(quantidade),
-        setor: tipo === 'Saída' ? setor : undefined,
-        solicitante: tipo === 'Saída' ? solicitante : undefined,
-        justificativa: tipo === 'Saída' ? justificativa : undefined
-      });
-      toast.success("Registro salvo com sucesso.");
+    try {
+      if (editItem) {
+        updateMovimentacao(editItem.id, {
+          item,
+          codigo,
+          quantidade: Number(quantidade),
+          setor: tipo === 'Saída' ? setor : undefined,
+          solicitante: tipo === 'Saída' ? solicitante : undefined,
+          justificativa: tipo === 'Saída' ? justificativa : undefined
+        });
+        toast.success("Registro atualizado com sucesso.");
+      } else {
+        await addMovimentacao({
+          responsavel,
+          marca,
+          tipo,
+          item,
+          codigo,
+          quantidade: Number(quantidade),
+          setor: tipo === 'Saída' ? setor : undefined,
+          solicitante: tipo === 'Saída' ? solicitante : undefined,
+          justificativa: tipo === 'Saída' ? justificativa : undefined
+        });
+        toast.success("Registro salvo com sucesso.");
+      }
+
+      if (refetch) refetch();
+
+      setItem("");
+      setCodigo("");
+      setQuantidade("");
+      setSetor("");
+      setSolicitante("");
+      setJustificativa("");
+      
+      onClose();
+    } catch (e) {
+      setErrorMsg("Ocorreu um erro ao salvar. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (refetch) refetch();
-
-    setItem("");
-    setCodigo("");
-    setQuantidade("");
-    setSetor("");
-    setSolicitante("");
-    setJustificativa("");
-    
-    onClose();
   };
 
   return (
@@ -228,9 +240,9 @@ function NovaMovimentacaoModal({
           )}
 
           <div className="mt-4 flex gap-3 justify-end border-t border-zinc-100 pt-5">
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" className="bg-purple-700 hover:bg-purple-800 text-white">
-              Registrar {tipo}
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+            <Button type="submit" className="bg-purple-700 hover:bg-purple-800 text-white" disabled={isSubmitting}>
+              {isSubmitting ? "Registrando..." : `Registrar ${tipo}`}
             </Button>
           </div>
         </form>

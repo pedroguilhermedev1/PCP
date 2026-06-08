@@ -57,12 +57,15 @@ export function useInsumosMovimentacoes() {
       return updated;
     });
     
+    const cdTarget = (mov.marca === 'sas' || mov.marca === 'sae') ? `JDI-${mov.marca.toUpperCase()}` : mov.marca.toUpperCase();
+
     // Dispara a atualização no banco de dados (Supabase)
     try {
       await fetch('/api/estoque', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          cd: cdTarget,
           item: mov.item,
           codigo: mov.codigo,
           tipo: mov.tipo,

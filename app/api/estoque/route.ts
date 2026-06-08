@@ -70,14 +70,14 @@ export async function PATCH(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  const { item, codigo, tipo, quantidade } = body;
+  const { cd, item, codigo, tipo, quantidade } = body;
   
-  if (!item || !tipo || !quantidade) {
+  if (!cd || !item || !tipo || !quantidade) {
     return NextResponse.json({ error: 'Faltam dados para atualizar o estoque' }, { status: 400 });
   }
 
   // 1. Busca o item atual para ver quanto tem no estoque_real
-  let query = supabase.from('estoque_insumos').select('*').eq('item', item);
+  let query = supabase.from('estoque_insumos').select('*').eq('item', item).eq('cd', cd);
   if (codigo) {
     query = query.eq('codigo', codigo);
   }
