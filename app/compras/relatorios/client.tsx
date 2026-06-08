@@ -8,17 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
-
-// Supabase client instance (created lazily to avoid build errors during prerendering)
-let supabase: any = null;
-const getSupabase = () => {
-  if (!supabase) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key';
-    supabase = createClient(supabaseUrl, supabaseKey);
-  }
-  return supabase;
-};
+import { supabase } from "@/lib/supabase";
 
 type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas';
 
@@ -54,28 +44,28 @@ export function RelatoriosClient() {
       const start = `${dataInicial}T00:00:00`;
       const end = `${dataFinal}T23:59:59`;
 
-      const supa = getSupabase();
+      if (!supabase) throw new Error("Supabase não inicializado.");
 
       if (activeTab === 'fornecedores') {
-        query = supa.from('fornecedores')
+        query = supabase.from('fornecedores')
           .select('*')
           .gte('created_at', start)
           .lte('created_at', end)
           .order('created_at', { ascending: false });
       } else if (activeTab === 'produtos') {
-        query = supa.from('estoque_insumos')
+        query = supabase.from('estoque_insumos')
           .select('*')
           .gte('data_cadastro', start)
           .lte('data_cadastro', end)
           .order('data_cadastro', { ascending: false });
       } else if (activeTab === 'movimentacoes') {
-        query = supa.from('estoque_movimentacoes')
+        query = supabase.from('estoque_movimentacoes')
           .select('*')
           .gte('data_hora', start)
           .lte('data_hora', end)
           .order('data_hora', { ascending: false });
       } else if (activeTab === 'faturas') {
-        query = supa.from('faturas')
+        query = supabase.from('faturas')
           .select('*')
           .gte('data_emissao', start)
           .lte('data_emissao', end)
