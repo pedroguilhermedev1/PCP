@@ -9,10 +9,16 @@ import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 
-// Initialize Supabase Client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Supabase client instance (created lazily to avoid build errors during prerendering)
+let supabase: any = null;
+const getSupabase = () => {
+  if (!supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key';
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabase;
+};
 
 type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas';
 
@@ -48,26 +54,28 @@ export function RelatoriosClient() {
       const start = `${dataInicial}T00:00:00`;
       const end = `${dataFinal}T23:59:59`;
 
+      const supa = getSupabase();
+
       if (activeTab === 'fornecedores') {
-        query = supabase.from('fornecedores')
+        query = supa.from('fornecedores')
           .select('*')
           .gte('created_at', start)
           .lte('created_at', end)
           .order('created_at', { ascending: false });
       } else if (activeTab === 'produtos') {
-        query = supabase.from('estoque_insumos')
+        query = supa.from('estoque_insumos')
           .select('*')
           .gte('data_cadastro', start)
           .lte('data_cadastro', end)
           .order('data_cadastro', { ascending: false });
       } else if (activeTab === 'movimentacoes') {
-        query = supabase.from('estoque_movimentacoes')
+        query = supa.from('estoque_movimentacoes')
           .select('*')
           .gte('data_hora', start)
           .lte('data_hora', end)
           .order('data_hora', { ascending: false });
       } else if (activeTab === 'faturas') {
-        query = supabase.from('faturas')
+        query = supa.from('faturas')
           .select('*')
           .gte('data_emissao', start)
           .lte('data_emissao', end)
