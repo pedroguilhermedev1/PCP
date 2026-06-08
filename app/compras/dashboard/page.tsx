@@ -9,15 +9,13 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage() {
   const faturas = await faturaRepository.getFaturas();
   
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zwvajnsmylaebxfeypeo.supabase.co';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dmFqbnNteWxhZWJ4ZmV5cGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwODEyNzksImV4cCI6MjA5MzY1NzI3OX0.vl359IIHkx-oE4Z1CzenYAPcvlZWYqgAwoX8xa6mVTw';
   let insumos: any[] = [];
   
-  if (supabaseUrl && supabaseKey) {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data } = await supabase.from('estoque_insumos').select('*');
-    if (data) insumos = data;
-  }
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const { data } = await supabase.from('estoque_insumos').select('*');
+  if (data) insumos = data;
 
   // Calculate Faturas Stas
   const now = new Date();
