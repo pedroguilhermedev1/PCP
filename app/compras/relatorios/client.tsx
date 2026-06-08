@@ -55,8 +55,8 @@ export function RelatoriosClient() {
       } else if (activeTab === 'produtos') {
         query = supabase.from('estoque_insumos')
           .select('*')
-          .gte('data_cadastro', start)
-          .lte('data_cadastro', end)
+          .gte('data_cadastro', dataInicial)
+          .lte('data_cadastro', dataFinal)
           .order('data_cadastro', { ascending: false });
       } else if (activeTab === 'movimentacoes') {
         query = supabase.from('estoque_movimentacoes')
@@ -67,8 +67,8 @@ export function RelatoriosClient() {
       } else if (activeTab === 'faturas') {
         query = supabase.from('faturas')
           .select('*')
-          .gte('data_emissao', start)
-          .lte('data_emissao', end)
+          .gte('data_emissao', dataInicial)
+          .lte('data_emissao', dataFinal)
           .order('data_emissao', { ascending: false });
       }
 
