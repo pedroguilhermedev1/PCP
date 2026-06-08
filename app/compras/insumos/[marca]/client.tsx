@@ -31,10 +31,10 @@ function NovaMovimentacaoModal({
   marca: string;
   responsavel: string;
   editItem?: any | null;
-  addMovimentacao: (mov: any) => Promise<any>;
-  updateMovimentacao: (id: string, updates: any) => void;
+  updateMovimentacao?: (id: string, updates: any) => void;
   insumos: any[];
   refetch: () => void;
+  refreshMovs: () => void;
 }) {
   const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
 
@@ -112,32 +112,27 @@ function NovaMovimentacaoModal({
     }
 
     try {
-      if (editItem) {
-        updateMovimentacao(editItem.id, {
-          item,
-          codigo,
-          quantidade: Number(quantidade),
-          setor: tipo === 'Saída' ? setor : undefined,
-          solicitante: tipo === 'Saída' ? solicitante : undefined,
-          justificativa: tipo === 'Saída' ? justificativa : undefined
-        });
-        toast.success("Registro atualizado com sucesso.");
-      } else {
-        await addMovimentacao({
-          responsavel,
-          marca,
+      const res = await fetch('/api/movimentacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           tipo,
-          item,
           codigo,
+          item,
+          cd: cdTarget,
           quantidade: Number(quantidade),
+          usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
-          solicitante: tipo === 'Saída' ? solicitante : undefined,
-          justificativa: tipo === 'Saída' ? justificativa : undefined
-        });
-        toast.success("Registro salvo com sucesso.");
-      }
+          observacoes: tipo === 'Saída' ? justificativa : undefined
+        })
+      });
+
+      if (!res.ok) throw new Error("Erro da API");
+
+      toast.success("Solicitação enviada para aprovação.");
 
       if (refetch) refetch();
+      if (refreshMovs) refreshMovs();
 
       setItem("");
       setCodigo("");
@@ -256,11 +251,9 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
   const [editItem, setEditItem] = useState<any | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  
-  const { movimentacoes, deleteMovimentacao, addMovimentacao, updateMovimentacao } = useInsumosMovimentacoes();
   
   const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
+  const { movimentacoes, refresh } = useInsumosMovimentacoes(cdTarget);
   const { insumos, loading, error, refetch } = useEstoqueInsumos(cdTarget);
   
   const [currentUser, setCurrentUser] = useState("");
@@ -278,24 +271,16 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
   const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
 
   const filteredMovs = useMemo(() => {
-    const list = movimentacoes.filter(m => m.marca === marca);
+    // Todos os que estão na lista já são do CD correto por causa do hook
+    // Vamos mostrar apenas os CONFIRMADOS no log, PENDENTES ficam no Formulário
+    const list = movimentacoes.filter(m => m.status === 'CONFIRMADO');
     if (activeTab === 'entradas') return list.filter(m => m.tipo === 'Entrada').reverse();
     if (activeTab === 'saidas') return list.filter(m => m.tipo === 'Saída').reverse();
     return list;
-  }, [movimentacoes, marca, activeTab]);
+  }, [movimentacoes, activeTab]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <ConfirmDeleteModal
-        isOpen={!!itemToDelete}
-        onClose={() => setItemToDelete(null)}
-        onConfirm={() => {
-          if (itemToDelete) {
-            deleteMovimentacao(itemToDelete);
-            toast.success("Registro excluído com sucesso.");
-          }
-        }}
-      />
       <NovaMovimentacaoModal 
         isOpen={modalOpen} 
         onClose={() => {
@@ -306,10 +291,11 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
         marca={marca} 
         responsavel={currentUser || 'Usuário Indefinido'} 
         editItem={editItem}
-        addMovimentacao={addMovimentacao}
-        updateMovimentacao={updateMovimentacao}
+        addMovimentacao={async () => {}}
+        updateMovimentacao={() => {}}
         insumos={insumos}
         refetch={refetch}
+        refreshMovs={refresh}
       />
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -439,40 +425,22 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
                           </td>
                         )}
                         <td className="px-6 py-4 text-zinc-600">
-                          {mov.responsavel}
+                          {mov.usuario}
                         </td>
                         {activeTab === 'saidas' && (
                           <>
                             <td className="px-6 py-4 text-zinc-600">
-                              {mov.solicitante || '-'}
+                              {'-'}
                             </td>
-                            <td className="px-6 py-4 text-zinc-500 max-w-[150px] truncate" title={mov.justificativa}>
-                              {mov.justificativa || '-'}
+                            <td className="px-6 py-4 text-zinc-500 max-w-[150px] truncate" title={mov.observacoes}>
+                              {mov.observacoes || '-'}
                             </td>
                           </>
                         )}
                         {canEditOrDelete && (
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {/* Add edit button mock to fulfill requirement for now */}
-                              <button 
-                                className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                title="Editar"
-                                onClick={() => {
-                                  setEditItem(mov);
-                                  setModalTipo(mov.tipo);
-                                  setModalOpen(true);
-                                }}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button 
-                                className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Excluir"
-                                onClick={() => setItemToDelete(mov.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {/* Não permite editar nem excluir registros imutáveis */}
                             </div>
                           </td>
                         )}

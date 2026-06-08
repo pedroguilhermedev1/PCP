@@ -4,28 +4,17 @@ import { Box, CheckCircle2, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
 import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
+import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 export function FormulariosModuleClient({ marca }: { marca: string }) {
   const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
   const { insumos } = useEstoqueInsumos(cdTarget);
+  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cdTarget);
 
-  const [responsavel, setResponsavel] = useState("");
-  const [tipo, setTipo] = useState<'Entrada' | 'Saída'>('Entrada');
-  const [codigo, setCodigo] = useState("");
-  const [item, setItem] = useState("");
-  const [quantidade, setQuantidade] = useState<number | "">("");
-  const [setor, setSetor] = useState("");
-  const [solicitante, setSolicitante] = useState("");
-  const [justificativa, setJustificativa] = useState("");
-  
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  
-  const { addMovimentacao } = useInsumosMovimentacoes();
-
-  const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
+  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
@@ -73,38 +62,30 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
     setIsSubmitting(true);
     
     try {
-      // 1. Atualizar o estoque real no banco de dados (Supabase via API)
-      const res = await fetch('/api/estoque/update', {
-        method: 'PUT',
+      // Substituído para apenas registrar a movimentação PENDENTE
+      const res = await fetch('/api/movimentacoes', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          tipo,
           codigo,
+          item,
           cd: cdTarget,
-          quantidade_movimento: Number(quantidade),
-          tipo
+          quantidade: Number(quantidade),
+          usuario: responsavel,
+          setor: tipo === 'Saída' ? setor : undefined,
+          observacoes: tipo === 'Saída' ? justificativa : undefined
         })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Erro ao atualizar o estoque.');
+        throw new Error(data.error || 'Erro ao registrar solicitação.');
       }
 
-      // 2. Registrar a movimentação (histórico local)
-      addMovimentacao({
-        responsavel,
-        marca,
-        tipo,
-        item,
-        codigo,
-        quantidade: Number(quantidade),
-        setor: tipo === 'Saída' ? setor : undefined,
-        solicitante: tipo === 'Saída' ? solicitante : undefined,
-        justificativa: tipo === 'Saída' ? justificativa : undefined
-      });
-
-      setSuccessMsg(`Solicitação de ${tipo.toLowerCase()} registrada com sucesso em ${formalMarca}! Novo estoque: ${data.novo_estoque}`);
+      setSuccessMsg(`Solicitação de ${tipo.toLowerCase()} enviada para aprovação com sucesso!`);
+      refresh();
       setTimeout(() => setSuccessMsg(""), 5000);
 
       // Limpar formulário
@@ -126,8 +107,8 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-zinc-200 px-6 pt-4 flex flex-col flex-shrink-0">
+        <div className="flex items-center gap-3 mb-4">
           <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
             <Box className="w-5 h-5" />
           </div>
@@ -136,10 +117,30 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
             <p className="text-sm text-zinc-500">Solicitação de Entrada e Saída de Insumos.</p>
           </div>
         </div>
+        
+        <div className="flex gap-4 border-b border-transparent">
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('NOVA')}
+          >
+            Nova Solicitação
+          </button>
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('PENDENTES')}
+          >
+            Aprovações Pendentes
+            {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                {movimentacoes.filter(m => m.status === 'PENDENTE').length}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full flex justify-center items-start">
-        <div className="w-full max-w-2xl mt-4">
+        <div className="w-full max-w-4xl mt-4">
           
           {successMsg && (
             <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-3 border border-green-200 shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -163,123 +164,189 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="space-y-4">
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700">Tipo de Movimentação *</label>
-                    <div className="flex bg-zinc-100 p-1 rounded-md">
-                      <button
-                        type="button"
-                        onClick={() => setTipo('Entrada')}
-                        className={`flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors ${
-                          tipo === 'Entrada' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                        }`}
-                      >
-                        Entrada
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTipo('Saída')}
-                        className={`flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors ${
-                          tipo === 'Saída' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                        }`}
-                      >
-                        Saída
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700">Quantidade *</label>
-                    <Input 
-                      type="number" 
-                      min="1"
-                      required
-                      placeholder="0"
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(e.target.value ? Number(e.target.value) : "")}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700">Item / Material *</label>
-                    <select 
-                      required
-                      value={item}
-                      onChange={(e) => setItem(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="" disabled>Selecione um item...</option>
-                      {insumos.map(mat => (
-                        <option key={mat.id} value={mat.item}>{mat.item}</option>
-                      ))}
-                    </select>
-                  </div>
+            {activeTab === 'NOVA' ? (
+              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <div className="space-y-4">
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-700">Código</label>
-                    <Input 
-                      disabled
-                      type="text" 
-                      value={codigo}
-                      placeholder="Preenchido automaticamente"
-                      className="w-full bg-zinc-50"
-                    />
-                  </div>
-                </div>
-
-                {tipo === 'Saída' && (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-700">Setor Responsável *</label>
-                        <select 
-                          required
-                          value={setor}
-                          onChange={(e) => setSetor(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Tipo de Movimentação *</label>
+                      <div className="flex bg-zinc-100 p-1 rounded-md">
+                        <button
+                          type="button"
+                          onClick={() => setTipo('Entrada')}
+                          className={`flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors ${
+                            tipo === 'Entrada' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                          }`}
                         >
-                          <option value="" disabled>Selecione...</option>
-                          {setores.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-700">Solicitante</label>
-                        <Input 
-                          disabled
-                          type="text" 
-                          value={solicitante}
-                          className="w-full bg-zinc-50"
-                        />
+                          Entrada
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTipo('Saída')}
+                          className={`flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors ${
+                            tipo === 'Saída' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                          }`}
+                        >
+                          Saída
+                        </button>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700">Justificativa / Motivo *</label>
-                      <textarea 
+                      <label className="text-sm font-medium text-zinc-700">Quantidade *</label>
+                      <Input 
+                        type="number" 
+                        min="1"
                         required
-                        className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 resize-y"
-                        placeholder="Descreva o motivo desta solicitação..."
-                        value={justificativa}
-                        onChange={(e) => setJustificativa(e.target.value)}
+                        placeholder="0"
+                        value={quantidade}
+                        onChange={(e) => setQuantidade(e.target.value ? Number(e.target.value) : "")}
+                        className="w-full"
                       />
                     </div>
-                  </>
-                )}
+                  </div>
 
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Item / Material *</label>
+                      <select 
+                        required
+                        value={item}
+                        onChange={(e) => setItem(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="" disabled>Selecione um item...</option>
+                        {insumos.map(mat => (
+                          <option key={mat.id} value={mat.item}>{mat.item}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Código</label>
+                      <Input 
+                        disabled
+                        type="text" 
+                        value={codigo}
+                        placeholder="Preenchido automaticamente"
+                        className="w-full bg-zinc-50"
+                      />
+                    </div>
+                  </div>
 
-              <div className="pt-2">
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? 'Registrando...' : 'Registrar Solicitação'}
-                </Button>
+                  {tipo === 'Saída' && (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-zinc-700">Setor Responsável *</label>
+                          <select 
+                            required
+                            value={setor}
+                            onChange={(e) => setSetor(e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2"
+                          >
+                            <option value="" disabled>Selecione...</option>
+                            {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-zinc-700">Solicitante</label>
+                          <Input 
+                            disabled
+                            type="text" 
+                            value={solicitante}
+                            className="w-full bg-zinc-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-zinc-700">Justificativa / Motivo *</label>
+                        <textarea 
+                          required
+                          className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 resize-y"
+                          placeholder="Descreva o motivo desta solicitação..."
+                          value={justificativa}
+                          onChange={(e) => setJustificativa(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                </div>
+
+                <div className="pt-2">
+                  <Button type="submit" disabled={isSubmitting} className="w-full">
+                    {isSubmitting ? 'Registrando...' : 'Registrar Solicitação'}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead className="text-right">Qtd</TableHead>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movimentacoes.filter(m => m.status === 'PENDENTE').map(m => (
+                      <TableRow key={m.id}>
+                        <TableCell className="font-medium">{m.identificador || 'S/ ID'}</TableCell>
+                        <TableCell>{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
+                            {m.tipo}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="truncate max-w-[200px]" title={m.item}>{m.item}</span>
+                            {m.setor && <span className="text-xs text-zinc-400">Setor: {m.setor}</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-bold">{m.quantidade}</TableCell>
+                        <TableCell>{m.usuario}</TableCell>
+                        <TableCell className="text-center">
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data.error);
+                                setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
+                                setTimeout(() => setSuccessMsg(""), 5000);
+                                refresh();
+                              } catch (e: any) {
+                                setErrorMsg(e.message);
+                              }
+                            }}
+                          >
+                            Aprovar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {movimentacoes.filter(m => m.status === 'PENDENTE').length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
+                          Nenhuma solicitação pendente.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-            </form>
+            )}
           </div>
         </div>
       </div>
