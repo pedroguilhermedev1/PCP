@@ -30,7 +30,6 @@ function NovoInsumoModal({
     estoque_minimo: '0',
     estoque_real: '0',
     cmd: '10',
-    dias_seguranca: '3',
     status: ''
   });
 
@@ -101,7 +100,7 @@ function NovoInsumoModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Lead Time</label>
               <Input value={formData.lead_time} onChange={e => setFormData({...formData, lead_time: e.target.value})} />
@@ -109,10 +108,6 @@ function NovoInsumoModal({
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">CMD</label>
               <Input type="number" value={formData.cmd} onChange={e => setFormData({...formData, cmd: e.target.value})} title="Consumo Médio Diário" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Dias Seg.</label>
-              <Input type="number" value={formData.dias_seguranca} onChange={e => setFormData({...formData, dias_seguranca: e.target.value})} title="Dias de Estoque de Segurança" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Est. Real</label>
@@ -204,7 +199,7 @@ export function EstoqueInsumosTable({
               <th className="px-6 py-4 font-semibold text-center">Unidade</th>
               <th className="px-6 py-4 font-semibold">Categoria</th>
               <th className="px-6 py-4 font-semibold text-right">Lead Time</th>
-              <th className="px-6 py-4 font-semibold text-right">Ressuprimento</th>
+              <th className="px-6 py-4 font-semibold text-right">Est. Mín</th>
               <th className="px-6 py-4 font-semibold text-right">Est. Real</th>
               <th className="px-6 py-4 font-semibold text-right">Cobert. Dias</th>
               <th className="px-6 py-4 font-semibold text-center">Status</th>
@@ -223,10 +218,8 @@ export function EstoqueInsumosTable({
             ) : insumos.length > 0 ? (
               insumos.map((item) => {
                 const cmd = parseFloat(item.cmd) || 10;
-                const dias = parseFloat(item.dias_seguranca) || 3;
                 const lt = parseFloat(item.lead_time) || 0;
-                const es = cmd * dias;
-                const pr = (cmd * lt) + es;
+                const em = cmd * lt;
                 const ce = cmd > 0 ? (item.estoque_real / cmd).toFixed(1) : '∞';
 
                 return (
@@ -251,8 +244,8 @@ export function EstoqueInsumosTable({
                     <td className="px-6 py-4 text-right text-zinc-600">
                       {item.lead_time || '-'}
                     </td>
-                    <td className="px-6 py-4 text-right text-zinc-700" title={`ES: ${es}`}>
-                      {pr}
+                    <td className="px-6 py-4 text-right text-zinc-700" title={`EM: ${em}`}>
+                      {em}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-zinc-900">
                       {item.estoque_real}
@@ -266,11 +259,9 @@ export function EstoqueInsumosTable({
                           "font-bold uppercase tracking-wider",
                           item.status.toUpperCase() === 'CRÍTICO' 
                             ? "bg-red-100 text-red-800 hover:bg-red-200 border border-red-200" 
-                            : item.status.toUpperCase() === 'ATENÇÃO'
+                            : item.status.toUpperCase() === 'ALERTA'
                               ? "bg-orange-100 text-orange-800 hover:bg-orange-200 border border-orange-200"
-                              : item.status.toUpperCase() === 'ADEQUADO'
-                                ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200"
-                                : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200"
+                              : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200"
                         )}
                       >
                         {item.status}

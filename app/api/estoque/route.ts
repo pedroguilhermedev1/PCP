@@ -40,21 +40,18 @@ export async function POST(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let { cd, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, dias_seguranca } = body;
+  let { cd, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd } = body;
 
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
   cmd = parseFloat(cmd) || 10;
-  dias_seguranca = parseFloat(dias_seguranca) || 3;
   const lt = parseFloat(lead_time) || 0;
   
   if (!status) {
-    const es = cmd * dias_seguranca;
-    const pr = (cmd * lt) + es;
+    const em = cmd * lt;
 
-    if (estoque_real < es) status = 'CRÍTICO';
-    else if (estoque_real >= es && estoque_real < pr) status = 'ATENÇÃO';
-    else if (estoque_real >= pr && estoque_real < pr * 2) status = 'ADEQUADO';
+    if (estoque_real <= em) status = 'CRÍTICO';
+    else if (estoque_real > em && estoque_real <= (cmd * 10)) status = 'ALERTA';
     else status = 'CONFORTÁVEL';
   }
 
@@ -111,16 +108,13 @@ export async function PATCH(request: Request) {
 
   // Se a saída deixar negativo, a gente permite ou não? Vamos permitir e mudar status
   const currentCmd = parseFloat(currentItem.cmd) || 10;
-  const currentDias = parseFloat(currentItem.dias_seguranca) || 3;
   const currentLt = parseFloat(currentItem.lead_time) || 0;
 
-  const es = currentCmd * currentDias;
-  const pr = (currentCmd * currentLt) + es;
+  const em = currentCmd * currentLt;
 
   let novoStatus = 'OK';
-  if (newReal < es) novoStatus = 'CRÍTICO';
-  else if (newReal >= es && newReal < pr) novoStatus = 'ATENÇÃO';
-  else if (newReal >= pr && newReal < pr * 2) novoStatus = 'ADEQUADO';
+  if (newReal <= em) novoStatus = 'CRÍTICO';
+  else if (newReal > em && newReal <= (currentCmd * 10)) novoStatus = 'ALERTA';
   else novoStatus = 'CONFORTÁVEL';
 
   // 3. Atualiza
