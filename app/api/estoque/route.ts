@@ -48,10 +48,10 @@ export async function POST(request: Request) {
   const lt = parseFloat(lead_time) || 0;
   
   if (!status) {
-    const em = cmd * lt;
+    const cobertura = cmd > 0 ? (estoque_real / cmd) : Infinity;
 
-    if (estoque_real <= em) status = 'CRÍTICO';
-    else if (estoque_real > em && estoque_real <= (cmd * 10)) status = 'ALERTA';
+    if (cobertura <= lt) status = 'CRÍTICO';
+    else if (cobertura > lt && cobertura <= (lt + 3)) status = 'ALERTA';
     else status = 'CONFORTÁVEL';
   }
 
@@ -110,11 +110,11 @@ export async function PATCH(request: Request) {
   const currentCmd = parseFloat(currentItem.cmd) || 10;
   const currentLt = parseFloat(currentItem.lead_time) || 0;
 
-  const em = currentCmd * currentLt;
+  const cobertura = currentCmd > 0 ? (newReal / currentCmd) : Infinity;
 
   let novoStatus = 'OK';
-  if (newReal <= em) novoStatus = 'CRÍTICO';
-  else if (newReal > em && newReal <= (currentCmd * 10)) novoStatus = 'ALERTA';
+  if (cobertura <= currentLt) novoStatus = 'CRÍTICO';
+  else if (cobertura > currentLt && cobertura <= (currentLt + 3)) novoStatus = 'ALERTA';
   else novoStatus = 'CONFORTÁVEL';
 
   // 3. Atualiza

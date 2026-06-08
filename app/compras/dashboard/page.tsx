@@ -48,10 +48,10 @@ export default async function DashboardPage() {
     const lt = parseFloat(i.lead_time) || 0;
     const real = i.estoque_real || 0;
 
-    const em = cmd * lt;
+    const cobertura = cmd > 0 ? (real / cmd) : Infinity;
 
-    if (real <= em) criticos++;
-    else if (real > em && real <= (cmd * 10)) alertas++;
+    if (cobertura <= lt) criticos++;
+    else if (cobertura > lt && cobertura <= (lt + 3)) alertas++;
     else confortaveis++;
   });
 
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
                   <div>
                     <p className="text-sm font-medium text-red-600 mb-2">Crítico</p>
                     <div className="text-4xl font-bold text-red-700">{criticos}</div>
-                    <p className="text-sm text-red-600/70 mt-2">Limite de reposição</p>
+                    <p className="text-sm text-red-600/70 mt-2">Cobertura não atende tempo de entrega</p>
                   </div>
                   <AlertTriangle className="w-8 h-8 text-red-500 opacity-20" />
                 </div>
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
                   <div>
                     <p className="text-sm font-medium text-orange-600 mb-2">Em Alerta</p>
                     <div className="text-4xl font-bold text-orange-700">{alertas}</div>
-                    <p className="text-sm text-orange-600/70 mt-2">Próximos do Lead Time</p>
+                    <p className="text-sm text-orange-600/70 mt-2">Margem de segurança curta (até 3 dias)</p>
                   </div>
                   <AlertTriangle className="w-8 h-8 text-orange-500 opacity-20" />
                 </div>
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
                   <div>
                     <p className="text-sm font-medium text-emerald-600 mb-2">Confortável</p>
                     <div className="text-4xl font-bold text-emerald-700">{confortaveis}</div>
-                    <p className="text-sm text-emerald-600/70 mt-2">Cobertura segura {'>'} 10 dias</p>
+                    <p className="text-sm text-emerald-600/70 mt-2">Margem de segurança folgada</p>
                   </div>
                   <CheckCircle className="w-8 h-8 text-emerald-500 opacity-20" />
                 </div>
