@@ -47,17 +47,29 @@ export function RelatoriosClient() {
       if (!supabase) throw new Error("Supabase não inicializado.");
 
       if (activeTab === 'fornecedores') {
-        query = supabase.from('fornecedores')
+        // Fornecedores are saved in localStorage
+        const dataFornecedoresRaw = localStorage.getItem('fornecedores_db');
+        let parsed = [];
+        try {
+          parsed = dataFornecedoresRaw ? JSON.parse(dataFornecedoresRaw) : [];
+        } catch (e) {
+          console.error("Erro no parse fornecedores");
+        }
+        const filtered = parsed.filter((f: any) => {
+          if (!f.created_at) return false;
+          const dt = f.created_at.substring(0, 10);
+          return dt >= dataInicial && dt <= dataFinal;
+        });
+        setData(filtered);
+        if (filtered.length === 0) {
+          toast.info("Nenhum dado encontrado para o período.");
+        }
+      } else if (activeTab === 'produtos') {
+        query = supabase.from('estoque_insumos')
           .select('*')
           .gte('created_at', start)
           .lte('created_at', end)
           .order('created_at', { ascending: false });
-      } else if (activeTab === 'produtos') {
-        query = supabase.from('estoque_insumos')
-          .select('*')
-          .gte('data_cadastro', dataInicial)
-          .lte('data_cadastro', dataFinal)
-          .order('data_cadastro', { ascending: false });
       } else if (activeTab === 'movimentacoes') {
         query = supabase.from('estoque_movimentacoes')
           .select('*')
@@ -108,6 +120,8 @@ export function RelatoriosClient() {
         "Código": d.codigo,
         "Descrição": d.item,
         "Categoria": d.categoria || 'Geral',
+        "Conta Contábil": d.conta_contabil || '-',
+        "Descrição Contábil": d.descricao_contabil || '-',
         "Estoque Atual": d.estoque_real,
         "Estoque Mínimo": d.estoque_minimo,
         "Data Cadastro": new Date(d.data_cadastro).toLocaleDateString('pt-BR')
@@ -171,7 +185,7 @@ export function RelatoriosClient() {
                     : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'movimentacoes' ? 'Movimentações' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>

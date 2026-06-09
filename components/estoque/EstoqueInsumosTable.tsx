@@ -229,10 +229,23 @@ export function EstoqueInsumosTable({
                 else if (coberturaNum > lt && coberturaNum <= (lt + 3)) dynamicStatus = 'ALERTA';
                 else dynamicStatus = 'CONFORTÁVEL';
 
+                const rawCd = item.cd.includes('-') ? item.cd.split('-')[0] : item.cd;
+                const formatCd = (cdStr: string) => {
+                  const map: Record<string, string> = {
+                    fortaleza: 'Fortaleza',
+                    jundiai: 'Jundiaí',
+                    nse: 'NSE',
+                    curitiba: 'Curitiba',
+                    'ribeirao-preto': 'Ribeirão Preto',
+                    raizes: 'Raízes'
+                  };
+                  return map[cdStr.toLowerCase()] || cdStr.toUpperCase();
+                };
+
                 return (
                   <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-zinc-900 border-l-[3px] border-l-transparent hover:border-purple-500">
-                      {item.cd.includes('-') ? item.cd.split('-')[0] : item.cd}
+                      {formatCd(rawCd)}
                     </td>
                     <td className="px-6 py-4 text-zinc-600 font-mono text-xs">
                       {item.codigo}

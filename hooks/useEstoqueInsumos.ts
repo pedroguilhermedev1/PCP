@@ -16,20 +16,20 @@ export type EstoqueInsumo = {
   categoria: string;
 };
 
-export function useEstoqueInsumos(filtro_cd?: string) {
+export function useEstoqueInsumos(filtro_cd?: string, filtro_empresa?: string) {
   const [insumos, setInsumos] = useState<EstoqueInsumo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEstoque = async (cd?: string) => {
+  const fetchEstoque = async (cd?: string, empresa?: string) => {
     setLoading(true);
     setError(null);
     try {
-      // Add a timestamp query parameter to bust any aggressive browser/Next.js caching
       const timestamp = new Date().getTime();
-      const url = cd 
-        ? `/api/estoque?cd=${encodeURIComponent(cd)}&_t=${timestamp}` 
-        : `/api/estoque?_t=${timestamp}`;
+      let url = `/api/estoque?_t=${timestamp}`;
+      if (cd) url += `&cd=${encodeURIComponent(cd)}`;
+      if (empresa) url += `&empresa=${encodeURIComponent(empresa)}`;
+
       const res = await fetch(url, { cache: 'no-store' });
       const result = await res.json();
 
@@ -42,7 +42,6 @@ export function useEstoqueInsumos(filtro_cd?: string) {
       console.error("Erro ao buscar estoque_insumos:", err);
       if (err.message?.includes('PGRST205') || err.message?.includes('not find the table') || err.message?.includes('does not exist')) {
          setInsumos([]);
-         // Silently fail or keep error null to avoid showing aggressive errors
          setError(null);
       } else {
          setError(err.message);
@@ -59,10 +58,10 @@ export function useEstoqueInsumos(filtro_cd?: string) {
   useEffect(() => {
     let mounted = true;
     if (mounted) {
-       fetchEstoque(filtro_cd);
+       fetchEstoque(filtro_cd, filtro_empresa);
     }
     return () => { mounted = false; };
-  }, [filtro_cd]);
+  }, [filtro_cd, filtro_empresa]);
 
-  return { insumos, loading, error, refetch: () => fetchEstoque(filtro_cd) };
+  return { insumos, loading, error, refetch: () => fetchEstoque(filtro_cd, filtro_empresa) };
 }

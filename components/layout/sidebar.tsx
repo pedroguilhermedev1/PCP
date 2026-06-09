@@ -3,10 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Briefcase, Box, Menu, X, ShoppingCart, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar } from "lucide-react"
+import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLembretes } from "@/components/lembretes/LembretesContext"
+import { useCronogramaNotification } from "@/components/cronograma/CronogramaNotificationContext"
 import { motion, AnimatePresence } from "motion/react"
 
 const sidebarItems = [
@@ -17,15 +18,9 @@ const sidebarItems = [
     icon: <LayoutDashboard className="w-5 h-5 flex-shrink-0" />,
   },
   {
-    type: 'link',
-    title: "RELATÓRIOS",
-    href: "/compras/relatorios",
-    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
-  },
-  {
     type: 'group',
     title: "FATURAS",
-    icon: <ShoppingCart className="w-5 h-5 flex-shrink-0" />,
+    icon: <DollarSign className="w-5 h-5 flex-shrink-0" />,
     items: [
       {
         title: "Materiais",
@@ -45,13 +40,13 @@ const sidebarItems = [
     icon: <Box className="w-5 h-5 flex-shrink-0" />,
     items: [
       {
-        title: "COC",
-        href: "/compras/insumos/coc",
+        title: "Fortaleza",
+        href: "/compras/insumos/fortaleza",
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
       {
-        title: "IS",
-        href: "/compras/insumos/is",
+        title: "Jundiaí",
+        href: "/compras/insumos/jundiai",
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
       {
@@ -60,65 +55,18 @@ const sidebarItems = [
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
       {
-        title: "PSD",
-        href: "/compras/insumos/psd",
+        title: "Curitiba",
+        href: "/compras/insumos/curitiba",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+      {
+        title: "Ribeirão Preto",
+        href: "/compras/insumos/ribeirao-preto",
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
       {
         title: "Raízes",
         href: "/compras/insumos/raizes",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "SAE",
-        href: "/compras/insumos/sae",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "SAS",
-        href: "/compras/insumos/sas",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-    ]
-  },
-  {
-    type: 'group',
-    title: "FORMULÁRIOS",
-    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
-    items: [
-      {
-        title: "COC",
-        href: "/compras/formularios/coc",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "IS",
-        href: "/compras/formularios/is",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "NSE",
-        href: "/compras/formularios/nse",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "PSD",
-        href: "/compras/formularios/psd",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "Raízes",
-        href: "/compras/formularios/raizes",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "SAE",
-        href: "/compras/formularios/sae",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "SAS",
-        href: "/compras/formularios/sas",
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
     ]
@@ -141,10 +89,53 @@ const sidebarItems = [
     ]
   },
   {
+    type: 'group',
+    title: "FORMULÁRIOS",
+    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
+    items: [
+      {
+        title: "Fortaleza",
+        href: "/compras/formularios/fortaleza",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+      {
+        title: "Jundiaí",
+        href: "/compras/formularios/jundiai",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+      {
+        title: "NSE",
+        href: "/compras/formularios/nse",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+      {
+        title: "Curitiba",
+        href: "/compras/formularios/curitiba",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+      {
+        title: "Ribeirão Preto",
+        href: "/compras/formularios/ribeirao-preto",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+      {
+        title: "Raízes",
+        href: "/compras/formularios/raizes",
+        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+      },
+    ]
+  },
+  {
     type: 'link',
     title: "CRONOGRAMA",
     href: "/compras/cronograma",
     icon: <Calendar className="w-5 h-5 flex-shrink-0" />,
+  },
+  {
+    type: 'link',
+    title: "RELATÓRIOS",
+    href: "/compras/relatorios",
+    icon: <Database className="w-5 h-5 flex-shrink-0" />,
   },
   {
     type: 'link',
@@ -161,6 +152,7 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const { pendingNotifiedLembretes, forceRender } = useLembretes()
   const badgeCount = pendingNotifiedLembretes.length
+  const { unseenCount, markAllAsSeen } = useCronogramaNotification()
 
   const [currentUser, setCurrentUser] = useState<string | null>(null);
 
@@ -188,6 +180,10 @@ export function Sidebar() {
     FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false,
     FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false,
   });
+  
+  if (pathname === '/compras/cronograma') {
+    markAllAsSeen();
+  }
 }, [pathname]);
 
   const visibleItems = isAdmin
@@ -227,8 +223,8 @@ export function Sidebar() {
     <>
       <div className="md:hidden flex flex-row items-center justify-between p-4 border-b border-zinc-200 bg-zinc-50 flex-shrink-0">
         <Link href="/" className="flex items-center gap-2 font-bold text-purple-900">
-          <ShoppingCart className="w-5 h-5 text-purple-800 flex-shrink-0" />
-          <span>Compras e Insumos</span>
+          <Building className="w-5 h-5 text-purple-800 flex-shrink-0" />
+          <span>PCP Compras</span>
         </Link>
         <button onClick={() => setIsOpen(true)} className="p-2 -mr-2 text-zinc-600">
           <Menu className="w-6 h-6" />
@@ -243,8 +239,8 @@ export function Sidebar() {
         <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-200 overflow-hidden">
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-2 font-bold text-purple-900 overflow-hidden transition-all justify-start">
-              <ShoppingCart className="w-5 h-5 text-purple-800 flex-shrink-0" />
-              <span className="whitespace-nowrap text-sm">Compras</span>
+              <Building className="w-5 h-5 text-purple-800 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm">PCP Compras</span>
             </Link>
           )}
           
@@ -289,6 +285,11 @@ export function Sidebar() {
                     {group.title === 'LEMBRETES' && badgeCount > 0 && (
                       <div className={cn("bg-red-500 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0 text-[10px]", isCollapsed ? "absolute top-1 right-2 w-4 h-4" : "px-2 py-0.5")}>
                         {badgeCount}
+                      </div>
+                    )}
+                    {group.title === 'CRONOGRAMA' && unseenCount > 0 && (
+                      <div className={cn("bg-red-500 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0 text-[10px]", isCollapsed ? "absolute top-1 right-2 w-4 h-4" : "px-2 py-0.5")}>
+                        {unseenCount}
                       </div>
                     )}
                   </Link>

@@ -24,8 +24,9 @@ export function useInsumosMovimentacoes(cdTarget?: string) {
   const fetchMovimentacoes = async () => {
     setLoading(true);
     try {
-      const url = cdTarget ? `/api/movimentacoes?cd=${cdTarget}` : '/api/movimentacoes';
-      const res = await fetch(url);
+      const timestamp = new Date().getTime();
+      const url = cdTarget ? `/api/movimentacoes?cd=${cdTarget}&_t=${timestamp}` : `/api/movimentacoes?_t=${timestamp}`;
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
       if (res.ok) {
         setMovimentacoes(data);

@@ -25,19 +25,25 @@ export async function POST(request: Request) {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dmFqbnNteWxhZWJ4ZmV5cGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwODEyNzksImV4cCI6MjA5MzY1NzI3OX0.vl359IIHkx-oE4Z1CzenYAPcvlZWYqgAwoX8xa6mVTw';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { tipo, codigo, item, cd, quantidade, usuario, observacoes, setor } = body;
+  const { tipo, codigo, item, cd, empresa, quantidade, usuario, observacoes, setor } = body;
 
   if (!tipo || !codigo || !cd || !quantidade) {
     return NextResponse.json({ error: 'Faltam dados obrigatórios' }, { status: 400 });
   }
 
   // Verificar se existe o insumo no CD
-  const { data: insumo, error: fetchError } = await supabase
+  let query = supabase
     .from('estoque_insumos')
     .select('id, estoque_real')
     .eq('codigo', codigo)
-    .eq('cd', cd)
-    .single();
+    .eq('cd', cd);
+    
+  if (empresa) {
+    query = query.ilike('empresa', empresa);
+  }
+
+  const { data: insumoList, error: fetchError } = await query.limit(1);
+  const insumo = insumoList ? insumoList[0] : null;
 
   if (fetchError || !insumo) {
     return NextResponse.json({ error: 'Insumo não encontrado no CD especificado.' }, { status: 404 });

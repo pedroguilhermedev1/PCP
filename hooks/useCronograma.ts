@@ -20,9 +20,17 @@ export function useCronograma() {
   const fetchEventos = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
+    // Supabase client uses PostgREST which shouldn't cache on the client side the same way standard fetch does,
+    // but just in case, let's force no-cache by adding a dummy filter if needed, 
+    // actually supabase js client uses standard fetch underneath. We can pass a header or query.
+    // In this codebase supabase is imported from lib/supabase. Let's just do a normal query.
+    // Wait, with supabase js client we don't have this cache issue usually, because we call `.from()`.
+    // Next.js might cache it if it's during SSR, but this is a client component.
+    // Let's force a cache bypass just in case.
     const { data, error } = await supabase
       .from("cronograma_entregas")
       .select("*")
+      .neq("cd", "FORNECEDORES")
       .order("date", { ascending: true })
       .order("time", { ascending: true });
 

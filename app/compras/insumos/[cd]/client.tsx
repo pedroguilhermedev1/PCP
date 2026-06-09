@@ -13,11 +13,30 @@ import { EstoqueInsumosTable } from "@/components/estoque/EstoqueInsumosTable";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 
+const cd_marcas_map: Record<string, string[]> = {
+  fortaleza: ['SAS', 'SAE', 'IS'],
+  jundiai: ['SAS', 'SAE', 'IS'],
+  nse: ['EI', 'Pleno', 'MM', 'GF'],
+  curitiba: ['PSD', 'Positivo'],
+  'ribeirao-preto': ['COC'],
+  raizes: ['Geekie', 'Nave']
+};
+
+const cd_names_map: Record<string, string> = {
+  fortaleza: 'Fortaleza',
+  jundiai: 'Jundiaí',
+  nse: 'NSE',
+  curitiba: 'Curitiba',
+  'ribeirao-preto': 'Ribeirão Preto',
+  raizes: 'Raízes'
+};
+
 function NovaMovimentacaoModal({ 
   isOpen, 
   onClose, 
   tipo,
   marca,
+  cd,
   responsavel,
   editItem,
   insumos,
@@ -28,13 +47,13 @@ function NovaMovimentacaoModal({
   onClose: () => void;
   tipo: 'Entrada' | 'Saída';
   marca: string;
+  cd: string;
   responsavel: string;
   editItem?: any | null;
   insumos: any[];
   refetch: () => void;
   refreshMovs: () => void;
 }) {
-  const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
 
   const [item, setItem] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -117,7 +136,8 @@ function NovaMovimentacaoModal({
           tipo,
           codigo,
           item,
-          cd: cdTarget,
+          cd,
+          empresa: marca,
           quantidade: Number(quantidade),
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
@@ -244,15 +264,19 @@ function NovaMovimentacaoModal({
   );
 }
 
-export function InsumosModuleClient({ marca }: { marca: string }) {
+export function InsumosModuleClient({ cd }: { cd: string }) {
+  const marcas = cd_marcas_map[cd] || [];
+  const [activeMarca, setActiveMarca] = useState(marcas[0] || '');
   const [activeTab, setActiveTab] = useState<'insumos' | 'entradas' | 'saidas'>('insumos');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
   const [editItem, setEditItem] = useState<any | null>(null);
   
-  const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
-  const { movimentacoes, refresh } = useInsumosMovimentacoes(cdTarget);
-  const { insumos, loading, error, refetch } = useEstoqueInsumos(cdTarget);
+  const { movimentacoes, refresh } = useInsumosMovimentacoes(cd);
+  // Movimentacoes right now are fetched just by cd. We need to filter them by marca (empresa) locally if we want, or adjust useInsumosMovimentacoes.
+  // Actually, we can just filter by insumos list below.
+  
+  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, activeMarca);
   
   const [currentUser, setCurrentUser] = useState("");
 
@@ -265,15 +289,18 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
 
   const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
 
-  // Utility to formalize the name
-  const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
+  const cdName = cd_names_map[cd] || cd.toUpperCase();
 
   const filteredMovs = useMemo(() => {
-    const list = movimentacoes;
+    let list = movimentacoes;
+    // Filter by marca matching the insumos currently listed for this marca
+    const allowedCodigos = new Set(insumos.map(i => i.codigo));
+    list = list.filter(m => allowedCodigos.has(m.codigo));
+
     if (activeTab === 'entradas') return list.filter(m => m.tipo === 'Entrada').reverse();
     if (activeTab === 'saidas') return list.filter(m => m.tipo === 'Saída').reverse();
     return list;
-  }, [movimentacoes, activeTab]);
+  }, [movimentacoes, activeTab, insumos]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -284,7 +311,8 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
           setEditItem(null);
         }} 
         tipo={modalTipo} 
-        marca={marca} 
+        marca={activeMarca} 
+        cd={cd}
         responsavel={currentUser || 'Usuário Indefinido'} 
         editItem={editItem}
         insumos={insumos}
@@ -297,13 +325,29 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
             <Box className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Insumos - {formalMarca}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Insumos - CD {cdName}</h1>
             <p className="text-sm text-zinc-500">Gestão de materiais e insumos gerais.</p>
           </div>
         </div>
       </header>
 
       <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+        {/* Navegação Superior de Marcas */}
+        {marcas.length > 0 && (
+          <div className="mb-6 flex gap-2">
+            {marcas.map(marca => (
+              <Button 
+                key={marca}
+                variant={activeMarca === marca ? "default" : "outline"}
+                className={activeMarca === marca ? "bg-purple-700 hover:bg-purple-800 text-white" : "text-zinc-600 hover:text-purple-700 border-zinc-200"}
+                onClick={() => setActiveMarca(marca)}
+              >
+                {marca.toUpperCase()}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Navegação / Tabs Internas */}
         <div className="mb-6 border-b border-zinc-200">
           <div className="flex gap-6">
@@ -349,12 +393,12 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
           </div>
         </div>
 
-        {/* Couteúdo de cada Tab */}
+        {/* Conteúdo de cada Tab */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h2 className="text-lg font-semibold text-purple-900">
-            {activeTab === 'insumos' && `Insumos em Estoque`}
-            {activeTab === 'entradas' && `Registro de Entradas`}
-            {activeTab === 'saidas' && `Registro de Saídas`}
+            {activeTab === 'insumos' && `Insumos em Estoque - ${activeMarca}`}
+            {activeTab === 'entradas' && `Registro de Entradas - ${activeMarca}`}
+            {activeTab === 'saidas' && `Registro de Saídas - ${activeMarca}`}
           </h2>
           {activeTab !== 'insumos' && (
             <Button onClick={() => {
@@ -369,7 +413,7 @@ export function InsumosModuleClient({ marca }: { marca: string }) {
         </div>
         
         {activeTab === 'insumos' ? (
-          <EstoqueInsumosTable marca={marca.toLowerCase()} insumos={insumos} loading={loading} error={error} refetch={refetch} />
+          <EstoqueInsumosTable marca={activeMarca.toLowerCase()} insumos={insumos} loading={loading} error={error} refetch={refetch} />
         ) : (
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4">
             <div className="overflow-x-auto w-full">

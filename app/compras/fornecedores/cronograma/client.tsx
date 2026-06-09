@@ -6,8 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, MapPin, Truck, CheckCircle, XCircle, Calendar as CalendarIcon, Clock, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
-
-type EntregaStatus = "Programada" | "Em Trânsito" | "Recebida" | "Cancelada";
+import { useCronogramaFornecedores, Entrega, EntregaStatus } from "@/hooks/useCronogramaFornecedores";
 
 type Entrega = {
   id: string;
@@ -22,7 +21,7 @@ type Entrega = {
 
 export function CronogramaClient() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [entregas, setEntregas] = useState<Entrega[]>([]);
+  const { entregas, loading, addEntrega, updateEntrega, deleteEntrega } = useCronogramaFornecedores();
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,20 +32,7 @@ export function CronogramaClient() {
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) setCurrentUser(user);
-    
-    // Load from local storage for now
-    const saved = localStorage.getItem('fornecedores_cronograma_entregas');
-    if (saved) {
-      try {
-        setEntregas(JSON.parse(saved));
-      } catch(e) {}
-    }
   }, []);
-
-  const saveToStorage = (newEntregas: Entrega[]) => {
-    setEntregas(newEntregas);
-    localStorage.setItem('fornecedores_cronograma_entregas', JSON.stringify(newEntregas));
-  };
 
   const [formData, setFormData] = useState({
     data: format(new Date(), "yyyy-MM-dd"),
@@ -96,31 +82,31 @@ export function CronogramaClient() {
     setModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.data || !formData.fornecedor || !formData.produto) return;
 
     if (editItem) {
-      const updated = entregas.map(ent => ent.id === editItem.id ? { ...ent, ...formData } : ent);
-      saveToStorage(updated);
-      toast.success("Entrega atualizada com sucesso.");
+      const success = await updateEntrega(editItem.id, formData);
+      if (success) toast.success("Entrega atualizada com sucesso.");
+      else toast.error("Erro ao atualizar entrega.");
     } else {
-      const nova: Entrega = {
-        id: crypto.randomUUID(),
+      const nova = {
         ...formData,
         responsavel: currentUser || "Indefinido"
       };
-      saveToStorage([...entregas, nova]);
-      toast.success("Entrega agendada com sucesso.");
+      const success = await addEntrega(nova);
+      if (success) toast.success("Entrega agendada com sucesso.");
+      else toast.error("Erro ao agendar entrega.");
     }
     setModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (itemToDelete) {
-      const updated = entregas.filter(e => e.id !== itemToDelete);
-      saveToStorage(updated);
-      toast.success("Entrega excluída com sucesso.");
+      const success = await deleteEntrega(itemToDelete);
+      if (success) toast.success("Entrega excluída com sucesso.");
+      else toast.error("Erro ao excluir entrega.");
     }
   };
 

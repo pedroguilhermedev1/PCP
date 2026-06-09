@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 export type Fornecedor = {
   id: string;
@@ -19,64 +20,55 @@ export type Fornecedor = {
 export function useFornecedores(tipoFiltro?: 'Material' | 'Serviço') {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
 
-  useEffect(() => {
-    const data = localStorage.getItem('fornecedores_db');
-    if (data) {
-      try {
-        const parsed = JSON.parse(data);
-        if (tipoFiltro) {
-          setFornecedores(parsed.filter((f: Fornecedor) => f.tipo === tipoFiltro));
-        } else {
-          setFornecedores(parsed);
-        }
-      } catch (e) {
-        console.error("Failed to parse fornecedores:", e);
-      }
+  const fetchFornecedores = useCallback(async () => {
+    if (!supabase) return;
+    let query = supabase.from("fornecedores").select("*").order("created_at", { ascending: false });
+    
+    if (tipoFiltro) {
+      query = query.eq("tipo", tipoFiltro);
+    }
+
+    const { data, error } = await query;
+    if (!error && data) {
+      setFornecedores(data as Fornecedor[]);
     }
   }, [tipoFiltro]);
 
-  const saveToStorage = (data: Fornecedor[]) => {
-    // If we filtered, we need to update the main list
-    const allDataRaw = localStorage.getItem('fornecedores_db');
-    let allData: Fornecedor[] = allDataRaw ? JSON.parse(allDataRaw) : [];
-    
-    if (tipoFiltro) {
-      const otherData = allData.filter(f => f.tipo !== tipoFiltro);
-      const combined = [...otherData, ...data];
-      localStorage.setItem('fornecedores_db', JSON.stringify(combined));
-    } else {
-      localStorage.setItem('fornecedores_db', JSON.stringify(data));
+  useEffect(() => {
+    fetchFornecedores();
+  }, [fetchFornecedores]);
+
+  const addFornecedor = async (f: Omit<Fornecedor, 'id' | 'created_at'>) => {
+    if (!supabase) return;
+    const { data, error } = await supabase.from("fornecedores").insert([f]).select().single();
+    if (!error && data) {
+      setFornecedores(prev => [data as Fornecedor, ...prev]);
+      return data;
+    }
+    return null;
+  };
+
+  const deleteFornecedor = async (id: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from("fornecedores").delete().eq("id", id);
+    if (!error) {
+      setFornecedores(prev => prev.filter(f => f.id !== id));
     }
   };
 
-  const addFornecedor = (f: Omit<Fornecedor, 'id' | 'created_at'>) => {
-    const newFornecedor: Fornecedor = {
-      ...f,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString()
-    };
-    const updated = [...fornecedores, newFornecedor];
-    setFornecedores(updated);
-    saveToStorage(updated);
-    return newFornecedor;
-  };
-
-  const deleteFornecedor = (id: string) => {
-    const updated = fornecedores.filter(f => f.id !== id);
-    setFornecedores(updated);
-    saveToStorage(updated);
-  };
-
-  const updateFornecedor = (id: string, updates: Partial<Fornecedor>) => {
-    const updated = fornecedores.map(f => f.id === id ? { ...f, ...updates } : f);
-    setFornecedores(updated);
-    saveToStorage(updated);
+  const updateFornecedor = async (id: string, updates: Partial<Fornecedor>) => {
+    if (!supabase) return;
+    const { data, error } = await supabase.from("fornecedores").update(updates).eq("id", id).select().single();
+    if (!error && data) {
+      setFornecedores(prev => prev.map(f => f.id === id ? (data as Fornecedor) : f));
+    }
   };
 
   return {
     fornecedores,
     addFornecedor,
     deleteFornecedor,
-    updateFornecedor
+    updateFornecedor,
+    refresh: fetchFornecedores
   };
 }

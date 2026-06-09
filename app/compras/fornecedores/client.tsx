@@ -14,14 +14,15 @@ function FornecedorModal({
   isOpen, 
   onClose, 
   tipo,
-  editItem
+  editItem,
+  onSave
 }: { 
   isOpen: boolean; 
   onClose: () => void;
   tipo: 'Material' | 'Serviço';
   editItem?: any | null;
+  onSave: (fornecedor: any, isEdit: boolean) => void;
 }) {
-  const { addFornecedor, updateFornecedor } = useFornecedores(tipo);
 
   const [cnpj, setCnpj] = useState("");
   const [razaoSocial, setRazaoSocial] = useState("");
@@ -59,31 +60,23 @@ function FornecedorModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const payload = {
+      cnpj,
+      razao_social: razaoSocial,
+      nome_fantasia: nomeFantasia,
+      contato,
+      telefone,
+      email,
+      categoria,
+      observacoes,
+      tipo
+    };
+
     if (editItem) {
-      updateFornecedor(editItem.id, {
-        cnpj,
-        razao_social: razaoSocial,
-        nome_fantasia: nomeFantasia,
-        contato,
-        telefone,
-        email,
-        categoria,
-        observacoes,
-        tipo
-      });
+      onSave({ ...payload, id: editItem.id }, true);
       toast.success("Registro atualizado com sucesso.");
     } else {
-      addFornecedor({
-        cnpj,
-        razao_social: razaoSocial,
-        nome_fantasia: nomeFantasia,
-        contato,
-        telefone,
-        email,
-        categoria,
-        observacoes,
-        tipo
-      });
+      onSave(payload, false);
       toast.success("Registro salvo com sucesso.");
     }
 
@@ -166,7 +159,7 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   
-  const { fornecedores, deleteFornecedor } = useFornecedores(tipo);
+  const { fornecedores, deleteFornecedor, addFornecedor, updateFornecedor } = useFornecedores(tipo);
   
   const [currentUser, setCurrentUser] = useState("");
 
@@ -207,6 +200,13 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
         }} 
         tipo={tipo} 
         editItem={editItem}
+        onSave={(fornecedor, isEdit) => {
+          if (isEdit) {
+            updateFornecedor(fornecedor.id, fornecedor);
+          } else {
+            addFornecedor(fornecedor);
+          }
+        }}
       />
       
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">

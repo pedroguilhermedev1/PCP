@@ -14,7 +14,8 @@ const getSupabase = () => {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const cd = searchParams.get('cd');
-  console.log('CD RECEBIDO:', cd);
+  const empresa = searchParams.get('empresa');
+  console.log('CD RECEBIDO:', cd, 'EMPRESA:', empresa);
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
@@ -23,6 +24,10 @@ export async function GET(request: Request) {
 
   if (cd) {
     query = query.eq('cd', cd);
+  }
+  if (empresa) {
+    // Some might be null or missing, we can filter using ILIKE or EQ depending on data. Let's use EQ (case insensitive might be needed if they type 'sas' vs 'SAS')
+    query = query.ilike('empresa', empresa);
   }
 
   const { data, error } = await query;
@@ -40,7 +45,7 @@ export async function POST(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let { cd, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd } = body;
+  let { cd, empresa, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil } = body;
 
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
@@ -55,13 +60,13 @@ export async function POST(request: Request) {
     else status = 'CONFORTÁVEL';
   }
 
-  const { data: existing } = await supabase.from('estoque_insumos').select('id').eq('codigo', codigo).limit(1);
+  const { data: existing } = await supabase.from('estoque_insumos').select('id').eq('codigo', codigo).eq('cd', cd).limit(1);
   if (existing && existing.length > 0) {
-    return NextResponse.json({ error: `O código ${codigo} já existe no sistema.` }, { status: 400 });
+    return NextResponse.json({ error: `O código ${codigo} já existe no CD ${cd}.` }, { status: 400 });
   }
 
   const result = await supabase.from('estoque_insumos').insert([
-    { cd, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd }
+    { cd, empresa, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil }
   ]);
 
   if (result.error) {
@@ -76,7 +81,7 @@ export async function PATCH(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  const { cd, item, codigo, tipo, quantidade } = body;
+  const { cd, empresa, item, codigo, tipo, quantidade } = body;
   
   if (!cd || !item || !tipo || !quantidade) {
     return NextResponse.json({ error: 'Faltam dados para atualizar o estoque' }, { status: 400 });
@@ -86,6 +91,9 @@ export async function PATCH(request: Request) {
   let query = supabase.from('estoque_insumos').select('*').eq('item', item).eq('cd', cd);
   if (codigo) {
     query = query.eq('codigo', codigo);
+  }
+  if (empresa) {
+    query = query.ilike('empresa', empresa);
   }
   
   const { data: currentItems, error: searchError } = await query.limit(1);

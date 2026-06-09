@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, CheckCircle2, AlertCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
@@ -9,10 +9,30 @@ import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-export function FormulariosModuleClient({ marca }: { marca: string }) {
-  const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
-  const { insumos } = useEstoqueInsumos(cdTarget);
-  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cdTarget);
+const cd_marcas_map: Record<string, string[]> = {
+  fortaleza: ['SAS', 'SAE', 'IS'],
+  jundiai: ['SAS', 'SAE', 'IS'],
+  nse: ['EI', 'Pleno', 'MM', 'GF'],
+  curitiba: ['PSD', 'Positivo'],
+  'ribeirao-preto': ['COC'],
+  raizes: ['Geekie', 'Nave']
+};
+
+const cd_names_map: Record<string, string> = {
+  fortaleza: 'Fortaleza',
+  jundiai: 'Jundiaí',
+  nse: 'NSE',
+  curitiba: 'Curitiba',
+  'ribeirao-preto': 'Ribeirão Preto',
+  raizes: 'Raízes'
+};
+
+export function FormulariosModuleClient({ cd }: { cd: string }) {
+  const marcas = cd_marcas_map[cd] || [];
+  const [activeMarca, setActiveMarca] = useState(marcas[0] || '');
+  
+  const { insumos } = useEstoqueInsumos(cd, activeMarca);
+  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd);
 
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
 
@@ -28,7 +48,7 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const formalMarca = marca === 'raizes' ? 'Raízes' : marca.toUpperCase();
+  const cdName = cd_names_map[cd] || cd.toUpperCase();
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
@@ -76,7 +96,6 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
     setIsSubmitting(true);
     
     try {
-      // Substituído para apenas registrar a movimentação PENDENTE
       const res = await fetch('/api/movimentacoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,7 +103,8 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
           tipo,
           codigo,
           item,
-          cd: cdTarget,
+          cd,
+          empresa: activeMarca,
           quantidade: Number(quantidade),
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
@@ -118,6 +138,12 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
     }
   };
 
+  const filteredMovs = useMemo(() => {
+    let list = movimentacoes;
+    const allowedCodigos = new Set(insumos.map(i => i.codigo));
+    list = list.filter(m => allowedCodigos.has(m.codigo));
+    return list;
+  }, [movimentacoes, insumos]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -127,10 +153,26 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
             <Box className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Formulários - {formalMarca}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Formulários - CD {cdName}</h1>
             <p className="text-sm text-zinc-500">Solicitação de Entrada e Saída de Insumos.</p>
           </div>
         </div>
+
+        {/* Navegação Superior de Marcas */}
+        {marcas.length > 0 && (
+          <div className="mb-6 flex gap-2">
+            {marcas.map(marca => (
+              <Button 
+                key={marca}
+                variant={activeMarca === marca ? "default" : "outline"}
+                className={activeMarca === marca ? "bg-purple-700 hover:bg-purple-800 text-white" : "text-zinc-600 hover:text-purple-700 border-zinc-200"}
+                onClick={() => setActiveMarca(marca)}
+              >
+                {marca.toUpperCase()}
+              </Button>
+            ))}
+          </div>
+        )}
         
         <div className="flex gap-4 border-b border-transparent">
           <button 
@@ -144,9 +186,9 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
             onClick={() => setActiveTab('PENDENTES')}
           >
             Aprovações Pendentes
-            {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
+            {filteredMovs.filter(m => m.status === 'PENDENTE').length > 0 && (
               <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                {movimentacoes.filter(m => m.status === 'PENDENTE').length}
+                {filteredMovs.filter(m => m.status === 'PENDENTE').length}
               </span>
             )}
           </button>
@@ -172,7 +214,9 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
 
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
-              <h2 className="text-lg font-bold text-zinc-800">Nova Solicitação</h2>
+              <h2 className="text-lg font-bold text-zinc-800">
+                Nova Solicitação - {activeMarca.toUpperCase()}
+              </h2>
               <p className="text-sm text-zinc-500 mt-1">
                 Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
               </p>
@@ -311,7 +355,7 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {movimentacoes.filter(m => m.status === 'PENDENTE').map(m => (
+                    {filteredMovs.filter(m => m.status === 'PENDENTE').map(m => (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.identificador || 'S/ ID'}</TableCell>
                         <TableCell>{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
@@ -350,10 +394,10 @@ export function FormulariosModuleClient({ marca }: { marca: string }) {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {movimentacoes.filter(m => m.status === 'PENDENTE').length === 0 && (
+                    {filteredMovs.filter(m => m.status === 'PENDENTE').length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
-                          Nenhuma solicitação pendente.
+                          Nenhuma solicitação pendente para {activeMarca.toUpperCase()}.
                         </TableCell>
                       </TableRow>
                     )}

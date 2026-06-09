@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 export interface Lembrete {
   id: string;
@@ -22,6 +23,7 @@ interface LembretesContextType {
   activeNotification: Lembrete | null;
   dismissNotification: () => void;
   forceRender: number;
+  refresh: () => Promise<void>;
 }
 
 const LembretesContext = createContext<LembretesContextType | undefined>(undefined);
@@ -31,59 +33,84 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
   const [activeNotification, setActiveNotification] = useState<Lembrete | null>(null);
   const [forceRender, setForceRender] = useState(0);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("pcp_lembretes");
-    if (saved) {
-      try {
-        setLembretes(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse lembretes", e);
-      }
+  const fetchLembretes = useCallback(async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase.from('lembretes').select('*').order('createdAt', { ascending: false });
+    if (!error && data) {
+      // API returns column names like scheduledFor, isCompleted because we used them with quotes in SQL,
+      // but let's map them just in case.
+      const mapped = data.map(l => ({
+        id: l.id,
+        text: l.text,
+        scheduledFor: l.scheduledFor || l.scheduled_for || l.scheduledFor,
+        isCompleted: l.isCompleted === true || l.is_completed === true,
+        notified: l.notified === true,
+        createdAt: l.createdAt || l.created_at || l.createdAt
+      })) as Lembrete[];
+      setLembretes(mapped);
     }
   }, []);
 
-  const saveLembretes = (newVal: Lembrete[]) => {
-    setLembretes(newVal);
-    localStorage.setItem("pcp_lembretes", JSON.stringify(newVal));
-  };
+  useEffect(() => {
+    fetchLembretes();
+  }, [fetchLembretes]);
 
-  const addLembrete = (data: Omit<Lembrete, "id" | "createdAt" | "notified">) => {
-    const novo: Lembrete = {
+  const addLembrete = async (data: Omit<Lembrete, "id" | "createdAt" | "notified">) => {
+    const novo: Partial<Lembrete> = {
       ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
       notified: false,
     };
-    saveLembretes([...lembretes, novo]);
-  };
-
-  const updateLembrete = (id: string, updates: Partial<Lembrete>) => {
-    const novo = lembretes.map(l => l.id === id ? { ...l, ...updates } : l);
-    saveLembretes(novo);
-  };
-
-  const deleteLembrete = (id: string) => {
-    saveLembretes(lembretes.filter(l => l.id !== id));
-    if (activeNotification?.id === id) {
-      setActiveNotification(null);
+    if (!supabase) return;
+    const { data: inserted, error } = await supabase.from('lembretes').insert([novo]).select().single();
+    if (!error && inserted) {
+      setLembretes(prev => [{
+        id: inserted.id,
+        text: inserted.text,
+        scheduledFor: inserted.scheduledFor || inserted.scheduled_for,
+        isCompleted: inserted.isCompleted === true,
+        notified: inserted.notified === true,
+        createdAt: inserted.createdAt || inserted.created_at
+      } as Lembrete, ...prev]);
     }
   };
 
-  const markAsCompleted = (id: string) => {
+  const updateLembrete = async (id: string, updates: Partial<Lembrete>) => {
+    if (!supabase) return;
+    setLembretes(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+    await supabase.from('lembretes').update(updates).eq('id', id);
+  };
+
+  const deleteLembrete = async (id: string) => {
+    setLembretes(prev => prev.filter(l => l.id !== id));
+    if (activeNotification?.id === id) {
+      setActiveNotification(null);
+    }
+    if (!supabase) return;
+    await supabase.from('lembretes').delete().eq('id', id);
+  };
+
+  const markAsCompleted = async (id: string) => {
     updateLembrete(id, { isCompleted: true });
     if (activeNotification?.id === id) {
       setActiveNotification(null);
     }
   };
 
-  const markAllNotified = () => {
-    const novo = lembretes.map(l => {
+  const markAllNotified = async () => {
+    const idsToUpdate: string[] = [];
+    setLembretes(prev => prev.map(l => {
       if (!l.isCompleted && new Date(l.scheduledFor).getTime() <= new Date().getTime()) {
+        idsToUpdate.push(l.id);
         return { ...l, notified: true };
       }
       return l;
-    });
-    saveLembretes(novo);
+    }));
+
+    if (supabase && idsToUpdate.length > 0) {
+      for (const id of idsToUpdate) {
+        await supabase.from('lembretes').update({ notified: true }).eq('id', id);
+      }
+    }
   };
 
   // Poll for notifications
@@ -107,7 +134,18 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
       }
 
       if (hasUpdates) {
-        saveLembretes(novo);
+        // We update the local state without triggering full DB update here to avoid spamming
+        // The individual updates to DB happen when we actually interact. But for just 'notified' flag, 
+        // we should persist it.
+        setLembretes(novo);
+        
+        // Optimistically update db
+        if (supabase) {
+           const newlyNotified = novo.filter((n, idx) => n.notified && !lembretes[idx].notified);
+           newlyNotified.forEach(async (n) => {
+             await supabase.from('lembretes').update({ notified: true }).eq('id', n.id);
+           });
+        }
         if (notificationToShow) {
           setActiveNotification(notificationToShow);
         }
@@ -137,7 +175,8 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
       pendingNotifiedLembretes,
       activeNotification,
       dismissNotification,
-      forceRender
+      forceRender,
+      refresh: fetchLembretes
     }}>
       {children}
     </LembretesContext.Provider>

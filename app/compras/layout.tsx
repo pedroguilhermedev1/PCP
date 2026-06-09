@@ -8,6 +8,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { LembretesProvider } from '@/components/lembretes/LembretesContext';
 import { LembretesNotification } from '@/components/lembretes/LembretesNotification';
+import { CronogramaNotificationProvider } from '@/components/cronograma/CronogramaNotificationContext';
+import { CronogramaNotificationUI } from '@/components/cronograma/CronogramaNotificationUI';
 
 export default function ComprasLayout({
   children,
@@ -30,14 +32,17 @@ export default function ComprasLayout({
       'francisco.edson',
     ];
 
-    const isAdmin = admins.includes(user || '');
+    const isAdmin = admins.some(admin => user?.includes(admin));
 
     console.log('É admin?', isAdmin);
 
     if (!isAdmin) {
       const allowedRoutes = [
+        '/compras/dashboard',
         '/compras/cronograma',
         '/compras/formularios',
+        '/compras/insumos', // allow insumos for non-admins
+        '/compras/fornecedores/cronograma' // allow fornecedores cronograma
       ];
 
       const hasAccess = allowedRoutes.some((route) =>
@@ -48,20 +53,23 @@ export default function ComprasLayout({
 
       if (!hasAccess) {
         console.log('REDIRECIONANDO...');
-        router.push('/compras/cronograma');
+        router.push('/compras/dashboard');
       }
     }
   }, [pathname, router]);
 
   return (
     <LembretesProvider>
-      <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50/50">
-          {children}
-        </main>
-      </div>
-      <LembretesNotification />
+      <CronogramaNotificationProvider>
+        <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden">
+          <Sidebar />
+          <main className="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50/50">
+            {children}
+          </main>
+        </div>
+        <LembretesNotification />
+        <CronogramaNotificationUI />
+      </CronogramaNotificationProvider>
     </LembretesProvider>
   );
 }

@@ -21,6 +21,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [currentUser, setCurrentUser] = useState("");
 
   useEffect(() => {
+    setFaturas(initialFaturas);
+  }, [initialFaturas]);
+
+  useEffect(() => {
     const savedMarca = localStorage.getItem(`selectedMarca_${categoria}`);
     if (savedMarca) {
       setSelectedMarca(savedMarca);
@@ -38,7 +42,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     localStorage.setItem(`selectedMarca_${categoria}`, marca);
   };
 
-  const marcas = ["COC", "IS", "NSE", "PSD", "Raízes", "SAE", "SAS"];
+  const marcas = ["SAS", "SAE", "IS", "EI", "Pleno", "MM", "GF", "PSD", "Positivo", "COC", "Geekie", "Nave"];
 
   const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria);
   const faturasFiltradas = selectedMarca 
@@ -138,7 +142,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-purple-900 mb-4">Gestão de Compras</h1>
         
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {marcas.map(marca => (
             <Button 
               key={marca} 

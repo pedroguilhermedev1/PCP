@@ -1,11 +1,11 @@
 import { InsumosModuleClient } from "./client";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
-export default async function InsumosMarcaPage({ params }: { params: Promise<{ marca: string }> }) {
+export default async function InsumosCDPage({ params }: { params: Promise<{ cd: string }> }) {
   const resolvedParams = await params;
   return (
     <RoleGuard allowedRoles={['ADMIN']}>
-      <InsumosModuleClient marca={resolvedParams.marca} />
+      <InsumosModuleClient cd={resolvedParams.cd} />
     </RoleGuard>
   );
 }
