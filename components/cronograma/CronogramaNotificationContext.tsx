@@ -47,7 +47,7 @@ export function CronogramaNotificationProvider({ children }: { children: ReactNo
         
         if (notDismissed.length > 0) {
           // Find if we already have an active one so we don't flash, or just take the newest
-          setActiveNotification(prev => prev || notDismissed[0]);
+          setActiveNotification((prev: any) => prev || notDismissed[0]);
         }
       } else {
         setUnseenCount(0);

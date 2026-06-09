@@ -8,16 +8,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { useCronogramaFornecedores, Entrega, EntregaStatus } from "@/hooks/useCronogramaFornecedores";
 
-type Entrega = {
-  id: string;
-  data: string;
-  fornecedor: string;
-  produto: string;
-  quantidade: string;
-  status: EntregaStatus;
-  observacao: string;
-  responsavel: string;
-};
+
 
 export function CronogramaClient() {
   const [currentDate, setCurrentDate] = useState(new Date());

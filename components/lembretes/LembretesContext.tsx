@@ -143,7 +143,7 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
         if (supabase) {
            const newlyNotified = novo.filter((n, idx) => n.notified && !lembretes[idx].notified);
            newlyNotified.forEach(async (n) => {
-             await supabase.from('lembretes').update({ notified: true }).eq('id', n.id);
+             await supabase?.from('lembretes').update({ notified: true }).eq('id', n.id);
            });
         }
         if (notificationToShow) {
