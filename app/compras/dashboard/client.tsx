@@ -336,68 +336,74 @@ export function DashboardClient({
                 <h2 className="text-lg font-bold text-zinc-800">Insumos e Movimentações</h2>
               </div>
               
-              <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-xl border border-zinc-200 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
+              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
                   <select 
                     value={insAno} 
                     onChange={(e) => setInsAno(e.target.value)}
-                    className="w-[90px] h-8 text-sm bg-white border border-zinc-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[55px]"
                   >
                     <option value="todos">Todos</option>
                     {anos.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 border-l pl-4 border-zinc-200">
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
                   <select 
                     value={insMes} 
                     onChange={(e) => setInsMes(e.target.value)}
-                    className="w-[120px] h-8 text-sm bg-white border border-zinc-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[85px]"
                   >
                     <option value="todos">Todos</option>
                     {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 border-l pl-4 border-zinc-200">
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Dia</span>
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Dia</span>
                   <select 
                     value={insDia} 
                     onChange={(e) => setInsDia(e.target.value)}
-                    className="w-[80px] h-8 text-sm bg-white border border-zinc-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[50px]"
                   >
                     <option value="todos">Todos</option>
                     {dias.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 border-l pl-4 border-zinc-200">
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
+
+                <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
+
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
                   <select 
                     value={insCD} 
                     onChange={(e) => setInsCD(e.target.value)}
-                    className="w-[120px] h-8 text-sm bg-white border border-zinc-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
                   >
                     <option value="todos">Todos</option>
                     {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 border-l pl-4 border-zinc-200">
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Marca</span>
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Marca</span>
                   <select 
                     value={insMarca} 
                     onChange={(e) => setInsMarca(e.target.value)}
-                    className="w-[120px] h-8 text-sm bg-white border border-zinc-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
                   >
                     <option value="todas">Todas</option>
                     {uniqueMarcas.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 border-l pl-4 border-zinc-200">
-                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Envio</span>
+
+                <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
+
+                <div className="flex items-center gap-2 bg-purple-50/80 px-3 py-1.5 rounded-lg border border-purple-200 shadow-sm transition-colors hover:bg-purple-100/80">
+                  <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Envio</span>
                   <select 
                     value={insTipoEnvio} 
                     onChange={(e) => setInsTipoEnvio(e.target.value)}
-                    className="w-[130px] h-8 text-sm font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                    className="text-sm font-bold bg-transparent outline-none text-purple-800 cursor-pointer"
                   >
                     <option value="Principal">Principal</option>
                     <option value="Complementar">Complementar</option>
