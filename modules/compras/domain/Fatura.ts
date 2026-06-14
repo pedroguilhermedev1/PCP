@@ -28,6 +28,8 @@ export interface Fatura {
   filial: string;
   conta_protheus?: string;
   desc_conta_protheus?: string;
+  conta_contabil?: string;
+  descricao_contabil?: string;
   tipo_documento: string;
   tipo_servico: string;
   codigo_servico: string;

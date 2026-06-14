@@ -41,7 +41,8 @@ function NovaMovimentacaoModal({
   editItem,
   insumos,
   refetch,
-  refreshMovs
+  refreshMovs,
+  tipoEnvio
 }: { 
   isOpen: boolean; 
   onClose: () => void;
