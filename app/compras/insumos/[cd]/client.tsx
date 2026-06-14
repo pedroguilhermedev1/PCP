@@ -53,6 +53,7 @@ function NovaMovimentacaoModal({
   insumos: any[];
   refetch: () => void;
   refreshMovs: () => void;
+  tipoEnvio: string;
 }) {
 
   const [item, setItem] = useState("");
@@ -141,7 +142,8 @@ function NovaMovimentacaoModal({
           quantidade: Number(quantidade),
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
-          observacoes: tipo === 'Saída' ? justificativa : undefined
+          observacoes: tipo === 'Saída' ? justificativa : undefined,
+          tipo_envio: tipoEnvio
         })
       });
 
@@ -271,12 +273,13 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
   const [editItem, setEditItem] = useState<any | null>(null);
+  const [activeTipoEnvio, setActiveTipoEnvio] = useState<'Principal' | 'Complementar'>('Principal');
   
-  const { movimentacoes, refresh } = useInsumosMovimentacoes(cd);
+  const { movimentacoes, refresh } = useInsumosMovimentacoes(cd, activeTipoEnvio);
   // Movimentacoes right now are fetched just by cd. We need to filter them by marca (empresa) locally if we want, or adjust useInsumosMovimentacoes.
   // Actually, we can just filter by insumos list below.
   
-  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, activeMarca);
+  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, activeMarca, activeTipoEnvio);
   
   const [currentUser, setCurrentUser] = useState("");
 
@@ -318,6 +321,7 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
         insumos={insumos}
         refetch={refetch}
         refreshMovs={refresh}
+        tipoEnvio={activeTipoEnvio}
       />
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -348,17 +352,18 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
           </div>
         )}
 
-        {/* Navegação / Tabs Internas */}
+        {/* Filtro Principal vs Complementar e Tabs Internas */}
         <div className="mb-6 border-b border-zinc-200">
-          <div className="flex gap-6">
-            <button
-              onClick={() => setActiveTab('insumos')}
-              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'insumos'
-                  ? 'border-purple-600 text-purple-700'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
-              }`}
-            >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex gap-6">
+              <button
+                onClick={() => setActiveTab('insumos')}
+                className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'insumos'
+                    ? 'border-purple-600 text-purple-700'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
               <div className="flex items-center gap-2">
                 <Box className="w-4 h-4" />
                 Insumos
@@ -390,6 +395,31 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                 Saídas
               </div>
             </button>
+            </div>
+
+            {/* Filtro Tipo de Envio */}
+            <div className="flex bg-zinc-100 p-1 rounded-lg self-start sm:mb-2">
+              <button
+                onClick={() => setActiveTipoEnvio('Principal')}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  activeTipoEnvio === 'Principal' 
+                    ? 'bg-white text-purple-700 shadow-sm' 
+                    : 'text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                Principal
+              </button>
+              <button
+                onClick={() => setActiveTipoEnvio('Complementar')}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  activeTipoEnvio === 'Complementar' 
+                    ? 'bg-white text-purple-700 shadow-sm' 
+                    : 'text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                Complementar
+              </button>
+            </div>
           </div>
         </div>
 
@@ -420,6 +450,7 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
                   <tr>
+                    <th className="px-6 py-4 font-semibold">ID Mov.</th>
                     <th className="px-6 py-4 font-semibold">Data / Hora</th>
                     <th className="px-6 py-4 font-semibold">Código</th>
                     <th className="px-6 py-4 font-semibold">Item</th>
@@ -444,6 +475,9 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                   {filteredMovs.length > 0 ? (
                     filteredMovs.map(mov => (
                       <tr key={mov.id} className="hover:bg-zinc-50/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap font-mono text-xs font-bold text-zinc-700">
+                          {mov.codigo_movimentacao || '-'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-zinc-500">
                           {format(new Date(mov.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </td>
@@ -495,7 +529,7 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 6 : 5) : (canEditOrDelete ? 9 : 8)} className="px-6 py-12 text-center text-zinc-500">
+                      <td colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 7 : 6) : (canEditOrDelete ? 10 : 9)} className="px-6 py-12 text-center text-zinc-500">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           {activeTab === 'entradas' ? <LogIn className="w-8 h-8 text-zinc-300" /> : <LogOut className="w-8 h-8 text-zinc-300" />}
                           <p>Nenhum registro de {activeTab} encontrado.</p>

@@ -170,6 +170,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <TableHeader>
                 <TableRow>
                   <TableHead>Fornecedor</TableHead>
+                  <TableHead>Local</TableHead>
                   <TableHead>Documento</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Vencimento</TableHead>
@@ -194,6 +195,9 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                             <span className="text-xs text-zinc-400 font-bold">{f.identificador || 'S/ ID'}</span>
                             <span>{f.fornecedor}</span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs text-zinc-600 bg-zinc-50">{f.filial || 'Indefinido'}</Badge>
                         </TableCell>
                         <TableCell>{f.numero_documento}</TableCell>
                         <TableCell className="text-right font-medium">
@@ -230,7 +234,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                       
                       {expandedFaturaId === f.id && (
                         <TableRow className="bg-zinc-50">
-                          <TableCell colSpan={canEditOrDelete ? 7 : 6} className="p-0 border-b">
+                          <TableCell colSpan={canEditOrDelete ? 8 : 7} className="p-0 border-b">
                             <div className="p-6">
                               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                                 <h3 className="text-lg font-bold text-purple-900">Detalhes da Compra</h3>
@@ -364,7 +368,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                 })}
                 {faturasOrdenadas.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={canEditOrDelete ? 7 : 6} className="text-center py-8 text-zinc-500">
+                    <TableCell colSpan={canEditOrDelete ? 8 : 7} className="text-center py-8 text-zinc-500">
                       Nenhuma fatura encontrada para {selectedMarca}
                     </TableCell>
                   </TableRow>

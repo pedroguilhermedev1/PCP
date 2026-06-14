@@ -4,6 +4,17 @@ export type StatusFatura = 'A vencer' | 'Vencido' | 'Pago';
 export type StatusPagamento = 'Em andamento' | 'Aguardando pagamento' | 'Pago' | 'ERP' | 'V360' | 'HEFLO';
 export type Etapa = 'Integração' | 'HEFLO' | 'ERP' | 'V360' | 'Aguardando pagamento' | 'Pago';
 
+export interface FaturaInsumo {
+  codigo: string;
+  item: string;
+  quantidade: number;
+  preco_unitario?: number;
+  valor_total?: number;
+  conta_protheus?: string;
+  desc_conta_protheus?: string;
+  observacoes?: string;
+}
+
 export interface Fatura {
   id: string;
   identificador?: string;
@@ -15,8 +26,8 @@ export interface Fatura {
   cnpj: string;
   centro_custo: string;
   filial: string;
-  conta_contabil?: string;
-  descricao_contabil?: string;
+  conta_protheus?: string;
+  desc_conta_protheus?: string;
   tipo_documento: string;
   tipo_servico: string;
   codigo_servico: string;
@@ -41,6 +52,8 @@ export interface Fatura {
   
   data_pagamento_real?: string;
   observacoes?: string;
+  
+  insumos?: FaturaInsumo[];
 
   possui_encargo: boolean;
   valor_encargo?: number;

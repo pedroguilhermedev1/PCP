@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Box, RefreshCw, AlertCircle, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 
 function NovoInsumoModal({ 
@@ -142,8 +142,24 @@ export function EstoqueInsumosTable({
   error: string | null; 
   refetch: () => void; 
 }) {
-  const cdTarget = (marca === 'sas' || marca === 'sae') ? `JDI-${marca.toUpperCase()}` : marca.toUpperCase();
+  const cdTarget = marca.toUpperCase();
   const [modalOpen, setModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('Todos');
+
+  const filteredInsumos = useMemo(() => {
+    return insumos.filter(item => {
+      if (statusFilter === 'Todos') return true;
+      const cmd = parseFloat(item.cmd) || 10;
+      const lt = parseFloat(item.lead_time) || 0;
+      const coberturaNum = cmd > 0 ? (item.estoque_real / cmd) : Infinity;
+      
+      let dynamicStatus = 'CONFORTÁVEL';
+      if (coberturaNum <= lt) dynamicStatus = 'CRÍTICO';
+      else if (coberturaNum > lt && coberturaNum <= (lt + 3)) dynamicStatus = 'ALERTA';
+      
+      return dynamicStatus === statusFilter;
+    });
+  }, [insumos, statusFilter]);
 
   return (
     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4 relative">
@@ -167,8 +183,21 @@ export function EstoqueInsumosTable({
       )}
       
       <div className="p-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
-        <div className="text-sm text-zinc-600 font-medium">Estoque Base <span className="font-bold text-zinc-900">{cdTarget.includes('-') ? cdTarget.split('-')[0] : cdTarget}</span></div>
+        <div className="text-sm text-zinc-600 font-medium">Estoque Base <span className="font-bold text-zinc-900">{cdTarget}</span></div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 mr-2">
+            <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status:</label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-md bg-white text-zinc-700 h-9 px-3 py-1 outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="Todos">Todos</option>
+              <option value="CONFORTÁVEL">Confortável</option>
+              <option value="ALERTA">Alerta</option>
+              <option value="CRÍTICO">Crítico</option>
+            </select>
+          </div>
           <Button 
             variant="ghost" 
             size="sm" 
@@ -189,20 +218,20 @@ export function EstoqueInsumosTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto w-full">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
+      <div className="overflow-auto w-full max-h-[calc(100vh-280px)] border-t border-zinc-200 custom-scrollbar">
+        <table className="w-full text-sm text-left relative border-collapse">
+          <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 sticky top-0 z-20 shadow-[0_1px_0_0_#e4e4e7]">
             <tr>
-              <th className="px-6 py-4 font-semibold">CD</th>
-              <th className="px-6 py-4 font-semibold">Código</th>
-              <th className="px-6 py-4 font-semibold">Item</th>
-              <th className="px-6 py-4 font-semibold text-center">Unidade</th>
-              <th className="px-6 py-4 font-semibold">Categoria</th>
-              <th className="px-6 py-4 font-semibold text-right">Lead Time</th>
-              <th className="px-6 py-4 font-semibold text-right">Est. Mín</th>
-              <th className="px-6 py-4 font-semibold text-right">Est. Real</th>
-              <th className="px-6 py-4 font-semibold text-right">Cobert. Dias</th>
-              <th className="px-6 py-4 font-semibold text-center">Status</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50">CD</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50">Código</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50">Item</th>
+              <th className="px-6 py-4 font-semibold text-center bg-zinc-50">Unidade</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50">Categoria</th>
+              <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Lead Time</th>
+              <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Est. Mín</th>
+              <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Est. Real</th>
+              <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Cobert. Dias</th>
+              <th className="px-6 py-4 font-semibold text-center bg-zinc-50">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200">
@@ -215,8 +244,8 @@ export function EstoqueInsumosTable({
                   </div>
                 </td>
               </tr>
-            ) : insumos.length > 0 ? (
-              insumos.map((item) => {
+            ) : filteredInsumos.length > 0 ? (
+              filteredInsumos.map((item) => {
                 const cmd = parseFloat(item.cmd) || 10;
                 const lt = parseFloat(item.lead_time) || 0;
                 const em = cmd * lt;

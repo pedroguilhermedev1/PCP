@@ -60,6 +60,7 @@ export function DashboardClient({
   const [insDia, setInsDia] = useState<string>("todos");
   const [insCD, setInsCD] = useState<string>("todos");
   const [insMarca, setInsMarca] = useState<string>("todas");
+  const [insTipoEnvio, setInsTipoEnvio] = useState<string>("Principal");
 
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -132,17 +133,21 @@ export function DashboardClient({
   // Filtered Insumos (Snapshots)
   const filteredInsumos = useMemo(() => {
     return insumos.filter(i => {
+      const tipo = i.tipo_envio || 'Principal';
+      if (tipo !== insTipoEnvio) return false;
       if (insCD !== "todos" && i.cd !== insCD) return false;
       if (insMarca !== "todas" && i.empresa !== insMarca) return false;
       return true;
     });
-  }, [insumos, insCD, insMarca]);
+  }, [insumos, insCD, insMarca, insTipoEnvio]);
 
   // Filtered Movimentações
   const filteredMovs = useMemo(() => {
     return movimentacoes.filter(m => {
+      const tipo = m.tipo_envio || 'Principal';
+      if (tipo !== insTipoEnvio) return false;
+      
       // Filtrar por CD / Marca
-      // As movimentacoes tem CD, mas podem não ter Marca nativamente em todas. Vamos cruzar com insumos permitidos
       if (insCD !== "todos" && m.cd !== insCD) return false;
       
       if (insMarca !== "todas") {
@@ -167,7 +172,7 @@ export function DashboardClient({
 
       return true;
     });
-  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD, insMarca]);
+  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD, insMarca, insTipoEnvio]);
 
 
   // Insumos Stats
@@ -385,6 +390,17 @@ export function DashboardClient({
                   >
                     <option value="todas">Todas</option>
                     {uniqueMarcas.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 border-l pl-4 border-zinc-200">
+                  <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Envio</span>
+                  <select 
+                    value={insTipoEnvio} 
+                    onChange={(e) => setInsTipoEnvio(e.target.value)}
+                    className="w-[130px] h-8 text-sm font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-md px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="Principal">Principal</option>
+                    <option value="Complementar">Complementar</option>
                   </select>
                 </div>
               </div>

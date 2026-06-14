@@ -15,12 +15,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const cd = searchParams.get('cd');
   const empresa = searchParams.get('empresa');
-  console.log('CD RECEBIDO:', cd, 'EMPRESA:', empresa);
+  const tipo_envio = searchParams.get('tipo_envio') || 'Principal';
+  console.log('CD RECEBIDO:', cd, 'EMPRESA:', empresa, 'TIPO_ENVIO:', tipo_envio);
 
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let query = supabase.from('estoque_insumos').select('*').order('item', { ascending: true });
+  let query = supabase.from('estoque_insumos').select('*').eq('tipo_envio', tipo_envio).order('item', { ascending: true });
 
   if (cd) {
     query = query.eq('cd', cd);
@@ -45,12 +46,13 @@ export async function POST(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let { cd, empresa, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil } = body;
+  let { cd, empresa, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio } = body;
 
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
   cmd = parseFloat(cmd) || 10;
   const lt = parseFloat(lead_time) || 0;
+  const t_envio = tipo_envio || 'Principal';
   
   if (!status) {
     const cobertura = cmd > 0 ? (estoque_real / cmd) : Infinity;
@@ -66,7 +68,8 @@ export async function POST(request: Request) {
   }
 
   const result = await supabase.from('estoque_insumos').insert([
-    { cd, empresa, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil }
+    { cd, empresa, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio: 'Principal' },
+    { cd, empresa, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio: 'Complementar' }
   ]);
 
   if (result.error) {
@@ -96,17 +99,17 @@ export async function PATCH(request: Request) {
     query = query.ilike('empresa', empresa);
   }
   
-  const { data: currentItems, error: searchError } = await query.limit(1);
+  const { data: currentItems, error: searchError } = await query;
   
   if (searchError || !currentItems || currentItems.length === 0) {
     return NextResponse.json({ error: 'Item não encontrado no estoque' }, { status: 404 });
   }
 
-  const currentItem = currentItems[0];
-  const oldReal = currentItem.estoque_real || 0;
+  // Pegamos o estoque atual de qualquer um (devem ser iguais, mas pegamos do primeiro)
+  const oldReal = currentItems[0].estoque_real || 0;
   const quant = parseInt(quantidade) || 0;
   
-  // 2. Calcula novo valor
+  // 2. Calcula novo valor de estoque físico unificado
   let newReal = oldReal;
   if (tipo === 'Entrada') {
     newReal += quant;
@@ -114,26 +117,29 @@ export async function PATCH(request: Request) {
     newReal -= quant;
   }
 
-  // Se a saída deixar negativo, a gente permite ou não? Vamos permitir e mudar status
-  const currentCmd = parseFloat(currentItem.cmd) || 10;
-  const currentLt = parseFloat(currentItem.lead_time) || 0;
+  // 3. Atualiza TODAS as linhas do mesmo insumo e CD recalculando status separadamente
+  let finalStatusToReturn = 'OK';
 
-  const cobertura = currentCmd > 0 ? (newReal / currentCmd) : Infinity;
+  for (const row of currentItems) {
+    const currentCmd = parseFloat(row.cmd) || 10;
+    const currentLt = parseFloat(row.lead_time) || 0;
 
-  let novoStatus = 'OK';
-  if (cobertura <= currentLt) novoStatus = 'CRÍTICO';
-  else if (cobertura > currentLt && cobertura <= (currentLt + 3)) novoStatus = 'ALERTA';
-  else novoStatus = 'CONFORTÁVEL';
+    const cobertura = currentCmd > 0 ? (newReal / currentCmd) : Infinity;
 
-  // 3. Atualiza
-  const { error: updateError } = await supabase
-    .from('estoque_insumos')
-    .update({ estoque_real: newReal, status: novoStatus })
-    .eq('id', currentItem.id);
+    let novoStatus = 'CONFORTÁVEL';
+    if (cobertura <= currentLt) novoStatus = 'CRÍTICO';
+    else if (cobertura > currentLt && cobertura <= (currentLt + 3)) novoStatus = 'ALERTA';
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    // Salva o status calculado da primeira linha só pra retornar no log, mas cada linha terá o seu salvo correto no DB
+    if (row.id === currentItems[0].id) {
+      finalStatusToReturn = novoStatus;
+    }
+
+    await supabase
+      .from('estoque_insumos')
+      .update({ estoque_real: newReal, status: novoStatus })
+      .eq('id', row.id);
   }
 
-  return NextResponse.json({ success: true, new_real: newReal, new_status: novoStatus });
+  return NextResponse.json({ success: true, new_real: newReal, new_status: finalStatusToReturn });
 }

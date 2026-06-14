@@ -49,7 +49,10 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       data_emissao: faturaData.data_emissao || null,
       data_recebimento: faturaData.data_recebimento || null,
       data_vencimento: faturaData.data_vencimento || null,
-      valor: faturaData.valor || 0
+      valor: faturaData.valor || 0,
+      conta_protheus: faturaData.conta_protheus || null,
+      desc_conta_protheus: faturaData.desc_conta_protheus || null,
+      insumos: faturaData.insumos || []
     };
     
     // Convert undefined to null or omit, as supabase expects certain formats

@@ -109,42 +109,93 @@ export function RelatoriosClient() {
     
     if (activeTab === 'fornecedores') {
       exportData = data.map(d => ({
-        "Nome": d.nome,
+        "Nome Fantasia": d.nome,
+        "Razão Social": d.razao_social || '-',
         "CNPJ": d.cnpj,
         "Contato": d.contato,
-        "Data Cadastro": new Date(d.created_at).toLocaleDateString('pt-BR'),
-        "Status": d.status
+        "Email": d.email || '-',
+        "Telefone": d.telefone || '-',
+        "Status": d.status,
+        "Data Cadastro": d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '-'
       }));
     } else if (activeTab === 'produtos') {
       exportData = data.map(d => ({
         "Código": d.codigo,
         "Descrição": d.item,
+        "Empresa/Marca": d.empresa || '-',
+        "Filial/CD": d.cd || '-',
         "Categoria": d.categoria || 'Geral',
         "Conta Contábil": d.conta_contabil || '-',
         "Descrição Contábil": d.descricao_contabil || '-',
+        "Tipo de Envio (Indicadores)": d.tipo_envio || 'Principal',
         "Estoque Atual": d.estoque_real,
         "Estoque Mínimo": d.estoque_minimo,
-        "Data Cadastro": new Date(d.data_cadastro).toLocaleDateString('pt-BR')
+        "Data Cadastro": d.data_cadastro ? new Date(d.data_cadastro).toLocaleDateString('pt-BR') : '-'
       }));
     } else if (activeTab === 'movimentacoes') {
       exportData = data.map(d => ({
-        "ID": d.identificador,
-        "Data": new Date(d.data_hora).toLocaleDateString('pt-BR'),
+        "ID Movimentação": d.codigo_movimentacao || '-',
+        "ID Geral": d.identificador,
+        "Tipo de Envio": d.tipo_envio || 'Principal',
+        "ID Fatura Vinculada": d.fatura_id || '-',
+        "Data": d.data_hora ? new Date(d.data_hora).toLocaleDateString('pt-BR') : '-',
         "Tipo": d.tipo,
+        "CD/Filial": d.cd || '-',
+        "Marca": d.empresa || '-',
         "Produto": d.item,
+        "Código Produto": d.codigo || '-',
         "Quantidade": d.quantidade,
+        "Setor": d.setor || '-',
         "Usuário Responsável": d.usuario,
+        "Status": d.status || 'CONFIRMADO',
         "Observações": d.observacoes || '-'
       }));
     } else if (activeTab === 'faturas') {
-      exportData = data.map(d => ({
-        "Número da Fatura": d.numero_documento,
-        "Fornecedor": d.fornecedor,
-        "Data de Emissão": d.data_emissao,
-        "Data de Vencimento": d.data_vencimento,
-        "Valor": d.valor,
-        "Status": d.status_pagamento
-      }));
+      data.forEach(d => {
+        const baseFatura = {
+          "Número da Fatura": d.numero_documento,
+          "Identificador": d.identificador || '-',
+          "Fornecedor": d.fornecedor,
+          "CNPJ": d.cnpj || '-',
+          "Data de Emissão": d.data_emissao,
+          "Data de Vencimento": d.data_vencimento,
+          "Data Real Pgto": d.data_pagamento_real || '-',
+          "Valor Total Fatura": d.valor,
+          "Status Pagamento": d.status_pagamento,
+          "Categoria": d.categoria,
+          "Centro de Custo": d.centro_custo || '-',
+          "Filial": d.filial || '-',
+          "Marca": d.marca || '-',
+          "Tipo Documento": d.tipo_documento || '-',
+          "Responsável": d.responsavel || '-'
+        };
+
+        if (d.categoria === 'Material' && d.insumos && d.insumos.length > 0) {
+          d.insumos.forEach((ins: any) => {
+            exportData.push({
+              ...baseFatura,
+              "Insumo": ins.item,
+              "Código Insumo": ins.codigo,
+              "Quantidade": ins.quantidade,
+              "Preço Unit.": ins.preco_unitario || '-',
+              "Valor Total Insumo": ins.valor_total || '-',
+              "Conta Protheus": ins.conta_protheus || '-',
+              "Desc. Conta Protheus": ins.desc_conta_protheus || '-',
+            });
+          });
+        } else {
+          exportData.push({
+            ...baseFatura,
+            "Insumo": '-',
+            "Código Insumo": '-',
+            "Quantidade": '-',
+            "Preço Unit.": '-',
+            "Valor Total Insumo": '-',
+            "Conta Protheus": d.conta_protheus || d.conta_contabil || '-',
+            "Desc. Conta Protheus": d.desc_conta_protheus || d.descricao_contabil || '-',
+          });
+        }
+      });
     }
 
     const ws = XLSX.utils.json_to_sheet(exportData);

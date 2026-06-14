@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Fatura, calcularStatus, calcularEtapa } from "@/modules/compras/domain/Fatura";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
+import { supabase } from "@/lib/supabase";
 
 interface FaturaModalProps {
   isOpen: boolean;
@@ -27,6 +29,39 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
     status_pagamento: 'Em andamento',
     ...fatura,
   });
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [contasProtheus, setContasProtheus] = useState<{conta_protheus: string, desc_conta_protheus: string}[]>([]);
+  const [availableInsumos, setAvailableInsumos] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      supabase?.from('contas_protheus').select('*').then(({data}) => {
+        if (data) setContasProtheus(data);
+      });
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && categoriaAtiva === 'Material' && formData.marca) {
+      supabase?.from('estoque_insumos')
+        .select('codigo, item, cd, empresa')
+        .eq('empresa', formData.marca)
+        .then(({data}) => {
+          if (data) {
+            if (formData.filial) {
+              const filialNorm = formData.filial.toLowerCase().trim();
+              const filtered = data.filter(d => d.cd.toLowerCase().includes(filialNorm) || filialNorm.includes(d.cd.toLowerCase()));
+              setAvailableInsumos(filtered.length > 0 ? filtered : data);
+            } else {
+              setAvailableInsumos(data);
+            }
+          }
+        });
+    } else {
+      setAvailableInsumos([]);
+    }
+  }, [isOpen, categoriaAtiva, formData.marca, formData.filial]);
 
   if (!isOpen) return null;
 
@@ -51,6 +86,18 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (categoriaAtiva === 'Material' && formData.insumos && formData.insumos.length > 0) {
+      const somaInsumos = formData.insumos.reduce((acc, curr) => acc + (curr.valor_total || 0), 0);
+      const valorFatura = formData.valor || 0;
+      
+      if (Math.abs(somaInsumos - valorFatura) > 0.01) {
+        setFormError(`A soma dos insumos (R$ ${somaInsumos.toFixed(2)}) não confere com o valor total da fatura (R$ ${valorFatura.toFixed(2)}).`);
+        return;
+      }
+    }
+
     const finalFatura = {
       ...formData,
       id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${categoriaAtiva}`,
@@ -73,6 +120,12 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
         <div className="overflow-y-auto flex-1 p-6 bg-zinc-50/50">
           <form id="fatura-form" onSubmit={handleSubmit} className="space-y-6">
             
+            {formError && (
+              <div className="p-4 bg-red-50 text-red-700 text-sm font-medium rounded-lg border border-red-200">
+                {formError}
+              </div>
+            )}
+
             <section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -160,17 +213,206 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-zinc-100 pt-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Conta Contábil *</label>
-                  <Input value={formData.conta_contabil || ""} onChange={handleInputChange('conta_contabil')} placeholder="Ex: 1.1.2.01" required />
+              {categoriaAtiva === 'Serviço' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-zinc-100 pt-4">
+                  <div className="space-y-2 relative">
+                    <label className="text-sm font-medium">Conta Protheus *</label>
+                    <Input 
+                      value={formData.conta_protheus || ""} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData(prev => ({...prev, conta_protheus: val}));
+                        const match = contasProtheus.find(c => c.conta_protheus === val);
+                        if (match) setFormData(prev => ({...prev, conta_protheus: match.conta_protheus, desc_conta_protheus: match.desc_conta_protheus}));
+                      }}
+                      list="contas-protheus-list"
+                      placeholder="Ex: 102030" 
+                      required={categoriaAtiva === 'Serviço'} 
+                    />
+                    <datalist id="contas-protheus-list">
+                      {contasProtheus.map(c => (
+                        <option key={c.conta_protheus} value={c.conta_protheus}>{c.desc_conta_protheus}</option>
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="space-y-2 relative">
+                    <label className="text-sm font-medium">Descrição Conta Protheus *</label>
+                    <Input 
+                      value={formData.desc_conta_protheus || ""} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData(prev => ({...prev, desc_conta_protheus: val}));
+                        const match = contasProtheus.find(c => c.desc_conta_protheus === val);
+                        if (match) setFormData(prev => ({...prev, conta_protheus: match.conta_protheus, desc_conta_protheus: match.desc_conta_protheus}));
+                      }}
+                      list="desc-contas-protheus-list"
+                      placeholder="Descrição da conta" 
+                      required={categoriaAtiva === 'Serviço'} 
+                    />
+                    <datalist id="desc-contas-protheus-list">
+                      {contasProtheus.map(c => (
+                        <option key={c.conta_protheus} value={c.desc_conta_protheus}>{c.conta_protheus}</option>
+                      ))}
+                    </datalist>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Descrição Contábil *</label>
-                  <Input value={formData.descricao_contabil || ""} onChange={handleInputChange('descricao_contabil')} placeholder="Descrição da conta" required />
-                </div>
-              </div>
+              )}
             </section>
+
+            {categoriaAtiva === 'Material' && (
+              <section className="space-y-4 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-semibold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
+                    Insumos da Compra
+                  </h3>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const current = formData.insumos || [];
+                    setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1, observacoes: '' }]});
+                  }} className="gap-2">
+                    <Plus className="w-4 h-4" /> Adicionar Insumo
+                  </Button>
+                </div>
+
+                {(!formData.insumos || formData.insumos.length === 0) ? (
+                  <div className="text-sm text-zinc-500 text-center py-4 bg-zinc-50 rounded-lg border border-zinc-100">
+                    Nenhum insumo adicionado a esta fatura. (Preencha a Marca para listar os insumos corretamente)
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {formData.insumos.map((ins, index) => (
+                      <div key={index} className="flex flex-col gap-4 p-4 bg-zinc-50 rounded-lg border border-zinc-200">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                          <div className="space-y-2 md:col-span-4 relative">
+                            <label className="text-xs font-medium text-zinc-700">Insumo</label>
+                            <Input 
+                              list={`insumos-list-${index}`}
+                              value={ins.item} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const match = availableInsumos.find(a => a.item === val);
+                                const newInsumos = [...(formData.insumos || [])];
+                                newInsumos[index] = { ...ins, item: val, codigo: match ? match.codigo : ins.codigo };
+                                setFormData({ ...formData, insumos: newInsumos });
+                              }} 
+                              placeholder="Selecione o insumo..." 
+                              required
+                            />
+                            <datalist id={`insumos-list-${index}`}>
+                              {availableInsumos.map((a, i) => {
+                                const rawCd = a.cd.includes('-') ? a.cd.split('-')[0] : a.cd;
+                                const cdFormatted = rawCd.charAt(0).toUpperCase() + rawCd.slice(1).toLowerCase();
+                                return (
+                                  <option key={`${a.codigo}-${i}`} value={a.item}>{a.codigo} ({cdFormatted})</option>
+                                );
+                              })}
+                            </datalist>
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Código (Auto)</label>
+                            <Input value={ins.codigo} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Qtd</label>
+                            <Input type="number" min="1" value={ins.quantidade} onChange={(e) => {
+                              const newInsumos = [...(formData.insumos || [])];
+                              const qtd = parseFloat(e.target.value) || 0;
+                              const preco = newInsumos[index].preco_unitario || 0;
+                              newInsumos[index].quantidade = qtd;
+                              newInsumos[index].valor_total = parseFloat((qtd * preco).toFixed(2));
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }} required />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Preço Unit.</label>
+                            <Input type="number" step="0.01" value={ins.preco_unitario || ""} onChange={(e) => {
+                              const newInsumos = [...(formData.insumos || [])];
+                              const preco = parseFloat(e.target.value) || 0;
+                              const qtd = newInsumos[index].quantidade || 0;
+                              newInsumos[index].preco_unitario = preco;
+                              newInsumos[index].valor_total = parseFloat((qtd * preco).toFixed(2));
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }} required placeholder="R$ 0,00" />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Total (Auto)</label>
+                            <Input value={ins.valor_total || ""} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" placeholder="R$ 0,00" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                          <div className="space-y-2 md:col-span-3 relative">
+                            <label className="text-xs font-medium text-zinc-700">Conta Protheus</label>
+                            <Input 
+                              value={ins.conta_protheus || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const newInsumos = [...(formData.insumos || [])];
+                                newInsumos[index].conta_protheus = val;
+                                const match = contasProtheus.find(c => c.conta_protheus === val);
+                                if (match) {
+                                  newInsumos[index].conta_protheus = match.conta_protheus;
+                                  newInsumos[index].desc_conta_protheus = match.desc_conta_protheus;
+                                }
+                                setFormData({ ...formData, insumos: newInsumos });
+                              }}
+                              list={`contas-insumo-list-${index}`}
+                              placeholder="Ex: 102030" 
+                              required 
+                            />
+                            <datalist id={`contas-insumo-list-${index}`}>
+                              {contasProtheus.map(c => (
+                                <option key={c.conta_protheus} value={c.conta_protheus}>{c.desc_conta_protheus}</option>
+                              ))}
+                            </datalist>
+                          </div>
+                          <div className="space-y-2 md:col-span-4 relative">
+                            <label className="text-xs font-medium text-zinc-700">Desc. Conta Protheus</label>
+                            <Input 
+                              value={ins.desc_conta_protheus || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const newInsumos = [...(formData.insumos || [])];
+                                newInsumos[index].desc_conta_protheus = val;
+                                const match = contasProtheus.find(c => c.desc_conta_protheus === val);
+                                if (match) {
+                                  newInsumos[index].conta_protheus = match.conta_protheus;
+                                  newInsumos[index].desc_conta_protheus = match.desc_conta_protheus;
+                                }
+                                setFormData({ ...formData, insumos: newInsumos });
+                              }}
+                              list={`desc-contas-insumo-list-${index}`}
+                              placeholder="Descrição..." 
+                              required 
+                            />
+                            <datalist id={`desc-contas-insumo-list-${index}`}>
+                              {contasProtheus.map(c => (
+                                <option key={c.conta_protheus} value={c.desc_conta_protheus}>{c.conta_protheus}</option>
+                              ))}
+                            </datalist>
+                          </div>
+                          <div className="space-y-2 md:col-span-4">
+                            <label className="text-xs font-medium text-zinc-700">Observações</label>
+                            <Input value={ins.observacoes || ""} onChange={(e) => {
+                              const newInsumos = [...(formData.insumos || [])];
+                              newInsumos[index].observacoes = e.target.value;
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }} placeholder="Info extra..." />
+                          </div>
+                          <div className="md:col-span-1 pb-1 flex justify-end">
+                            <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                              const newInsumos = formData.insumos!.filter((_, i) => i !== index);
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
               <div className="space-y-4 p-4 border border-blue-400 bg-blue-50 rounded-lg shadow-sm">
