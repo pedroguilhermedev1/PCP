@@ -26,6 +26,7 @@ export interface Fatura {
   cnpj: string;
   centro_custo: string;
   filial: string;
+  cd?: string;
   conta_protheus?: string;
   desc_conta_protheus?: string;
   conta_contabil?: string;

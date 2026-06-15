@@ -19,6 +19,7 @@ export function RelatoriosClient() {
   
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('Todas');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -47,23 +48,11 @@ export function RelatoriosClient() {
       if (!supabase) throw new Error("Supabase não inicializado.");
 
       if (activeTab === 'fornecedores') {
-        // Fornecedores are saved in localStorage
-        const dataFornecedoresRaw = localStorage.getItem('fornecedores_db');
-        let parsed = [];
-        try {
-          parsed = dataFornecedoresRaw ? JSON.parse(dataFornecedoresRaw) : [];
-        } catch (e) {
-          console.error("Erro no parse fornecedores");
-        }
-        const filtered = parsed.filter((f: any) => {
-          if (!f.created_at) return false;
-          const dt = f.created_at.substring(0, 10);
-          return dt >= dataInicial && dt <= dataFinal;
-        });
-        setData(filtered);
-        if (filtered.length === 0) {
-          toast.info("Nenhum dado encontrado para o período.");
-        }
+        query = supabase.from('fornecedores')
+          .select('*')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .order('created_at', { ascending: false });
       } else if (activeTab === 'produtos') {
         query = supabase.from('estoque_insumos')
           .select('*')
@@ -77,18 +66,42 @@ export function RelatoriosClient() {
           .lte('data_hora', end)
           .order('data_hora', { ascending: false });
       } else if (activeTab === 'faturas') {
-        query = supabase.from('faturas')
+        let q = supabase.from('faturas')
           .select('*')
           .gte('data_emissao', dataInicial)
           .lte('data_emissao', dataFinal)
           .order('data_emissao', { ascending: false });
+        if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
+        if (categoriaFiltro === 'Serviços') q = q.like('id', '%__CAT__Serviço%');
+        query = q;
       }
 
       if (query) {
         const { data: result, error } = await query;
         if (error) throw new Error(error.message);
-        setData(result || []);
-        if (result?.length === 0) {
+        
+        let finalData = result || [];
+        if (activeTab === 'faturas') {
+          finalData = finalData.map(d => ({
+            ...d,
+            categoria: d.id.includes('__CAT__Material') ? 'Material' : 'Serviço'
+          }));
+
+          let flattened = [];
+          for (const d of finalData) {
+            if (d.categoria === 'Material' && d.insumos && d.insumos.length > 0) {
+              for (const ins of d.insumos) {
+                flattened.push({ ...d, _insumo: ins });
+              }
+            } else {
+              flattened.push({ ...d, _insumo: null });
+            }
+          }
+          finalData = flattened;
+        }
+
+        setData(finalData);
+        if (finalData.length === 0) {
           toast.info("Nenhum dado encontrado para o período.");
         }
       }
@@ -109,13 +122,12 @@ export function RelatoriosClient() {
     
     if (activeTab === 'fornecedores') {
       exportData = data.map(d => ({
-        "Nome Fantasia": d.nome,
+        "Nome Fantasia": d.nome_fantasia || d.nome,
         "Razão Social": d.razao_social || '-',
         "CNPJ": d.cnpj,
         "Contato": d.contato,
         "Email": d.email || '-',
         "Telefone": d.telefone || '-',
-        "Status": d.status,
         "Data Cadastro": d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '-'
       }));
     } else if (activeTab === 'produtos') {
@@ -146,6 +158,7 @@ export function RelatoriosClient() {
         "Código Produto": d.codigo || '-',
         "Quantidade": d.quantidade,
         "Setor": d.setor || '-',
+        "Conta Protheus": d.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-',
         "Usuário Responsável": d.usuario,
         "Status": d.status || 'CONFIRMADO',
         "Observações": d.observacoes || '-'
@@ -170,18 +183,16 @@ export function RelatoriosClient() {
           "Responsável": d.responsavel || '-'
         };
 
-        if (d.categoria === 'Material' && d.insumos && d.insumos.length > 0) {
-          d.insumos.forEach((ins: any) => {
-            exportData.push({
-              ...baseFatura,
-              "Insumo": ins.item,
-              "Código Insumo": ins.codigo,
-              "Quantidade": ins.quantidade,
-              "Preço Unit.": ins.preco_unitario || '-',
-              "Valor Total Insumo": ins.valor_total || '-',
-              "Conta Protheus": ins.conta_protheus || '-',
-              "Desc. Conta Protheus": ins.desc_conta_protheus || '-',
-            });
+        if (d._insumo) {
+          exportData.push({
+            ...baseFatura,
+            "Insumo": d._insumo.item,
+            "Código Insumo": d._insumo.codigo,
+            "Quantidade": d._insumo.quantidade,
+            "Preço Unit.": d._insumo.preco_unitario || '-',
+            "Valor Total Insumo": d._insumo.valor_total || '-',
+            "Conta Protheus": d._insumo.conta_protheus || '-',
+            "Desc. Conta Protheus": d._insumo.desc_conta_protheus || '-',
           });
         } else {
           exportData.push({
@@ -251,6 +262,20 @@ export function RelatoriosClient() {
                 <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Final</label>
                 <Input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="w-[160px]" />
               </div>
+              {activeTab === 'faturas' && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Tipo</label>
+                  <select 
+                    value={categoriaFiltro} 
+                    onChange={(e) => setCategoriaFiltro(e.target.value)} 
+                    className="flex h-9 w-[160px] rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                  >
+                    <option value="Todas">Todas</option>
+                    <option value="Materiais">Materiais</option>
+                    <option value="Serviços">Serviços</option>
+                  </select>
+                </div>
+              )}
               <Button onClick={handleSearch} disabled={loading} className="bg-purple-700 hover:bg-purple-800 text-white gap-2">
                 {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Gerar Relatório
@@ -301,8 +326,11 @@ export function RelatoriosClient() {
                         <TableHead>Fornecedor</TableHead>
                         <TableHead>Dt Emissão</TableHead>
                         <TableHead>Dt Vencimento</TableHead>
-                        <TableHead>Valor</TableHead>
+                        <TableHead>Valor Fatura</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Insumo</TableHead>
+                        <TableHead>Qtd</TableHead>
+                        <TableHead>Valor Insumo</TableHead>
                       </>
                     )}
                   </TableRow>
@@ -359,6 +387,9 @@ export function RelatoriosClient() {
                             <TableCell>{new Date(d.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
                             <TableCell>R$ {d.valor?.toFixed(2)}</TableCell>
                             <TableCell>{d.status_pagamento}</TableCell>
+                            <TableCell>{d._insumo ? d._insumo.item : '-'}</TableCell>
+                            <TableCell>{d._insumo ? d._insumo.quantidade : '-'}</TableCell>
+                            <TableCell>{d._insumo ? `R$ ${d._insumo.valor_total?.toFixed(2)}` : '-'}</TableCell>
                           </>
                         )}
                       </TableRow>

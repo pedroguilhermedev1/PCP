@@ -31,7 +31,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async saveFatura(fatura: Fatura): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, ...faturaData } = fatura as any;
+    const { categoria, identificador, ...faturaData } = fatura as any;
     
     // Ensure text fields are explicitly populated to avoid not-null constraint errors
     const sanitizedData = {

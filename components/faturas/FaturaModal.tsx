@@ -49,9 +49,9 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
         .eq('empresa', formData.marca)
         .then(({data}) => {
           if (data) {
-            if (formData.filial) {
-              const filialNorm = formData.filial.toLowerCase().trim();
-              const filtered = data.filter(d => d.cd.toLowerCase().includes(filialNorm) || filialNorm.includes(d.cd.toLowerCase()));
+            if (formData.cd) {
+              const cdNorm = formData.cd.toLowerCase().trim();
+              const filtered = data.filter(d => d.cd.toLowerCase().includes(cdNorm) || cdNorm.includes(d.cd.toLowerCase()));
               setAvailableInsumos(filtered.length > 0 ? filtered : data);
             } else {
               setAvailableInsumos(data);
@@ -61,7 +61,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
     } else {
       setAvailableInsumos([]);
     }
-  }, [isOpen, categoriaAtiva, formData.marca, formData.filial]);
+  }, [isOpen, categoriaAtiva, formData.marca, formData.cd]);
 
   if (!isOpen) return null;
 
@@ -178,7 +178,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Marca</label>
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
@@ -195,6 +195,16 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Filial</label>
                   <Input value={formData.filial || ""} onChange={handleInputChange('filial')} placeholder="Filial" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">CD / Unidade</label>
+                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    value={formData.cd || ""} onChange={handleSelectChange('cd')} required={categoriaAtiva === 'Material'}>
+                    <option value="" disabled>Selecione um CD</option>
+                    {["Fortaleza", "Jundiaí", "NSE", "Curitiba", "Ribeirão Preto", "Raízes"].map(cd => (
+                      <option key={cd} value={cd}>{cd}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

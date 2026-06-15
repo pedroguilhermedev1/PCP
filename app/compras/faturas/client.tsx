@@ -140,7 +140,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         }}
       />
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-purple-900 mb-4">Gestão de Compras</h1>
+        <h1 className="text-2xl font-bold text-purple-900 mb-4">Gestão de Faturas</h1>
         
         <div className="flex flex-wrap gap-2">
           {marcas.map(marca => (
@@ -158,10 +158,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       {selectedMarca && (
         <>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
-            <h2 className="text-lg font-semibold text-purple-900">Compras - {selectedMarca}</h2>
+            <h2 className="text-lg font-semibold text-purple-900">Faturas - {selectedMarca}</h2>
             <Button onClick={handleCreate}>
               <Plus className="w-4 h-4 mr-2" />
-              Nova Compra
+              Nova Fatura
             </Button>
           </div>
 
@@ -237,11 +237,11 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                           <TableCell colSpan={canEditOrDelete ? 8 : 7} className="p-0 border-b">
                             <div className="p-6">
                               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                                <h3 className="text-lg font-bold text-purple-900">Detalhes da Compra</h3>
+                                <h3 className="text-lg font-bold text-purple-900">Detalhes da Fatura</h3>
                                 {canEditOrDelete && (
                                   <Button variant="secondary" size="sm" onClick={() => handleEdit(f)}>
                                     <Edit className="w-4 h-4 mr-2" />
-                                    Editar Compra
+                                    Editar Fatura
                                   </Button>
                                 )}
                               </div>

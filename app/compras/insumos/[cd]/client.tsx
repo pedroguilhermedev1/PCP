@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { EstoqueInsumosTable } from "@/components/estoque/EstoqueInsumosTable";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { deleteMovimentacaoAction } from "@/app/compras/faturas/actions";
 
 const cd_marcas_map: Record<string, string[]> = {
   fortaleza: ['SAS', 'SAE', 'IS'],
@@ -275,6 +276,7 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
   const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
   const [editItem, setEditItem] = useState<any | null>(null);
   const [activeTipoEnvio, setActiveTipoEnvio] = useState<'Principal' | 'Complementar'>('Principal');
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
   const { movimentacoes, refresh } = useInsumosMovimentacoes(cd, activeTipoEnvio);
   // Movimentacoes right now are fetched just by cd. We need to filter them by marca (empresa) locally if we want, or adjust useInsumosMovimentacoes.
@@ -306,8 +308,28 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
     return list;
   }, [movimentacoes, activeTab, insumos]);
 
+  const handleDeleteMov = async (id: string) => {
+    try {
+      await deleteMovimentacaoAction(id);
+      toast.success("Registro excluído com sucesso.");
+      refresh();
+    } catch (error) {
+      toast.error("Erro ao excluir o registro.");
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <ConfirmDeleteModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={() => {
+          if (itemToDelete) {
+            handleDeleteMov(itemToDelete);
+            setItemToDelete(null);
+          }
+        }}
+      />
       <NovaMovimentacaoModal 
         isOpen={modalOpen} 
         onClose={() => {
@@ -453,6 +475,8 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                   <tr>
                     <th className="px-6 py-4 font-semibold">ID Mov.</th>
                     <th className="px-6 py-4 font-semibold">Data / Hora</th>
+                    <th className="px-6 py-4 font-semibold">Nº Fatura</th>
+                    <th className="px-6 py-4 font-semibold">Conta Protheus</th>
                     <th className="px-6 py-4 font-semibold">Código</th>
                     <th className="px-6 py-4 font-semibold">Item</th>
                     <th className="px-6 py-4 font-semibold text-center">Qtd</th>
@@ -481,6 +505,12 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-zinc-500">
                           {format(new Date(mov.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </td>
+                        <td className="px-6 py-4 text-zinc-600 font-medium">
+                          {mov.fatura_id ? mov.fatura_id.split('__')[0] : '-'}
+                        </td>
+                        <td className="px-6 py-4 text-zinc-600">
+                          {mov.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-'}
                         </td>
                         <td className="px-6 py-4 font-mono text-zinc-600">
                           {mov.codigo || '-'}
@@ -523,6 +553,9 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               {/* Não permite editar nem excluir registros imutáveis */}
+                              <Button variant="ghost" size="icon" onClick={() => setItemToDelete(mov.id)}>
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
                             </div>
                           </td>
                         )}
@@ -530,7 +563,7 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 7 : 6) : (canEditOrDelete ? 10 : 9)} className="px-6 py-12 text-center text-zinc-500">
+                      <td colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 9 : 8) : (canEditOrDelete ? 12 : 11)} className="px-6 py-12 text-center text-zinc-500">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           {activeTab === 'entradas' ? <LogIn className="w-8 h-8 text-zinc-300" /> : <LogOut className="w-8 h-8 text-zinc-300" />}
                           <p>Nenhum registro de {activeTab} encontrado.</p>
