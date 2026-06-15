@@ -14,6 +14,7 @@ export type InsumoMovimentacao = {
   data_hora: string;
   cd: string;
   setor?: string;
+  fatura_id?: string;
   observacoes?: string;
   status: 'PENDENTE' | 'CONFIRMADO' | 'REJEITADO';
 };
