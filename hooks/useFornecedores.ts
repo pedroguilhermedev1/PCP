@@ -14,6 +14,8 @@ export type Fornecedor = {
   email: string;
   categoria: string;
   observacoes: string;
+  codigo_fornecedor?: string;
+  tipo_servico?: string;
   created_at: string;
 };
 

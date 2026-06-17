@@ -12,7 +12,8 @@ export interface FaturaInsumo {
   valor_total?: number;
   conta_protheus?: string;
   desc_conta_protheus?: string;
-  observacoes?: string;
+  cd?: string;
+  codigo_fornecedor?: string;
 }
 
 export interface Fatura {
@@ -24,6 +25,7 @@ export interface Fatura {
   
   fornecedor: string;
   cnpj: string;
+  codigo_fornecedor?: string;
   centro_custo: string;
   filial: string;
   cd?: string;

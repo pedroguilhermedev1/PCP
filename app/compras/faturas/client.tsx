@@ -42,7 +42,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     localStorage.setItem(`selectedMarca_${categoria}`, marca);
   };
 
-  const marcas = ["SAS", "SAE", "IS", "EI", "Pleno", "MM", "GF", "PSD", "Positivo", "COC", "Geekie", "Nave"];
+  const marcas = ["SAS", "SAE", "IS", "EI", "Pleno", "MM", "GF", "NSE"];
 
   const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria);
   const faturasFiltradas = selectedMarca 

@@ -31,7 +31,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async saveFatura(fatura: Fatura): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, identificador, ...faturaData } = fatura as any;
+    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, ...faturaData } = fatura as any;
     
     // Ensure text fields are explicitly populated to avoid not-null constraint errors
     const sanitizedData = {
@@ -69,7 +69,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async updateFatura(id: string, fatura: Partial<Fatura>): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, ...faturaData } = fatura as any;
+    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, ...faturaData } = fatura as any;
 
     const { error } = await supabase
       .from('faturas')

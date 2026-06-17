@@ -32,28 +32,36 @@ function FornecedorModal({
   const [email, setEmail] = useState("");
   const [categoria, setCategoria] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [codigoFornecedor, setCodigoFornecedor] = useState("");
+  const [tipoServico, setTipoServico] = useState("");
 
   useEffect(() => {
-    if (editItem) {
-      setCnpj(editItem.cnpj || "");
-      setRazaoSocial(editItem.razao_social || "");
-      setNomeFantasia(editItem.nome_fantasia || "");
-      setContato(editItem.contato || "");
-      setTelefone(editItem.telefone || "");
-      setEmail(editItem.email || "");
-      setCategoria(editItem.categoria || "");
-      setObservacoes(editItem.observacoes || "");
-    } else {
-      setCnpj("");
-      setRazaoSocial("");
-      setNomeFantasia("");
-      setContato("");
-      setTelefone("");
-      setEmail("");
-      setCategoria("");
-      setObservacoes("");
+    if (isOpen) {
+      if (editItem) {
+        setCnpj(editItem.cnpj || "");
+        setRazaoSocial(editItem.razao_social || "");
+        setNomeFantasia(editItem.nome_fantasia || "");
+        setContato(editItem.contato || "");
+        setTelefone(editItem.telefone || "");
+        setEmail(editItem.email || "");
+        setCategoria(editItem.categoria || "");
+        setObservacoes(editItem.observacoes || "");
+        setCodigoFornecedor(editItem.codigo_fornecedor || "");
+        setTipoServico(editItem.tipo_servico || "");
+      } else {
+        setCnpj("");
+        setRazaoSocial("");
+        setNomeFantasia("");
+        setContato("");
+        setTelefone("");
+        setEmail("");
+        setCategoria("");
+        setObservacoes("");
+        setCodigoFornecedor("");
+        setTipoServico("");
+      }
     }
-  }, [editItem]);
+  }, [isOpen, editItem]);
 
   if (!isOpen) return null;
 
@@ -69,6 +77,8 @@ function FornecedorModal({
       email,
       categoria,
       observacoes,
+      codigo_fornecedor: codigoFornecedor,
+      tipo_servico: tipoServico,
       tipo
     };
 
@@ -113,6 +123,16 @@ function FornecedorModal({
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Categoria / Segmento</label>
               <Input value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Ex: Limpeza, Gráfica, TI..." />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-zinc-700">Cód. Fornecedor</label>
+              <Input value={codigoFornecedor} onChange={e => setCodigoFornecedor(e.target.value)} placeholder="Ex: 000100" />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-zinc-700">Tipo de {tipo}</label>
+              <Input value={tipoServico} onChange={e => setTipoServico(e.target.value)} placeholder={`Ex: ${tipo} de consumo`} />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -173,11 +193,12 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
   const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
 
   const filteredFornecedores = useMemo(() => {
-    return fornecedores.filter(f => 
+    const list = fornecedores.filter(f => 
       f.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.nome_fantasia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.cnpj.includes(searchTerm)
     );
+    return list.sort((a, b) => a.razao_social.localeCompare(b.razao_social));
   }, [fornecedores, searchTerm]);
 
   return (
@@ -204,6 +225,14 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
           if (isEdit) {
             updateFornecedor(fornecedor.id, fornecedor);
           } else {
+            const isDuplicate = fornecedores.some(f => 
+              f.cnpj === fornecedor.cnpj && 
+              f.razao_social.toLowerCase() === fornecedor.razao_social.toLowerCase()
+            );
+            if (isDuplicate) {
+              toast.error("Fornecedor já cadastrado com os mesmos dados exatos (CNPJ e Razão Social).");
+              return;
+            }
             addFornecedor(fornecedor);
           }
         }}

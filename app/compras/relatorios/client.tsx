@@ -32,7 +32,7 @@ export function RelatoriosClient() {
   }, [activeTab]);
 
   const handleSearch = async () => {
-    if (!dataInicial || !dataFinal) {
+    if (activeTab !== 'fornecedores' && (!dataInicial || !dataFinal)) {
       toast.error("Selecione a data inicial e final.");
       return;
     }
@@ -48,11 +48,10 @@ export function RelatoriosClient() {
       if (!supabase) throw new Error("Supabase não inicializado.");
 
       if (activeTab === 'fornecedores') {
-        query = supabase.from('fornecedores')
-          .select('*')
-          .gte('created_at', start)
-          .lte('created_at', end)
-          .order('created_at', { ascending: false });
+        let q = supabase.from('fornecedores').select('*').order('created_at', { ascending: false });
+        if (categoriaFiltro === 'Materiais') q = q.eq('tipo', 'Material');
+        if (categoriaFiltro === 'Serviços') q = q.eq('tipo', 'Serviço');
+        query = q;
       } else if (activeTab === 'produtos') {
         query = supabase.from('estoque_insumos')
           .select('*')
@@ -112,13 +111,23 @@ export function RelatoriosClient() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (data.length === 0) {
       toast.warning("Não há dados para exportar.");
       return;
     }
     
     let exportData: any[] = [];
+    
+    // Fetch contas protheus map for descriptions
+    let contasMap: Record<string, string> = {};
+    if (activeTab === 'movimentacoes') {
+      if (!supabase) return;
+      const { data: contas } = await supabase.from('contas_protheus').select('conta_protheus, desc_conta_protheus');
+      if (contas) {
+        contas.forEach(c => contasMap[c.conta_protheus] = c.desc_conta_protheus);
+      }
+    }
     
     if (activeTab === 'fornecedores') {
       exportData = data.map(d => ({
@@ -131,38 +140,42 @@ export function RelatoriosClient() {
         "Data Cadastro": d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '-'
       }));
     } else if (activeTab === 'produtos') {
-      exportData = data.map(d => ({
+      exportData = data.filter(d => d.tipo_envio === 'Principal' || !d.tipo_envio).map(d => ({
         "Código": d.codigo,
         "Descrição": d.item,
         "Empresa/Marca": d.empresa || '-',
-        "Filial/CD": d.cd || '-',
+        "CD": d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-',
         "Categoria": d.categoria || 'Geral',
         "Conta Contábil": d.conta_contabil || '-',
         "Descrição Contábil": d.descricao_contabil || '-',
-        "Tipo de Envio (Indicadores)": d.tipo_envio || 'Principal',
+        "Tipo de Envio (Indicadores)": 'Principal',
         "Estoque Atual": d.estoque_real,
         "Estoque Mínimo": d.estoque_minimo,
         "Data Cadastro": d.data_cadastro ? new Date(d.data_cadastro).toLocaleDateString('pt-BR') : '-'
       }));
     } else if (activeTab === 'movimentacoes') {
-      exportData = data.map(d => ({
-        "ID Movimentação": d.codigo_movimentacao || '-',
-        "ID Geral": d.identificador,
-        "Tipo de Envio": d.tipo_envio || 'Principal',
-        "ID Fatura Vinculada": d.fatura_id || '-',
-        "Data": d.data_hora ? new Date(d.data_hora).toLocaleDateString('pt-BR') : '-',
-        "Tipo": d.tipo,
-        "CD/Filial": d.cd || '-',
-        "Marca": d.empresa || '-',
-        "Produto": d.item,
-        "Código Produto": d.codigo || '-',
-        "Quantidade": d.quantidade,
-        "Setor": d.setor || '-',
-        "Conta Protheus": d.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-',
-        "Usuário Responsável": d.usuario,
-        "Status": d.status || 'CONFIRMADO',
-        "Observações": d.observacoes || '-'
-      }));
+      exportData = data.map(d => {
+        const contaExtracted = d.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-';
+        return {
+          "ID Movimentação": d.codigo_movimentacao || '-',
+          "ID Geral": d.identificador,
+          "Tipo de Envio": d.tipo_envio || 'Principal',
+          "ID Fatura Vinculada": d.fatura_id || '-',
+          "Data": d.data_hora ? new Date(d.data_hora).toLocaleDateString('pt-BR') : '-',
+          "Tipo": d.tipo,
+          "CD": d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-',
+          "Marca": d.empresa || '-',
+          "Produto": d.item,
+          "Código Produto": d.codigo || '-',
+          "Quantidade": d.quantidade,
+          "Setor": d.setor || '-',
+          "Conta Protheus": contaExtracted,
+          "Descrição Conta Protheus": contasMap[contaExtracted] || '-',
+          "Usuário Responsável": d.usuario,
+          "Status": d.status || 'CONFIRMADO',
+          "Observações": d.observacoes || '-'
+        };
+      });
     } else if (activeTab === 'faturas') {
       data.forEach(d => {
         const baseFatura = {
@@ -179,6 +192,7 @@ export function RelatoriosClient() {
           "Centro de Custo": d.centro_custo || '-',
           "Filial": d.filial || '-',
           "Marca": d.marca || '-',
+          "CD": d.cd || d._insumo?.cd || d.insumos?.[0]?.cd || '-',
           "Tipo Documento": d.tipo_documento || '-',
           "Responsável": d.responsavel || '-'
         };
@@ -254,15 +268,19 @@ export function RelatoriosClient() {
 
           <div className="p-6">
             <div className="flex flex-col md:flex-row gap-4 items-end mb-6 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Inicial</label>
-                <Input type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} className="w-[160px]" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Final</label>
-                <Input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="w-[160px]" />
-              </div>
-              {activeTab === 'faturas' && (
+              {activeTab !== 'fornecedores' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Inicial</label>
+                    <Input type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} className="w-[160px]" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Final</label>
+                    <Input type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} className="w-[160px]" />
+                  </div>
+                </>
+              )}
+              {(activeTab === 'faturas' || activeTab === 'fornecedores') && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Tipo</label>
                   <select 

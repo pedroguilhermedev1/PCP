@@ -25,7 +25,7 @@ export async function saveFaturaAction(fatura: Object) {
         cd: formatCd(faturaData.cd || ''),
         quantidade: insumo.quantidade,
         usuario: faturaData.responsavel || 'Sistema Faturas',
-        observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} - ${insumo.observacoes || ''} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
+        observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
         status: 'PENDENTE',
         fatura_id: faturaData.id,
         tipo_envio: 'Principal',

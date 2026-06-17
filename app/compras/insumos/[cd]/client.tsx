@@ -13,23 +13,18 @@ import { EstoqueInsumosTable } from "@/components/estoque/EstoqueInsumosTable";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { deleteMovimentacaoAction } from "@/app/compras/faturas/actions";
+import { formatUserName } from "@/lib/utils";
 
 const cd_marcas_map: Record<string, string[]> = {
   fortaleza: ['SAS', 'SAE', 'IS'],
   jundiai: ['SAS', 'SAE', 'IS'],
-  nse: ['EI', 'Pleno', 'MM', 'GF'],
-  curitiba: ['PSD', 'Positivo'],
-  'ribeirao-preto': ['COC'],
-  raizes: ['Geekie', 'Nave']
+  nse: ['NSE']
 };
 
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
   jundiai: 'Jundiaí',
-  nse: 'NSE',
-  curitiba: 'Curitiba',
-  'ribeirao-preto': 'Ribeirão Preto',
-  raizes: 'Raízes'
+  nse: 'NSE'
 };
 
 function NovaMovimentacaoModal({ 
@@ -43,7 +38,8 @@ function NovaMovimentacaoModal({
   insumos,
   refetch,
   refreshMovs,
-  tipoEnvio
+  tipoEnvio,
+  responsavelOriginal
 }: { 
   isOpen: boolean; 
   onClose: () => void;
@@ -56,6 +52,7 @@ function NovaMovimentacaoModal({
   refetch: () => void;
   refreshMovs: () => void;
   tipoEnvio: string;
+  responsavelOriginal: string;
 }) {
 
   const [item, setItem] = useState("");
@@ -89,7 +86,7 @@ function NovaMovimentacaoModal({
   }, [isOpen, editItem, responsavel]);
 
   const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
-  const isPrivileged = responsavel.startsWith('pedro.queiroz') || responsavel.startsWith('francisco.edson');
+  const isPrivileged = responsavelOriginal.startsWith('pedro.queiroz') || responsavelOriginal.startsWith('francisco.edson');
   const setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
 
   useEffect(() => {
@@ -285,15 +282,17 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
   const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, activeMarca, activeTipoEnvio);
   
   const [currentUser, setCurrentUser] = useState("");
+  const [currentUserOriginal, setCurrentUserOriginal] = useState("");
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) {
-      setCurrentUser(user);
+      setCurrentUser(formatUserName(user));
+      setCurrentUserOriginal(user);
     }
   }, []);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+  const canEditOrDelete = !currentUserOriginal || currentUserOriginal.startsWith('pedro.queiroz') || currentUserOriginal.startsWith('francisco.edson');
 
   const cdName = cd_names_map[cd] || cd.toUpperCase();
 
@@ -340,6 +339,7 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
         marca={activeMarca} 
         cd={cd}
         responsavel={currentUser || 'Usuário Indefinido'} 
+        responsavelOriginal={currentUserOriginal}
         editItem={editItem}
         insumos={insumos}
         refetch={refetch}

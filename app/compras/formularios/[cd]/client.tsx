@@ -4,6 +4,7 @@ import { Box, CheckCircle2, AlertCircle } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatUserName } from "@/lib/utils";
 import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
 import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,19 +13,13 @@ import { Badge } from "@/components/ui/badge";
 const cd_marcas_map: Record<string, string[]> = {
   fortaleza: ['SAS', 'SAE', 'IS'],
   jundiai: ['SAS', 'SAE', 'IS'],
-  nse: ['EI', 'Pleno', 'MM', 'GF'],
-  curitiba: ['PSD', 'Positivo'],
-  'ribeirao-preto': ['COC'],
-  raizes: ['Geekie', 'Nave']
+  nse: ['NSE']
 };
 
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
   jundiai: 'Jundiaí',
-  nse: 'NSE',
-  curitiba: 'Curitiba',
-  'ribeirao-preto': 'Ribeirão Preto',
-  raizes: 'Raízes'
+  nse: 'NSE'
 };
 
 export function FormulariosModuleClient({ cd }: { cd: string }) {
@@ -50,10 +45,14 @@ export function FormulariosModuleClient({ cd }: { cd: string }) {
 
   const cdName = cd_names_map[cd] || cd.toUpperCase();
 
+  const [responsavelOriginal, setResponsavelOriginal] = useState("");
+
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) {
-      setResponsavel(user);
+      const formatted = formatUserName(user);
+      setResponsavel(formatted);
+      setResponsavelOriginal(user);
     } else {
       setResponsavel("Usuário não identificado");
     }
@@ -64,7 +63,7 @@ export function FormulariosModuleClient({ cd }: { cd: string }) {
   }, [responsavel]);
 
   const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
-  const isPrivileged = responsavel.startsWith('pedro.queiroz') || responsavel.startsWith('francisco.edson');
+  const isPrivileged = responsavelOriginal.startsWith('pedro.queiroz') || responsavelOriginal.startsWith('francisco.edson');
   const setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
 
   useEffect(() => {

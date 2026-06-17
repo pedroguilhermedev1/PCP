@@ -54,21 +54,6 @@ const sidebarItems = [
         href: "/compras/insumos/nse",
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
-      {
-        title: "Curitiba",
-        href: "/compras/insumos/curitiba",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "Ribeirão Preto",
-        href: "/compras/insumos/ribeirao-preto",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "Raízes",
-        href: "/compras/insumos/raizes",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
     ]
   },
   {
@@ -106,21 +91,6 @@ const sidebarItems = [
       {
         title: "NSE",
         href: "/compras/formularios/nse",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "Curitiba",
-        href: "/compras/formularios/curitiba",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "Ribeirão Preto",
-        href: "/compras/formularios/ribeirao-preto",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
-      },
-      {
-        title: "Raízes",
-        href: "/compras/formularios/raizes",
         icon: <FileText className="w-4 h-4 flex-shrink-0" />,
       },
     ]

@@ -28,6 +28,9 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
     possui_encargo: false,
     status_pagamento: 'Em andamento',
     ...fatura,
+    cd: fatura?.cd || fatura?.insumos?.find(i => (i as any)._meta)?.cd || fatura?.insumos?.[0]?.cd || '',
+    codigo_fornecedor: fatura?.codigo_fornecedor || fatura?.insumos?.find(i => (i as any)._meta)?.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
+    insumos: fatura?.insumos?.filter(i => !(i as any)._meta) || [],
   });
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -98,9 +101,16 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
       }
     }
 
+    const currentInsumos = formData.insumos || [];
+    const metaObj = { _meta: true, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor };
+    
     const finalFatura = {
       ...formData,
       id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${categoriaAtiva}`,
+      insumos: [
+        ...currentInsumos.map(ins => ({ ...ins, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor })),
+        metaObj
+      ],
     } as Fatura;
     onSave(finalFatura);
   };
@@ -129,13 +139,13 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
             <section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">Fornecedor</label>
                   <Input list="fornecedores-list" value={formData.fornecedor || ""} onChange={(e) => {
                     const value = e.target.value;
                     const fornecedorMatch = fornecedores.find(f => (f.nome_fantasia || f.razao_social) === value);
                     if (fornecedorMatch) {
-                      setFormData(prev => ({ ...prev, fornecedor: value, cnpj: fornecedorMatch.cnpj }));
+                      setFormData(prev => ({ ...prev, fornecedor: value, cnpj: fornecedorMatch.cnpj, codigo_fornecedor: fornecedorMatch.codigo_fornecedor }));
                     } else {
                       setFormData(prev => ({ ...prev, fornecedor: value }));
                     }
@@ -148,7 +158,11 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">CNPJ</label>
-                  <Input value={formData.cnpj || ""} onChange={handleInputChange('cnpj')} placeholder="00.000.000/0000-00" />
+                  <Input value={formData.cnpj || ""} onChange={handleInputChange('cnpj')} placeholder="00.000.000/0000-00" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Cód. Fornecedor</label>
+                  <Input value={formData.codigo_fornecedor || ""} onChange={handleInputChange('codigo_fornecedor')} placeholder="Código do fornecedor" />
                 </div>
               </div>
 
@@ -170,11 +184,11 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Nº Documento</label>
-                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} />
+                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Valor Total</label>
-                  <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+                  <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} required />
                 </div>
               </div>
 
@@ -182,15 +196,15 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Marca</label>
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
-                    value={formData.marca || marcaAtiva} onChange={handleSelectChange('marca')}>
-                    {["COC", "IS", "NSE", "PSD", "Raízes", "SAE", "SAS"].map(m => (
+                    value={formData.marca || marcaAtiva} onChange={handleSelectChange('marca')} required>
+                    {["SAS", "SAE", "IS", "EI", "Pleno", "MM", "GF", "NSE"].map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Centro de Custo</label>
-                  <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" />
+                  <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Filial</label>
@@ -199,9 +213,9 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 <div className="space-y-2">
                   <label className="text-sm font-medium">CD / Unidade</label>
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
-                    value={formData.cd || ""} onChange={handleSelectChange('cd')} required={categoriaAtiva === 'Material'}>
+                    value={formData.cd || ""} onChange={handleSelectChange('cd')} required>
                     <option value="" disabled>Selecione um CD</option>
-                    {["Fortaleza", "Jundiaí", "NSE", "Curitiba", "Ribeirão Preto", "Raízes"].map(cd => (
+                    {["Fortaleza", "Jundiaí", "NSE"].map(cd => (
                       <option key={cd} value={cd}>{cd}</option>
                     ))}
                   </select>
@@ -215,11 +229,11 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tipo de {categoriaAtiva}</label>
-                  <Input value={formData.tipo_servico || ""} onChange={handleInputChange('tipo_servico')} placeholder={`Tipo de ${categoriaAtiva}`} />
+                  <Input value={formData.tipo_servico || ""} onChange={handleInputChange('tipo_servico')} placeholder={`Tipo de ${categoriaAtiva}`} required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cód. {categoriaAtiva}</label>
-                  <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" />
+                  <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" required />
                 </div>
               </div>
 
@@ -277,7 +291,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                   </h3>
                   <Button type="button" variant="outline" size="sm" onClick={() => {
                     const current = formData.insumos || [];
-                    setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1, observacoes: '' }]});
+                    setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1 }]});
                   }} className="gap-2">
                     <Plus className="w-4 h-4" /> Adicionar Insumo
                   </Button>
@@ -349,8 +363,8 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                          <div className="space-y-2 md:col-span-3 relative">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end mt-4">
+                          <div className="space-y-2 md:col-span-5 relative">
                             <label className="text-xs font-medium text-zinc-700">Conta Protheus</label>
                             <Input 
                               value={ins.conta_protheus || ""} 
@@ -375,7 +389,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                               ))}
                             </datalist>
                           </div>
-                          <div className="space-y-2 md:col-span-4 relative">
+                          <div className="space-y-2 md:col-span-6 relative">
                             <label className="text-xs font-medium text-zinc-700">Desc. Conta Protheus</label>
                             <Input 
                               value={ins.desc_conta_protheus || ""} 
@@ -399,14 +413,6 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                                 <option key={c.conta_protheus} value={c.desc_conta_protheus}>{c.conta_protheus}</option>
                               ))}
                             </datalist>
-                          </div>
-                          <div className="space-y-2 md:col-span-4">
-                            <label className="text-xs font-medium text-zinc-700">Observações</label>
-                            <Input value={ins.observacoes || ""} onChange={(e) => {
-                              const newInsumos = [...(formData.insumos || [])];
-                              newInsumos[index].observacoes = e.target.value;
-                              setFormData({ ...formData, insumos: newInsumos });
-                            }} placeholder="Info extra..." />
                           </div>
                           <div className="md:col-span-1 pb-1 flex justify-end">
                             <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
