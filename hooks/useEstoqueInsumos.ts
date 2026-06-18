@@ -14,6 +14,7 @@ export type EstoqueInsumo = {
   estoque_real: number;
   status: string;
   categoria: string;
+  empresa?: string;
 };
 
 export function useEstoqueInsumos(filtro_cd?: string, filtro_empresa?: string, tipo_envio?: string) {
