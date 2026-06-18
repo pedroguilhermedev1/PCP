@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { getUserRole } from "@/lib/roles";
 
 type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas';
 
@@ -16,6 +17,7 @@ export function RelatoriosClient() {
   const [activeTab, setActiveTab] = useState<ReportType>('fornecedores');
   const [dataInicial, setDataInicial] = useState<string>('');
   const [dataFinal, setDataFinal] = useState<string>('');
+  const [userRole, setUserRole] = useState<string | null>(null);
   
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +32,20 @@ export function RelatoriosClient() {
     setData([]);
     setPage(1);
   }, [activeTab]);
+
+  useEffect(() => {
+    const user = localStorage.getItem('pcp_user');
+    if (user) {
+      const role = getUserRole(user);
+      setUserRole(role);
+      if (role === 'OPERACIONAL') {
+        setActiveTab('produtos');
+      }
+    }
+  }, []);
+
+  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas'];
+  const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
     if (activeTab !== 'fornecedores' && (!dataInicial || !dataFinal)) {
@@ -179,7 +195,7 @@ export function RelatoriosClient() {
     } else if (activeTab === 'faturas') {
       data.forEach(d => {
         const baseFatura = {
-          "Número da Fatura": d.numero_documento,
+          "Nota Fiscal": d.numero_documento,
           "Identificador": d.identificador || '-',
           "Fornecedor": d.fornecedor,
           "CNPJ": d.cnpj || '-',
@@ -194,6 +210,8 @@ export function RelatoriosClient() {
           "Marca": d.marca || '-',
           "CD": d.cd || d._insumo?.cd || d.insumos?.[0]?.cd || '-',
           "Tipo Documento": d.tipo_documento || '-',
+          "Tipo de Serviço": d.tipo_servico || '-',
+          "Conta Contábil": d.conta_contabil || '-',
           "Responsável": d.responsavel || '-'
         };
 
@@ -251,7 +269,7 @@ export function RelatoriosClient() {
         <div className="bg-white border border-zinc-200 rounded-xl shadow-sm">
           
           <div className="border-b border-zinc-200 px-4 py-2 flex flex-wrap gap-2 bg-zinc-50/50 rounded-t-xl">
-            {['fornecedores', 'produtos', 'movimentacoes', 'faturas'].map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as ReportType)}
@@ -261,7 +279,7 @@ export function RelatoriosClient() {
                     : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                 }`}
               >
-                {tab === 'movimentacoes' ? 'Movimentações' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -340,11 +358,13 @@ export function RelatoriosClient() {
                     )}
                     {activeTab === 'faturas' && (
                       <>
-                        <TableHead>Nº Fatura</TableHead>
+                        <TableHead>Nota Fiscal</TableHead>
                         <TableHead>Fornecedor</TableHead>
                         <TableHead>Dt Emissão</TableHead>
                         <TableHead>Dt Vencimento</TableHead>
                         <TableHead>Valor Fatura</TableHead>
+                        <TableHead>Tipo Serviço</TableHead>
+                        <TableHead>Conta Contábil</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Insumo</TableHead>
                         <TableHead>Qtd</TableHead>
@@ -404,6 +424,8 @@ export function RelatoriosClient() {
                             <TableCell>{new Date(d.data_emissao).toLocaleDateString('pt-BR')}</TableCell>
                             <TableCell>{new Date(d.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
                             <TableCell>R$ {d.valor?.toFixed(2)}</TableCell>
+                            <TableCell>{d.tipo_servico || '-'}</TableCell>
+                            <TableCell>{d.conta_contabil || '-'}</TableCell>
                             <TableCell>{d.status_pagamento}</TableCell>
                             <TableCell>{d._insumo ? d._insumo.item : '-'}</TableCell>
                             <TableCell>{d._insumo ? d._insumo.quantidade : '-'}</TableCell>

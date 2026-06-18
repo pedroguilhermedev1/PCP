@@ -159,7 +159,7 @@ export function Sidebar() {
   const visibleItems = isAdmin
   ? sidebarItems
   : sidebarItems.filter(item =>
-      item.title === 'DASHBOARD' || item.title === 'FORMULÁRIOS' || item.title === 'CRONOGRAMA'
+      item.title === 'DASHBOARD' || item.title === 'FORMULÁRIOS' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
     )
 
   useEffect(() => {

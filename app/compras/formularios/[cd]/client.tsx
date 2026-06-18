@@ -10,11 +10,13 @@ import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useSearchParams } from "next/navigation";
+import { getUserRole } from "@/lib/roles";
 
 const cd_marcas_map: Record<string, string[]> = {
   fortaleza: ['SAS', 'SAE', 'IS'],
   jundiai: ['SAS', 'SAE', 'IS'],
-  nse: ['NSE']
+  nse: ['NSE'],
+  todas: ['SAS', 'SAE', 'IS', 'NSE']
 };
 
 const cd_names_map: Record<string, string> = {
@@ -25,12 +27,15 @@ const cd_names_map: Record<string, string> = {
 
 function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const marcas = cd_marcas_map[cd] || [];
-  const [activeMarca, setActiveMarca] = useState(marcas[0] || '');
+  const [marcaSelecionada, setMarcaSelecionada] = useState("");
   
-  const { insumos } = useEstoqueInsumos(cd, activeMarca);
+  const { insumos } = useEstoqueInsumos(cd);
   const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd);
 
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
+
+  const [filterCD, setFilterCD] = useState("TODOS");
+  const [filterMarca, setFilterMarca] = useState("TODAS");
 
   const searchParams = useSearchParams();
 
@@ -42,10 +47,12 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   }, [searchParams]);
 
   const [responsavel, setResponsavel] = useState("");
-  const [tipo, setTipo] = useState<'Entrada' | 'Saída'>('Entrada');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const tipo = 'Saída';
   const [codigo, setCodigo] = useState("");
   const [item, setItem] = useState("");
   const [quantidade, setQuantidade] = useState<number | "">("");
+  const [identificador, setIdentificador] = useState("");
   const [setor, setSetor] = useState("");
   const [solicitante, setSolicitante] = useState("");
   const [justificativa, setJustificativa] = useState("");
@@ -63,6 +70,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       const formatted = formatUserName(user);
       setResponsavel(formatted);
       setResponsavelOriginal(user);
+      setUserRole(getUserRole(user));
     } else {
       setResponsavel("Usuário não identificado");
     }
@@ -78,13 +86,19 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   useEffect(() => {
     // When item changes, set the code automatically.
-    const selected = insumos.find(i => i.item === item);
+    const selected = insumos.find(i => i.item === item && i.empresa === marcaSelecionada);
     if (selected) {
       setCodigo(selected.codigo);
     } else {
       setCodigo("");
     }
-  }, [item, insumos]);
+  }, [item, insumos, marcaSelecionada]);
+
+  useEffect(() => {
+    // Clear item when marca changes
+    setItem("");
+    setCodigo("");
+  }, [marcaSelecionada]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,7 +106,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
     e.preventDefault();
     setErrorMsg("");
     
-    if (!item || !quantidade || !tipo) {
+    if (!item || !quantidade || !tipo || !marcaSelecionada) {
       setErrorMsg("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -113,7 +127,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           codigo,
           item,
           cd,
-          empresa: activeMarca,
+          empresa: marcaSelecionada,
+          identificador: identificador || undefined,
           quantidade: Number(quantidade),
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
@@ -135,10 +150,11 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       setItem("");
       setCodigo("");
       setQuantidade("");
+      setIdentificador("");
       setSetor("");
       setSolicitante("");
       setJustificativa("");
-      setTipo("Entrada");
+      setMarcaSelecionada("");
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Erro inesperado ao registrar movimentação.');
@@ -167,21 +183,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           </div>
         </div>
 
-        {/* Navegação Superior de Marcas */}
-        {marcas.length > 0 && (
-          <div className="mb-6 flex gap-2">
-            {marcas.map(marca => (
-              <Button 
-                key={marca}
-                variant={activeMarca === marca ? "default" : "outline"}
-                className={activeMarca === marca ? "bg-purple-700 hover:bg-purple-800 text-white" : "text-zinc-600 hover:text-purple-700 border-zinc-200"}
-                onClick={() => setActiveMarca(marca)}
-              >
-                {marca.toUpperCase()}
-              </Button>
-            ))}
-          </div>
-        )}
+        {/* Navegação Superior Removida */}
         
         <div className="flex gap-4 border-b border-transparent">
           <button 
@@ -195,9 +197,9 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             onClick={() => setActiveTab('PENDENTES')}
           >
             APROVAÇÕES PENDENTES
-            {filteredMovs.filter(m => m.status === 'PENDENTE').length > 0 && (
+            {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
               <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                {filteredMovs.filter(m => m.status === 'PENDENTE').length}
+                {movimentacoes.filter(m => m.status === 'PENDENTE').length}
               </span>
             )}
           </button>
@@ -224,7 +226,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
               <h2 className="text-lg font-bold text-zinc-800">
-                NOVA SOLICITAÇÃO - {activeMarca.toUpperCase()}
+                NOVA SOLICITAÇÃO
               </h2>
               <p className="text-sm text-zinc-500 mt-1">
                 Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
@@ -241,19 +243,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                       <div className="flex bg-zinc-100 p-1 rounded-md">
                         <button
                           type="button"
-                          onClick={() => setTipo('Entrada')}
-                          className={`flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors ${
-                            tipo === 'Entrada' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                          }`}
-                        >
-                          Entrada
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setTipo('Saída')}
-                          className={`flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors ${
-                            tipo === 'Saída' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                          }`}
+                          disabled
+                          className="flex-1 py-1.5 text-sm font-medium rounded-sm transition-colors bg-white text-zinc-900 shadow-sm"
                         >
                           Saída
                         </button>
@@ -274,22 +265,40 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                     </div>
                   </div>
 
+                  {/* Entrada fields removed */}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Marca / Empresa *</label>
+                      <select 
+                        required
+                        value={marcaSelecionada}
+                        onChange={(e) => setMarcaSelecionada(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2"
+                      >
+                        <option value="" disabled>Selecione a marca...</option>
+                        {marcas.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-zinc-700">Item / Material *</label>
                       <select 
                         required
                         value={item}
                         onChange={(e) => setItem(e.target.value)}
+                        disabled={!marcaSelecionada}
                         className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <option value="" disabled>Selecione um item...</option>
-                        {insumos.map(mat => (
+                        <option value="" disabled>{marcaSelecionada ? "Selecione um item..." : "Selecione uma marca primeiro"}</option>
+                        {insumos.filter(i => i.empresa === marcaSelecionada).map(mat => (
                           <option key={mat.id} value={mat.item}>{mat.item}</option>
                         ))}
                       </select>
                     </div>
-                    
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-zinc-700">Código</label>
                       <Input 
@@ -302,8 +311,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                     </div>
                   </div>
 
-                  {tipo === 'Saída' && (
-                    <>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-zinc-700">Setor Responsável *</label>
@@ -338,8 +346,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                           onChange={(e) => setJustificativa(e.target.value)}
                         />
                       </div>
-                    </>
-                  )}
+
 
                 </div>
 
@@ -351,23 +358,28 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               </form>
             ) : (
               <div className="p-0 overflow-x-auto">
+
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
+                      <TableHead>Nota Fiscal</TableHead>
                       <TableHead>Data</TableHead>
+                      <TableHead>CD</TableHead>
+                      <TableHead>Marca</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead className="text-right">Qtd</TableHead>
                       <TableHead>Usuário</TableHead>
-                      <TableHead className="text-center">Ações</TableHead>
+                      {userRole === 'OPERACIONAL' && <TableHead className="text-center">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredMovs.filter(m => m.status === 'PENDENTE').map(m => (
+                    {movimentacoes.filter(m => m.status === 'PENDENTE').map(m => (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.identificador || 'S/ ID'}</TableCell>
                         <TableCell>{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>{m.cd.toUpperCase()}</TableCell>
+                        <TableCell>{(m.empresa || '').toUpperCase()}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
                             {m.tipo}
@@ -381,32 +393,34 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                         </TableCell>
                         <TableCell className="text-right font-bold">{m.quantidade}</TableCell>
                         <TableCell>{m.usuario}</TableCell>
-                        <TableCell className="text-center">
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            onClick={async () => {
-                              try {
-                                const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.error);
-                                setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
-                                setTimeout(() => setSuccessMsg(""), 5000);
-                                refresh();
-                              } catch (e: any) {
-                                setErrorMsg(e.message);
-                              }
-                            }}
-                          >
-                            Aprovar
-                          </Button>
-                        </TableCell>
+                        {userRole === 'OPERACIONAL' && (
+                          <TableCell className="text-center">
+                            <Button 
+                              size="sm" 
+                              variant="default"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
+                                  const data = await res.json();
+                                  if (!res.ok) throw new Error(data.error);
+                                  setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
+                                  setTimeout(() => setSuccessMsg(""), 5000);
+                                  refresh();
+                                } catch (e: any) {
+                                  setErrorMsg(e.message);
+                                }
+                              }}
+                            >
+                              Aprovar
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
-                    {filteredMovs.filter(m => m.status === 'PENDENTE').length === 0 && (
+                    {movimentacoes.filter(m => m.status === 'PENDENTE').length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-zinc-500">
-                          Nenhuma solicitação pendente para {activeMarca.toUpperCase()}.
+                        <TableCell colSpan={9} className="text-center py-8 text-zinc-500">
+                          Nenhuma solicitação pendente encontrada.
                         </TableCell>
                       </TableRow>
                     )}

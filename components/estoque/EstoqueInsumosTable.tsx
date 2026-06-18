@@ -134,17 +134,19 @@ export function EstoqueInsumosTable({
   insumos, 
   loading, 
   error, 
-  refetch 
+  refetch,
+  initialStatusFilter
 }: { 
   marca: string; 
   insumos: any[]; 
   loading: boolean; 
   error: string | null; 
   refetch: () => void; 
+  initialStatusFilter?: string;
 }) {
   const cdTarget = marca.toUpperCase();
   const [modalOpen, setModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'Todos');
 
   const filteredInsumos = useMemo(() => {
     return insumos.filter(item => {

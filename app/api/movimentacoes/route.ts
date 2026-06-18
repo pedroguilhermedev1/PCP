@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   let query = supabase.from('estoque_movimentacoes').select('*').eq('tipo_envio', tipo_envio).order('data_hora', { ascending: false });
-  if (cd) {
+  if (cd && cd !== 'todas') {
     query = query.ilike('cd', cd);
   }
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dmFqbnNteWxhZWJ4ZmV5cGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwODEyNzksImV4cCI6MjA5MzY1NzI3OX0.vl359IIHkx-oE4Z1CzenYAPcvlZWYqgAwoX8xa6mVTw';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { tipo, codigo, item, cd, empresa, quantidade, usuario, observacoes, setor, tipo_envio } = body;
+  const { tipo, codigo, item, cd, empresa, quantidade, usuario, observacoes, setor, tipo_envio, identificador } = body;
   const t_envio = tipo_envio || 'Principal';
 
   if (!tipo || !codigo || !cd || !quantidade) {
@@ -61,6 +61,8 @@ export async function POST(request: Request) {
     codigo,
     item,
     cd,
+    empresa,
+    identificador,
     quantidade,
     usuario,
     observacoes,

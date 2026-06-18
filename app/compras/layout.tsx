@@ -42,7 +42,8 @@ export default function ComprasLayout({
         '/compras/cronograma',
         '/compras/formularios',
         '/compras/insumos', // allow insumos for non-admins
-        '/compras/fornecedores/cronograma' // allow fornecedores cronograma
+        '/compras/fornecedores/cronograma', // allow fornecedores cronograma
+        '/compras/relatorios' // allow relatorios
       ];
 
       const hasAccess = allowedRoutes.some((route) =>

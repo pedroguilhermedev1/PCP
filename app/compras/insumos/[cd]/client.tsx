@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { deleteMovimentacaoAction } from "@/app/compras/faturas/actions";
 import { formatUserName } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 const cd_marcas_map: Record<string, string[]> = {
   fortaleza: ['SAS', 'SAE', 'IS'],
@@ -265,10 +267,20 @@ function NovaMovimentacaoModal({
   );
 }
 
-export function InsumosModuleClient({ cd }: { cd: string }) {
+function InsumosModuleClientInner({ cd }: { cd: string }) {
   const marcas = cd_marcas_map[cd] || [];
-  const [activeMarca, setActiveMarca] = useState(marcas[0] || '');
+  const searchParams = useSearchParams();
+  const urlEmpresa = searchParams.get('empresa');
+  const urlStatus = searchParams.get('status');
+
+  const [activeMarca, setActiveMarca] = useState(urlEmpresa || marcas[0] || '');
   const [activeTab, setActiveTab] = useState<'insumos' | 'entradas' | 'saidas'>('insumos');
+
+  useEffect(() => {
+    if (urlStatus) {
+      setActiveTab('insumos');
+    }
+  }, [urlStatus]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
   const [editItem, setEditItem] = useState<any | null>(null);
@@ -392,32 +404,36 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
                 Insumos
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('entradas')}
-              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'entradas'
-                  ? 'border-purple-600 text-purple-700'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <LogIn className="w-4 h-4" />
-                Entradas
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('saidas')}
-              className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'saidas'
-                  ? 'border-purple-600 text-purple-700'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-800'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <LogOut className="w-4 h-4" />
-                Saídas
-              </div>
-            </button>
+            {!urlStatus && (
+              <>
+                <button
+                  onClick={() => setActiveTab('entradas')}
+                  className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                    activeTab === 'entradas'
+                      ? 'border-purple-600 text-purple-700'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <LogIn className="w-4 h-4" />
+                    Entradas
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('saidas')}
+                  className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
+                    activeTab === 'saidas'
+                      ? 'border-purple-600 text-purple-700'
+                      : 'border-transparent text-zinc-500 hover:text-zinc-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <LogOut className="w-4 h-4" />
+                    Saídas
+                  </div>
+                </button>
+              </>
+            )}
             </div>
 
             {/* Filtro Tipo de Envio */}
@@ -465,9 +481,17 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
           )}
         </div>
         
-        {activeTab === 'insumos' ? (
-          <EstoqueInsumosTable marca={activeMarca.toLowerCase()} insumos={insumos} loading={loading} error={error} refetch={refetch} />
-        ) : (
+        {activeTab === 'insumos' && (
+          <EstoqueInsumosTable 
+            marca={activeMarca} 
+            insumos={insumos} 
+            loading={loading} 
+            error={error ? error.message : null} 
+            refetch={refetch} 
+            initialStatusFilter={urlStatus || undefined}
+          />
+        )}
+        {activeTab !== 'insumos' && (
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-sm text-left">
@@ -579,5 +603,13 @@ export function InsumosModuleClient({ cd }: { cd: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+export function InsumosModuleClient({ cd }: { cd: string }) {
+  return (
+    <Suspense fallback={<div className="p-8">Carregando...</div>}>
+      <InsumosModuleClientInner cd={cd} />
+    </Suspense>
   );
 }

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
   let query = supabase.from('estoque_insumos').select('*').eq('tipo_envio', tipo_envio).order('item', { ascending: true });
 
-  if (cd) {
+  if (cd && cd !== 'todas') {
     query = query.ilike('cd', cd);
   }
   if (empresa) {

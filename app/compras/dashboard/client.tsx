@@ -2,7 +2,7 @@
 
 import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { Fatura, calcularEtapa } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularEtapa, calcularSLA, calcularStatus } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +52,8 @@ export function DashboardClient({
 
   // Faturas Filters
   const [fatAno, setFatAno] = useState<string>(currentYear);
-  const [fatMes, setFatMes] = useState<string>(currentMonth);
+  const [fatMes, setFatMes] = useState<string>("todos");
+  const [fatCategoria, setFatCategoria] = useState<string>("Todas");
 
   // Insumos Filters
   const [insAno, setInsAno] = useState<string>(currentYear);
@@ -61,6 +62,9 @@ export function DashboardClient({
   const [insCD, setInsCD] = useState<string>("todos");
   const [insMarca, setInsMarca] = useState<string>("todas");
   const [insTipoEnvio, setInsTipoEnvio] = useState<string>("Principal");
+
+  // User Dashboard Filters
+  const [userCD, setUserCD] = useState<string>("todos");
 
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -86,7 +90,8 @@ export function DashboardClient({
   ];
   const dias = Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0'));
   
-  const uniqueCDs = Array.from(new Set(insumos.map(i => i.cd).filter(Boolean)));
+  const uniqueCDs = Array.from(new Set(insumos.map(i => i.cd).filter(Boolean)))
+    .filter(cd => !['raizes', 'curitiba'].includes((cd as string).toLowerCase()));
   const uniqueMarcas = Array.from(new Set(insumos.map(i => i.empresa).filter(Boolean)));
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -94,6 +99,8 @@ export function DashboardClient({
   // Filtered Faturas
   const filteredFaturas = useMemo(() => {
     return faturas.filter(f => {
+      if (fatCategoria !== "Todas" && f.categoria !== fatCategoria) return false;
+
       // Usando data_emissao para filtro de Faturas, fallback para created_at ou hoje
       const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
       const d = new Date(dataStr);
@@ -104,7 +111,7 @@ export function DashboardClient({
       if (fatMes !== "todos" && m !== fatMes) return false;
       return true;
     });
-  }, [faturas, fatAno, fatMes]);
+  }, [faturas, fatAno, fatMes, fatCategoria]);
 
   // Faturas Status
   const faturasCards = useMemo(() => {
@@ -114,6 +121,11 @@ export function DashboardClient({
     let v360 = { count: 0, val: 0 };
     let aguardando = { count: 0, val: 0 };
     let pago = { count: 0, val: 0 };
+    let atrasadasAberto = { count: 0, val: 0 };
+
+    let slaNoPrazo = 0;
+    let slaProximo = 0;
+    let slaAtrasado = 0;
 
     filteredFaturas.forEach(f => {
       const etapa = calcularEtapa(f);
@@ -124,9 +136,20 @@ export function DashboardClient({
       else if (etapa === 'V360') { v360.count++; v360.val += v; }
       else if (etapa === 'Aguardando pagamento') { aguardando.count++; aguardando.val += v; }
       else if (etapa === 'Pago') { pago.count++; pago.val += v; }
+
+      const sla = calcularSLA(f);
+      if (sla === 'Dentro do prazo') slaNoPrazo++;
+      else if (sla === 'Próximo do vencimento') slaProximo++;
+      else if (sla === 'Atrasado') slaAtrasado++;
+
+      const status = calcularStatus(f);
+      if (status === 'Vencido' && f.status_pagamento !== 'Pago') {
+        atrasadasAberto.count++;
+        atrasadasAberto.val += v;
+      }
     });
 
-    return { integracao, heflo, erp, v360, aguardando, pago };
+    return { integracao, heflo, erp, v360, aguardando, pago, atrasadasAberto, slaNoPrazo, slaProximo, slaAtrasado };
   }, [filteredFaturas]);
 
 
@@ -215,8 +238,16 @@ export function DashboardClient({
 
 
   const entradasPendentesCount = useMemo(() => {
-    return movimentacoes.filter(m => m.tipo === 'Entrada' && m.status === 'PENDENTE').length;
-  }, [movimentacoes]);
+    return movimentacoes.filter(m => {
+      if (m.status !== 'PENDENTE') return false;
+      
+      const cdLower = m.cd?.toLowerCase() || '';
+      if (['raizes', 'curitiba'].includes(cdLower)) return false;
+
+      if (userCD !== "todos" && cdLower !== userCD.toLowerCase()) return false;
+      return true;
+    }).length;
+  }, [movimentacoes, userCD]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-zinc-50/30">
@@ -243,23 +274,31 @@ export function DashboardClient({
                     <FileText className="w-5 h-5 text-zinc-400" />
                     <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
                   </div>
+                  
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
+                    <select 
+                      value={userCD} 
+                      onChange={(e) => setUserCD(e.target.value)}
+                      className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
+                    >
+                      <option value="todos">Todos</option>
+                      {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
+                    </select>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div 
-                    onClick={() => {
-                      const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'fortaleza';
-                      router.push(`/compras/formularios/${cdPath}?tab=pendentes`);
-                    }}
-                    className="bg-white rounded-xl shadow-sm border border-orange-200 p-6 flex items-start justify-between h-full bg-orange-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
-                  >
-                    <div>
-                      <p className="text-sm font-medium mb-2 text-orange-600">Entradas Pendentes</p>
-                      <div className="text-4xl font-bold text-orange-700">{entradasPendentesCount}</div>
-                      <p className="text-sm mt-2 opacity-80 text-orange-600">Aguardando aprovação</p>
-                    </div>
-                    <AlertTriangle className="w-8 h-8 opacity-20 text-orange-600" />
-                  </div>
+                  <InsumoCard 
+                    title="Aprovações Pendentes"
+                    value={entradasPendentesCount}
+                    subtitle={userCD === "todos" ? "Filtre por CD para habilitar o atalho" : "Movimentações aguardando aprovação"}
+                    icon={Package}
+                    colorClass="text-orange-600"
+                    borderClass={userCD === "todos" ? "border-orange-200" : "border-orange-200 cursor-pointer hover:shadow-md transition-all"}
+                    bgClass="bg-orange-50/20"
+                    onClick={userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
+                  />
                 </div>
               </div>
               <div className="border-t-2 border-dashed border-zinc-200 my-10"></div>
@@ -273,10 +312,22 @@ export function DashboardClient({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas</h2>
+                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas <span className="text-sm font-normal text-zinc-500">(envio ideal para o time de pagamentos)</span></h2>
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Categoria</span>
+                      <select 
+                        value={fatCategoria} 
+                        onChange={(e) => setFatCategoria(e.target.value)}
+                        className="w-[120px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="Todas">Todas</option>
+                        <option value="Material">Material</option>
+                        <option value="Serviço">Serviço</option>
+                      </select>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
                       <select 
@@ -300,6 +351,47 @@ export function DashboardClient({
                       </select>
                     </div>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  {/* Dentro do prazo */}
+                  <div 
+                    onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
+                    className="bg-white rounded-xl shadow-sm border border-emerald-200 p-6 flex flex-col justify-between h-full bg-emerald-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                  >
+                    <p className="text-sm font-medium mb-2 text-emerald-600">Dentro do prazo</p>
+                    <div>
+                      <div className="text-3xl font-bold text-emerald-700">{faturasCards.slaNoPrazo}</div>
+                      <p className="text-sm mt-2 font-medium opacity-80 text-emerald-600">faturas no prazo</p>
+                    </div>
+                  </div>
+                  {/* Próximo do Vencimento */}
+                  <div 
+                    onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
+                    className="bg-white rounded-xl shadow-sm border border-amber-200 p-6 flex flex-col justify-between h-full bg-amber-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                  >
+                    <p className="text-sm font-medium mb-2 text-amber-600">Próximas do limite</p>
+                    <div>
+                      <div className="text-3xl font-bold text-amber-700">{faturasCards.slaProximo}</div>
+                      <p className="text-sm mt-2 font-medium opacity-80 text-amber-600">faturas em alerta</p>
+                    </div>
+                  </div>
+                  {/* Atrasadas */}
+                  <div 
+                    onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
+                    className="bg-white rounded-xl shadow-sm border border-red-200 p-6 flex flex-col justify-between h-full bg-red-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                  >
+                    <p className="text-sm font-medium mb-2 text-red-600">Atrasadas</p>
+                    <div>
+                      <div className="text-3xl font-bold text-red-700">{faturasCards.slaAtrasado}</div>
+                      <p className="text-sm mt-2 font-medium opacity-80 text-red-600">faturas atrasadas</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mb-6">
+                  <Layers className="w-5 h-5 text-zinc-400" />
+                  <h2 className="text-lg font-bold text-zinc-800">Status das Faturas</h2>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -338,6 +430,15 @@ export function DashboardClient({
                     colorClass="text-orange-500" 
                     borderClass="border-orange-200" 
                     bgClass="bg-orange-50/20" 
+                  />
+                  {/* Atrasadas em Aberto → Vermelho escuro */}
+                  <FaturaCard 
+                    title="Atrasadas em Aberto" 
+                    value={formatBRL(faturasCards.atrasadasAberto.val)} 
+                    count={faturasCards.atrasadasAberto.count}
+                    colorClass="text-red-700" 
+                    borderClass="border-red-300" 
+                    bgClass="bg-red-100/50" 
                   />
                   {/* Aguardando Pagamento → Verde claro */}
                   <FaturaCard 
@@ -485,8 +586,8 @@ export function DashboardClient({
                 borderClass="border-emerald-200"
                 bgClass="bg-emerald-50/20"
                 onClick={() => {
-                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'fortaleza';
-                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}` : '';
+                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
+                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}&status=CONFORTÁVEL` : `?status=CONFORTÁVEL`;
                    router.push(`/compras/insumos/${cdPath}${marcaQuery}`);
                 }}
               />
@@ -499,8 +600,8 @@ export function DashboardClient({
                 borderClass="border-amber-200"
                 bgClass="bg-amber-50/20"
                 onClick={() => {
-                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'fortaleza';
-                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}` : '';
+                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
+                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}&status=ALERTA` : `?status=ALERTA`;
                    router.push(`/compras/insumos/${cdPath}${marcaQuery}`);
                 }}
               />
@@ -513,8 +614,8 @@ export function DashboardClient({
                 borderClass="border-red-200"
                 bgClass="bg-red-50/20"
                 onClick={() => {
-                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'fortaleza';
-                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}` : '';
+                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
+                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}&status=CRÍTICO` : `?status=CRÍTICO`;
                    router.push(`/compras/insumos/${cdPath}${marcaQuery}`);
                 }}
               />

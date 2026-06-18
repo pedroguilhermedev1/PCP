@@ -66,7 +66,7 @@ export interface Fatura {
   status_pagamento: StatusPagamento;
 
   // Calculados (Opcionais no model para persistência, mas gerados pela view/helper)
-  status?: StatusFatura;
+  status?: string;
   data_pagamento_ideal?: string;
   etapa?: Etapa;
 }
@@ -81,11 +81,24 @@ export function calcularDiasRestantes(data_vencimento: string): number {
   return Math.ceil(diff / (1000 * 3600 * 24));
 }
 
-export function calcularStatus(fatura: Partial<Fatura>): StatusFatura {
-  if (fatura.status_pagamento === 'Pago') return 'Pago';
+export function calcularStatus(fatura: Partial<Fatura>): string {
+  const dias = calcularDiasRestantes(fatura.data_vencimento || '');
+
+  if (fatura.status_pagamento === 'Pago') {
+    if (fatura.data_pagamento_real && fatura.data_vencimento) {
+      const dataPgto = new Date(fatura.data_pagamento_real + 'T00:00:00');
+      const dataVenc = new Date(fatura.data_vencimento + 'T00:00:00');
+      dataPgto.setHours(0,0,0,0);
+      dataVenc.setHours(0,0,0,0);
+      if (dataPgto > dataVenc) return 'Pago (Vencida)';
+    } else if (fatura.data_vencimento && dias < 0) {
+      return 'Pago (Vencida)';
+    }
+    return 'Pago';
+  }
+
   if (!fatura.data_vencimento) return 'A vencer';
   
-  const dias = calcularDiasRestantes(fatura.data_vencimento);
   if (dias < 0) return 'Vencido';
   return 'A vencer';
 }
@@ -105,4 +118,92 @@ export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
   return 'Integração';
 }
 
+export type SLAStatus = 'Dentro do prazo' | 'Próximo do vencimento' | 'Atrasado';
+
+export function getBusinessDaysDifference(startDateStr: string, endDate: Date = new Date()): number {
+  if (!startDateStr) return 0;
+  let current = new Date(startDateStr + 'T00:00:00');
+  let days = 0;
+  
+  const end = new Date(endDate.getTime());
+  end.setHours(0, 0, 0, 0);
+
+  while (current < end) {
+    current.setDate(current.getDate() + 1);
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      days++;
+    }
+  }
+  return days;
+}
+
+export function calcularDiasRestantesUteis(data_vencimento: string): number {
+  if (!data_vencimento) return 0;
+  
+  const dateVencimento = new Date(data_vencimento + 'T00:00:00');
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+
+  if (dateVencimento < hoje) {
+    let current = new Date(dateVencimento.getTime());
+    let days = 0;
+    while (current < hoje) {
+      current.setDate(current.getDate() + 1);
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) days--;
+    }
+    return days;
+  } else {
+    let current = new Date(hoje.getTime());
+    let days = 0;
+    while (current < dateVencimento) {
+      current.setDate(current.getDate() + 1);
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) days++;
+    }
+    return days;
+  }
+}
+
+export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
+  const etapa = calcularEtapa(fatura);
+  
+  if (etapa === 'Aguardando pagamento' || etapa === 'Pago') {
+    return null;
+  }
+
+  // 1. Prioridade para a Data de Vencimento (Global SLA)
+  if (fatura.data_vencimento) {
+    const diasVenc = calcularDiasRestantesUteis(fatura.data_vencimento);
+    if (diasVenc < 0) return 'Atrasado';
+    if (diasVenc >= 0 && diasVenc <= 3) return 'Próximo do vencimento';
+  }
+
+  // 2. Análise da Etapa Atual (Workflow SLA)
+  let startDateStr = '';
+  let limiteDias = 0;
+
+  if (etapa === 'Integração') {
+    startDateStr = fatura.data_recebimento || '';
+    limiteDias = 1;
+  } else if (etapa === 'HEFLO') {
+    startDateStr = fatura.data_abertura_heflo || '';
+    limiteDias = 4;
+  } else if (etapa === 'ERP') {
+    startDateStr = fatura.data_aprovacao || '';
+    limiteDias = 1;
+  } else if (etapa === 'V360') {
+    startDateStr = fatura.data_abertura_v360 || '';
+    limiteDias = 4;
+  }
+
+  if (startDateStr) {
+    const diasPassados = getBusinessDaysDifference(startDateStr);
+    if (diasPassados > limiteDias) return 'Atrasado';
+    if (diasPassados === limiteDias) return 'Próximo do vencimento';
+  }
+
+  return 'Dentro do prazo';
+}
 
