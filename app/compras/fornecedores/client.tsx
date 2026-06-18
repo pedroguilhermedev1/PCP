@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFornecedores } from "@/hooks/useFornecedores";
+import { formatCNPJ } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -21,7 +22,7 @@ function FornecedorModal({
   onClose: () => void;
   tipo: 'Material' | 'Serviço';
   editItem?: any | null;
-  onSave: (fornecedor: any, isEdit: boolean) => void;
+  onSave: (fornecedor: any, isEdit: boolean) => Promise<void>;
 }) {
 
   const [cnpj, setCnpj] = useState("");
@@ -65,7 +66,7 @@ function FornecedorModal({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const payload = {
@@ -82,15 +83,18 @@ function FornecedorModal({
       tipo
     };
 
-    if (editItem) {
-      onSave({ ...payload, id: editItem.id }, true);
-      toast.success("Registro atualizado com sucesso.");
-    } else {
-      onSave(payload, false);
-      toast.success("Registro salvo com sucesso.");
+    try {
+      if (editItem) {
+        await onSave({ ...payload, id: editItem.id }, true);
+        toast.success("Registro atualizado com sucesso.");
+      } else {
+        await onSave(payload, false);
+        toast.success("Registro salvo com sucesso.");
+      }
+      onClose();
+    } catch (err) {
+      toast.error("Erro ao salvar fornecedor.");
     }
-
-    onClose();
   };
 
   return (
@@ -107,7 +111,7 @@ function FornecedorModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">CNPJ <span className="text-red-500">*</span></label>
-              <Input required value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
+              <Input required value={cnpj} onChange={e => setCnpj(formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
             </div>
             
             <div className="flex flex-col gap-1.5">
@@ -193,12 +197,22 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
   const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
 
   const filteredFornecedores = useMemo(() => {
+    if (!searchTerm) {
+      return [...fornecedores].sort((a, b) => a.razao_social.localeCompare(b.razao_social));
+    }
+    const lowerSearch = searchTerm.toLowerCase();
     const list = fornecedores.filter(f => 
-      f.razao_social.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.nome_fantasia?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.razao_social.toLowerCase().includes(lowerSearch) ||
+      f.nome_fantasia?.toLowerCase().includes(lowerSearch) ||
       f.cnpj.includes(searchTerm)
     );
-    return list.sort((a, b) => a.razao_social.localeCompare(b.razao_social));
+    return list.sort((a, b) => {
+      const aStartsWith = a.razao_social.toLowerCase().startsWith(lowerSearch) || a.nome_fantasia?.toLowerCase().startsWith(lowerSearch);
+      const bStartsWith = b.razao_social.toLowerCase().startsWith(lowerSearch) || b.nome_fantasia?.toLowerCase().startsWith(lowerSearch);
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+      return a.razao_social.localeCompare(b.razao_social);
+    });
   }, [fornecedores, searchTerm]);
 
   return (
@@ -221,9 +235,9 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
         }} 
         tipo={tipo} 
         editItem={editItem}
-        onSave={(fornecedor, isEdit) => {
+        onSave={async (fornecedor, isEdit) => {
           if (isEdit) {
-            updateFornecedor(fornecedor.id, fornecedor);
+            await updateFornecedor(fornecedor.id, fornecedor);
           } else {
             const isDuplicate = fornecedores.some(f => 
               f.cnpj === fornecedor.cnpj && 
@@ -231,9 +245,9 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
             );
             if (isDuplicate) {
               toast.error("Fornecedor já cadastrado com os mesmos dados exatos (CNPJ e Razão Social).");
-              return;
+              throw new Error("Duplicate");
             }
-            addFornecedor(fornecedor);
+            await addFornecedor(fornecedor);
           }
         }}
       />
@@ -244,7 +258,7 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
             {tipo === 'Material' ? <Box className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Fornecedores - {tipo === 'Material' ? 'Materiais' : 'Serviços'}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">FORNECEDORES - {tipo === 'Material' ? 'MATERIAIS' : 'SERVIÇOS'}</h1>
             <p className="text-sm text-zinc-500">Gestão do cadastro de fornecedores.</p>
           </div>
         </div>
@@ -268,7 +282,7 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
               setModalOpen(true);
             }}>
               <Plus className="w-4 h-4 mr-2" />
-              Novo Fornecedor
+              NOVO FORNECEDOR
             </Button>
           </div>
 

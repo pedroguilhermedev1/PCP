@@ -41,10 +41,15 @@ export function useFornecedores(tipoFiltro?: 'Material' | 'Serviço') {
   }, [fetchFornecedores]);
 
   const addFornecedor = async (f: Omit<Fornecedor, 'id' | 'created_at'>) => {
-    if (!supabase) return;
+    if (!supabase) return null;
     const { data, error } = await supabase.from("fornecedores").insert([f]).select().single();
-    if (!error && data) {
+    if (error) {
+      console.error("Erro ao adicionar fornecedor:", error);
+      throw error;
+    }
+    if (data) {
       setFornecedores(prev => [data as Fornecedor, ...prev]);
+      await fetchFornecedores();
       return data;
     }
     return null;

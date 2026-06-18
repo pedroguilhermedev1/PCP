@@ -10,6 +10,7 @@ import { FaturaModal } from "@/components/faturas/FaturaModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { formatCNPJ } from "@/lib/utils";
 
 export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' }) {
   const [faturas, setFaturas] = useState<Fatura[]>(initialFaturas);
@@ -149,7 +150,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               variant={selectedMarca === marca ? "default" : "outline"}
               onClick={() => handleSetSelectedMarca(marca)}
             >
-              {marca}
+              {marca.toUpperCase()}
             </Button>
           ))}
         </div>
@@ -158,10 +159,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       {selectedMarca && (
         <>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
-            <h2 className="text-lg font-semibold text-purple-900">Faturas - {selectedMarca}</h2>
+            <h2 className="text-lg font-semibold text-purple-900">FATURAS - {selectedMarca.toUpperCase()}</h2>
             <Button onClick={handleCreate}>
               <Plus className="w-4 h-4 mr-2" />
-              Nova Fatura
+              NOVA FATURA
             </Button>
           </div>
 
@@ -210,12 +211,12 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={getStatusColor(status)}>
-                            {status}
+                            {status.toUpperCase()}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge className={getEtapaColor(etapa)}>
-                            {etapa}
+                            {etapa.toUpperCase()}
                           </Badge>
                         </TableCell>
                         {canEditOrDelete && (
@@ -255,7 +256,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                                   </div>
                                   <div className="space-y-1">
                                     <span className="text-xs text-zinc-500 block">CNPJ</span>
-                                    <span className="text-sm font-medium">{f.cnpj}</span>
+                                    <span className="text-sm font-medium">{formatCNPJ(f.cnpj)}</span>
                                   </div>
                                   <div className="space-y-1">
                                     <span className="text-xs text-zinc-500 block">Documento</span>

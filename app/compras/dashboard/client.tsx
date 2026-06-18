@@ -214,6 +214,10 @@ export function DashboardClient({
   }, [filteredInsumos, filteredMovs]);
 
 
+  const entradasPendentesCount = useMemo(() => {
+    return movimentacoes.filter(m => m.tipo === 'Entrada' && m.status === 'PENDENTE').length;
+  }, [movimentacoes]);
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-zinc-50/30">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -230,6 +234,38 @@ export function DashboardClient({
       <div className="flex-1 p-6 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-12">
           
+          {/* Sessão Entradas Pendentes (Operacional) */}
+          {!isAdmin && (
+            <>
+              <div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-zinc-400" />
+                    <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div 
+                    onClick={() => {
+                      const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'fortaleza';
+                      router.push(`/compras/formularios/${cdPath}?tab=pendentes`);
+                    }}
+                    className="bg-white rounded-xl shadow-sm border border-orange-200 p-6 flex items-start justify-between h-full bg-orange-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                  >
+                    <div>
+                      <p className="text-sm font-medium mb-2 text-orange-600">Entradas Pendentes</p>
+                      <div className="text-4xl font-bold text-orange-700">{entradasPendentesCount}</div>
+                      <p className="text-sm mt-2 opacity-80 text-orange-600">Aguardando aprovação</p>
+                    </div>
+                    <AlertTriangle className="w-8 h-8 opacity-20 text-orange-600" />
+                  </div>
+                </div>
+              </div>
+              <div className="border-t-2 border-dashed border-zinc-200 my-10"></div>
+            </>
+          )}
+
           {/* Sessão Faturas */}
           {isAdmin && (
             <>

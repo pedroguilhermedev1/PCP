@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
   let query = supabase.from('estoque_movimentacoes').select('*').eq('tipo_envio', tipo_envio).order('data_hora', { ascending: false });
   if (cd) {
-    query = query.eq('cd', cd);
+    query = query.ilike('cd', cd);
   }
 
   const { data, error } = await query;
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     .from('estoque_insumos')
     .select('id, estoque_real')
     .eq('codigo', codigo)
-    .eq('cd', cd);
+    .ilike('cd', cd);
     
   if (empresa) {
     query = query.ilike('empresa', empresa);

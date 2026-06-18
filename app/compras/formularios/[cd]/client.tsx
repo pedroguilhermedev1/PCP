@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, CheckCircle2, AlertCircle } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatUserName } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
 import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useSearchParams } from "next/navigation";
 
 const cd_marcas_map: Record<string, string[]> = {
   fortaleza: ['SAS', 'SAE', 'IS'],
@@ -22,7 +23,7 @@ const cd_names_map: Record<string, string> = {
   nse: 'NSE'
 };
 
-export function FormulariosModuleClient({ cd }: { cd: string }) {
+function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const marcas = cd_marcas_map[cd] || [];
   const [activeMarca, setActiveMarca] = useState(marcas[0] || '');
   
@@ -30,6 +31,15 @@ export function FormulariosModuleClient({ cd }: { cd: string }) {
   const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd);
 
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'pendentes') {
+      setActiveTab('PENDENTES');
+    }
+  }, [searchParams]);
 
   const [responsavel, setResponsavel] = useState("");
   const [tipo, setTipo] = useState<'Entrada' | 'Saída'>('Entrada');
@@ -178,13 +188,13 @@ export function FormulariosModuleClient({ cd }: { cd: string }) {
             className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
             onClick={() => setActiveTab('NOVA')}
           >
-            Nova Solicitação
+            NOVA SOLICITAÇÃO
           </button>
           <button 
             className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
             onClick={() => setActiveTab('PENDENTES')}
           >
-            Aprovações Pendentes
+            APROVAÇÕES PENDENTES
             {filteredMovs.filter(m => m.status === 'PENDENTE').length > 0 && (
               <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                 {filteredMovs.filter(m => m.status === 'PENDENTE').length}
@@ -214,7 +224,7 @@ export function FormulariosModuleClient({ cd }: { cd: string }) {
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
               <h2 className="text-lg font-bold text-zinc-800">
-                Nova Solicitação - {activeMarca.toUpperCase()}
+                NOVA SOLICITAÇÃO - {activeMarca.toUpperCase()}
               </h2>
               <p className="text-sm text-zinc-500 mt-1">
                 Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
@@ -408,5 +418,13 @@ export function FormulariosModuleClient({ cd }: { cd: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+export function FormulariosModuleClient({ cd }: { cd: string }) {
+  return (
+    <Suspense fallback={<div className="p-8">Carregando...</div>}>
+      <FormulariosModuleClientInner cd={cd} />
+    </Suspense>
   );
 }

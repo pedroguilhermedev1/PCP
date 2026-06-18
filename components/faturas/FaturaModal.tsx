@@ -5,7 +5,7 @@ import { Fatura, calcularStatus, calcularEtapa } from "@/modules/compras/domain/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCNPJ } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
 
@@ -145,7 +145,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                     const value = e.target.value;
                     const fornecedorMatch = fornecedores.find(f => (f.nome_fantasia || f.razao_social) === value);
                     if (fornecedorMatch) {
-                      setFormData(prev => ({ ...prev, fornecedor: value, cnpj: fornecedorMatch.cnpj, codigo_fornecedor: fornecedorMatch.codigo_fornecedor }));
+                      setFormData(prev => ({ ...prev, fornecedor: value, cnpj: formatCNPJ(fornecedorMatch.cnpj), codigo_fornecedor: fornecedorMatch.codigo_fornecedor }));
                     } else {
                       setFormData(prev => ({ ...prev, fornecedor: value }));
                     }
@@ -158,7 +158,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">CNPJ</label>
-                  <Input value={formData.cnpj || ""} onChange={handleInputChange('cnpj')} placeholder="00.000.000/0000-00" required />
+                  <Input value={formData.cnpj || ""} onChange={(e) => handleChange('cnpj', formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cód. Fornecedor</label>
@@ -525,7 +525,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                     autoStatus === 'Pago' ? 'text-green-900' :
                     autoStatus === 'A vencer' ? 'text-purple-900' :
                     'text-zinc-900'
-                  )}>{autoStatus}</span>
+                  )}>{autoStatus?.toUpperCase()}</span>
                 </div>
 
                 <div className={cn("p-3 rounded-md border space-y-1 transition-colors",
@@ -544,7 +544,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                   <span className={cn("text-sm font-bold",
                     autoEtapa === 'Aguardando pagamento' ? 'text-green-900' :
                     'text-white'
-                  )}>{autoEtapa}</span>
+                  )}>{autoEtapa?.toUpperCase()}</span>
                 </div>
               </div>
             </section>

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   let query = supabase.from('estoque_insumos').select('*').eq('tipo_envio', tipo_envio).order('item', { ascending: true });
 
   if (cd) {
-    query = query.eq('cd', cd);
+    query = query.ilike('cd', cd);
   }
   if (empresa) {
     // Some might be null or missing, we can filter using ILIKE or EQ depending on data. Let's use EQ (case insensitive might be needed if they type 'sas' vs 'SAS')
