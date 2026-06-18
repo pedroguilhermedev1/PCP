@@ -486,7 +486,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
             marca={activeMarca} 
             insumos={insumos} 
             loading={loading} 
-            error={error ? error.message : null} 
+            error={error} 
             refetch={refetch} 
             initialStatusFilter={urlStatus || undefined}
           />
