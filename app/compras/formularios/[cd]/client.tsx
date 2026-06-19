@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, CheckCircle2, AlertCircle } from "lucide-react";
+import { Box, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,10 +159,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       <header className="bg-white border-b border-zinc-200 px-6 pt-4 flex flex-col flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
-            <Box className="w-5 h-5" />
+            <MessageCircle className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Formulários - CD {cdName}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Solicitações - CD {cdName}</h1>
             <p className="text-sm text-zinc-500">Solicitação de Entrada e Saída de Insumos.</p>
           </div>
         </div>

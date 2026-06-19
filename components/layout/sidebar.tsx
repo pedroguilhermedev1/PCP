@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building } from "lucide-react"
+import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLembretes } from "@/components/lembretes/LembretesContext"
@@ -75,8 +75,8 @@ const sidebarItems = [
   },
   {
     type: 'group',
-    title: "FORMULÁRIOS",
-    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
+    title: "SOLICITAÇÕES",
+    icon: <MessageCircle className="w-5 h-5 flex-shrink-0" />,
     items: [
       {
         title: "Fortaleza",
@@ -105,7 +105,7 @@ const sidebarItems = [
     type: 'link',
     title: "RELATÓRIOS",
     href: "/compras/relatorios",
-    icon: <Database className="w-5 h-5 flex-shrink-0" />,
+    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
   },
   {
     type: 'link',
@@ -139,7 +139,7 @@ export function Sidebar() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
   FATURAS: false,
   INSUMOS: false,
-  FORMULÁRIOS: false,
+  SOLICITAÇÕES: false,
   FORNECEDORES: false,
 })
 
@@ -147,7 +147,7 @@ export function Sidebar() {
   setExpandedGroups({
     FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
     INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
-    FORMULÁRIOS: pathname?.startsWith('/compras/formularios') ?? false,
+    SOLICITAÇÕES: pathname?.startsWith('/compras/formularios') ?? false,
     FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false,
   });
   
@@ -159,7 +159,7 @@ export function Sidebar() {
   const visibleItems = isAdmin
   ? sidebarItems
   : sidebarItems.filter(item =>
-      item.title === 'DASHBOARD' || item.title === 'FORMULÁRIOS' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
+      item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
     )
 
   useEffect(() => {

@@ -224,6 +224,7 @@ export function EstoqueInsumosTable({
         <table className="w-full text-sm text-left relative border-collapse">
           <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 sticky top-0 z-20 shadow-[0_1px_0_0_#e4e4e7]">
             <tr>
+              <th className="w-12 text-center px-6 py-4 font-semibold bg-zinc-50">#</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">CD</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">Código</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">Item</th>
@@ -239,7 +240,7 @@ export function EstoqueInsumosTable({
           <tbody className="divide-y divide-zinc-200">
             {loading ? (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-zinc-500">
+                <td colSpan={10} className="px-6 py-12 text-center text-zinc-500">
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <RefreshCw className="w-6 h-6 animate-spin text-purple-600" />
                     <p>Carregando insumos...</p>
@@ -247,7 +248,7 @@ export function EstoqueInsumosTable({
                 </td>
               </tr>
             ) : filteredInsumos.length > 0 ? (
-              filteredInsumos.map((item) => {
+              filteredInsumos.map((item, index) => {
                 const cmd = parseFloat(item.cmd) || 10;
                 const lt = parseFloat(item.lead_time) || 0;
                 const em = cmd * lt;
@@ -275,6 +276,9 @@ export function EstoqueInsumosTable({
 
                 return (
                   <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
+                    <td className="px-6 py-4 text-center font-medium text-zinc-400 text-xs">
+                      {index + 1}
+                    </td>
                     <td className="px-6 py-4 font-medium text-zinc-900 border-l-[3px] border-l-transparent hover:border-purple-500">
                       {formatCd(rawCd)}
                     </td>
@@ -323,7 +327,7 @@ export function EstoqueInsumosTable({
               })
             ) : (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-zinc-500">
+                <td colSpan={10} className="px-6 py-12 text-center text-zinc-500">
                   <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-2">
                     <Box className="w-10 h-10 text-zinc-300 mb-2" />
                     <p className="font-medium text-zinc-900">Nenhum insumo encontrado</p>
