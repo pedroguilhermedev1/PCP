@@ -12,13 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { useSearchParams } from "next/navigation";
 import { getUserRole } from "@/lib/roles";
 
-const cd_marcas_map: Record<string, string[]> = {
-  fortaleza: ['SAS', 'SAE', 'IS'],
-  jundiai: ['SAS', 'SAE', 'IS'],
-  nse: ['NSE'],
-  todas: ['SAS', 'SAE', 'IS', 'NSE']
-};
-
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
   jundiai: 'Jundiaí',
@@ -26,8 +19,6 @@ const cd_names_map: Record<string, string> = {
 };
 
 function FormulariosModuleClientInner({ cd }: { cd: string }) {
-  const marcas = cd_marcas_map[cd] || [];
-  const [marcaSelecionada, setMarcaSelecionada] = useState("");
   
   const { insumos } = useEstoqueInsumos(cd);
   const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd);
@@ -35,7 +26,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
 
   const [filterCD, setFilterCD] = useState("TODOS");
-  const [filterMarca, setFilterMarca] = useState("TODAS");
 
   const searchParams = useSearchParams();
 
@@ -86,19 +76,15 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   useEffect(() => {
     // When item changes, set the code automatically.
-    const selected = insumos.find(i => i.item === item && i.empresa === marcaSelecionada);
+    const selected = insumos.find(i => i.item === item);
     if (selected) {
       setCodigo(selected.codigo);
     } else {
       setCodigo("");
     }
-  }, [item, insumos, marcaSelecionada]);
+  }, [item, insumos]);
 
-  useEffect(() => {
-    // Clear item when marca changes
-    setItem("");
-    setCodigo("");
-  }, [marcaSelecionada]);
+
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -106,7 +92,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
     e.preventDefault();
     setErrorMsg("");
     
-    if (!item || !quantidade || !tipo || !marcaSelecionada) {
+    if (!item || !quantidade || !tipo) {
       setErrorMsg("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -127,7 +113,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           codigo,
           item,
           cd,
-          empresa: marcaSelecionada,
           identificador: identificador || undefined,
           quantidade: Number(quantidade),
           usuario: responsavel,
@@ -154,7 +139,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       setSetor("");
       setSolicitante("");
       setJustificativa("");
-      setMarcaSelecionada("");
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Erro inesperado ao registrar movimentação.');
@@ -268,30 +252,18 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   {/* Entrada fields removed */}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-700">Marca / Empresa *</label>
-                      <select 
-                        required
-                        value={marcaSelecionada}
-                        onChange={(e) => setMarcaSelecionada(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2"
-                      >
-                        <option value="" disabled>Selecione a marca...</option>
-                        {marcas.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
 
-                    <div className="space-y-2">
+
+                    <div className="space-y-2 col-span-2 sm:col-span-1">
                       <label className="text-sm font-medium text-zinc-700">Item / Material *</label>
                       <select 
                         required
                         value={item}
                         onChange={(e) => setItem(e.target.value)}
-                        disabled={!marcaSelecionada}
                         className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <option value="" disabled>{marcaSelecionada ? "Selecione um item..." : "Selecione uma marca primeiro"}</option>
-                        {insumos.filter(i => i.empresa === marcaSelecionada).map(mat => (
+                        <option value="" disabled>Selecione um item...</option>
+                        {insumos.map(mat => (
                           <option key={mat.id} value={mat.item}>{mat.item}</option>
                         ))}
                       </select>
@@ -365,7 +337,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                       <TableHead>Nota Fiscal</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>CD</TableHead>
-                      <TableHead>Marca</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead className="text-right">Qtd</TableHead>
@@ -379,7 +350,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                         <TableCell className="font-medium">{m.identificador || 'S/ ID'}</TableCell>
                         <TableCell>{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>{m.cd.toUpperCase()}</TableCell>
-                        <TableCell>{(m.empresa || '').toUpperCase()}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
                             {m.tipo}

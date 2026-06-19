@@ -17,19 +17,18 @@ export type EstoqueInsumo = {
   empresa?: string;
 };
 
-export function useEstoqueInsumos(filtro_cd?: string, filtro_empresa?: string, tipo_envio?: string) {
+export function useEstoqueInsumos(filtro_cd?: string, ignored_filtro_empresa?: string, tipo_envio?: string) {
   const [insumos, setInsumos] = useState<EstoqueInsumo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEstoque = async (cd?: string, empresa?: string, tEnvio?: string, controller?: AbortController) => {
+  const fetchEstoque = async (cd?: string, tEnvio?: string, controller?: AbortController) => {
     setLoading(true);
     setError(null);
     try {
       const timestamp = new Date().getTime();
       let url = `/api/estoque?_t=${timestamp}`;
       if (cd) url += `&cd=${encodeURIComponent(cd)}`;
-      if (empresa) url += `&empresa=${encodeURIComponent(empresa)}`;
       url += `&tipo_envio=${encodeURIComponent(tEnvio || 'Principal')}`;
 
       const res = await fetch(url, { 
@@ -63,9 +62,9 @@ export function useEstoqueInsumos(filtro_cd?: string, filtro_empresa?: string, t
 
   useEffect(() => {
     const abortController = new AbortController();
-    fetchEstoque(filtro_cd, filtro_empresa, tipo_envio, abortController);
+    fetchEstoque(filtro_cd, tipo_envio, abortController);
     return () => { abortController.abort(); };
-  }, [filtro_cd, filtro_empresa, tipo_envio]);
+  }, [filtro_cd, tipo_envio]);
 
-  return { insumos, loading, error, refetch: () => fetchEstoque(filtro_cd, filtro_empresa, tipo_envio) };
+  return { insumos, loading, error, refetch: () => fetchEstoque(filtro_cd, tipo_envio) };
 }

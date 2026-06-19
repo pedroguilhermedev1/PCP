@@ -24,7 +24,6 @@ export async function saveFaturaAction(fatura: Object) {
         codigo: insumo.codigo,
         item: insumo.item,
         cd: formatCd(faturaData.cd || ''),
-        empresa: faturaData.marca,
         quantidade: insumo.quantidade,
         usuario: faturaData.responsavel || 'Sistema Faturas',
         observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),

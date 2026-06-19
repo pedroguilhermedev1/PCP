@@ -18,18 +18,15 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [faturaToEdit, setFaturaToEdit] = useState<Fatura | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [selectedMarca, setSelectedMarca] = useState<string | null>("COC");
   const [expandedFaturaId, setExpandedFaturaId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState("");
 
   const searchParams = useSearchParams();
-  const defaultMarca = searchParams.get('marca') || 'todas';
   const defaultCD = searchParams.get('cd') || 'todos';
   const defaultSLA = searchParams.get('sla') || 'todos';
   const qAno = searchParams.get('ano') || 'todos';
   const qMes = searchParams.get('mes') || 'todos';
 
-  const [filterMarca, setFilterMarca] = useState<string>(defaultMarca);
   const [filterCD, setFilterCD] = useState<string>(defaultCD);
   const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
   const [filterAno, setFilterAno] = useState<string>(qAno);
@@ -40,10 +37,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   }, [initialFaturas]);
 
   useEffect(() => {
-    const savedMarca = localStorage.getItem(`selectedMarca_${categoria}`);
-    if (savedMarca) {
-      setSelectedMarca(savedMarca);
-    }
     const user = localStorage.getItem('pcp_user');
     if (user) {
       setCurrentUser(user);
@@ -52,18 +45,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
 
-  const handleSetSelectedMarca = (marca: string) => {
-    setSelectedMarca(marca);
-    localStorage.setItem(`selectedMarca_${categoria}`, marca);
-  };
-
-  const uniqueMarcas = Array.from(new Set(faturas.map(f => f.marca).filter(Boolean)));
   const uniqueCDs = Array.from(new Set(faturas.map(f => f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd).filter(Boolean)));
 
   const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {
-    if (filterMarca !== 'todas' && f.marca !== filterMarca) return false;
-    
     const fCD = (f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '').toLowerCase();
     if (filterCD !== 'todos' && fCD !== filterCD.toLowerCase()) return false;
 
@@ -182,17 +167,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         <h1 className="text-2xl font-bold text-purple-900">Gestão de Faturas</h1>
         
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Marca</span>
-            <select 
-              value={filterMarca} 
-              onChange={(e) => setFilterMarca(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
-            >
-              <option value="todas">Todas</option>
-              {uniqueMarcas.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
+
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
             <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
             <select 
@@ -266,7 +241,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 text-center">#</TableHead>
-              <TableHead>Marca</TableHead>
               <TableHead>CD</TableHead>
               <TableHead>Fornecedor</TableHead>
               <TableHead>Local</TableHead>
@@ -291,9 +265,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                   >
                     <TableCell className="text-center font-medium text-zinc-400 text-xs">
                       {index + 1}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs bg-zinc-50">{f.marca}</Badge>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '-'}</span>
@@ -342,7 +313,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                   
                   {expandedFaturaId === f.id && (
                     <TableRow className="bg-zinc-50">
-                      <TableCell colSpan={canEditOrDelete ? 11 : 10} className="p-0 border-b">
+                      <TableCell colSpan={canEditOrDelete ? 10 : 9} className="p-0 border-b">
                         <div className="p-6">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                             <h3 className="text-lg font-bold text-purple-900">Detalhes da Fatura</h3>
@@ -476,7 +447,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             })}
             {faturasOrdenadas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEditOrDelete ? 10 : 9} className="text-center py-8 text-zinc-500">
+                <TableCell colSpan={canEditOrDelete ? 9 : 8} className="text-center py-8 text-zinc-500">
                   Nenhuma fatura encontrada.
                 </TableCell>
               </TableRow>
@@ -490,7 +461,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           fatura={faturaToEdit}
-          marcaAtiva={selectedMarca || ""}
           categoriaAtiva={categoria}
           onSave={handleSave}
         />

@@ -17,12 +17,6 @@ import { formatUserName } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-const cd_marcas_map: Record<string, string[]> = {
-  fortaleza: ['SAS', 'SAE', 'IS'],
-  jundiai: ['SAS', 'SAE', 'IS'],
-  nse: ['NSE']
-};
-
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
   jundiai: 'Jundiaí',
@@ -33,7 +27,6 @@ function NovaMovimentacaoModal({
   isOpen, 
   onClose, 
   tipo,
-  marca,
   cd,
   responsavel,
   editItem,
@@ -46,7 +39,6 @@ function NovaMovimentacaoModal({
   isOpen: boolean; 
   onClose: () => void;
   tipo: 'Entrada' | 'Saída';
-  marca: string;
   cd: string;
   responsavel: string;
   editItem?: any | null;
@@ -139,7 +131,6 @@ function NovaMovimentacaoModal({
           codigo,
           item,
           cd,
-          empresa: marca,
           quantidade: Number(quantidade),
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
@@ -174,7 +165,7 @@ function NovaMovimentacaoModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-zinc-200">
         <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
-          <h2 className="text-lg font-semibold text-zinc-800">{editItem ? 'Editar' : 'Nova'} {tipo} - {marca.toUpperCase()}</h2>
+          <h2 className="text-lg font-semibold text-zinc-800">{editItem ? 'Editar' : 'Nova'} {tipo}</h2>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
             <X className="w-5 h-5" />
           </button>
@@ -268,12 +259,9 @@ function NovaMovimentacaoModal({
 }
 
 function InsumosModuleClientInner({ cd }: { cd: string }) {
-  const marcas = cd_marcas_map[cd] || [];
   const searchParams = useSearchParams();
-  const urlEmpresa = searchParams.get('empresa');
   const urlStatus = searchParams.get('status');
 
-  const [activeMarca, setActiveMarca] = useState(urlEmpresa || marcas[0] || '');
   const [activeTab, setActiveTab] = useState<'insumos' | 'entradas' | 'saidas'>('insumos');
 
   useEffect(() => {
@@ -288,10 +276,10 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
   const { movimentacoes, refresh } = useInsumosMovimentacoes(cd, activeTipoEnvio);
-  // Movimentacoes right now are fetched just by cd. We need to filter them by marca (empresa) locally if we want, or adjust useInsumosMovimentacoes.
+  // Movimentacoes are fetched by cd.
   // Actually, we can just filter by insumos list below.
   
-  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, activeMarca, activeTipoEnvio);
+  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, undefined, activeTipoEnvio);
   
   const [currentUser, setCurrentUser] = useState("");
   const [currentUserOriginal, setCurrentUserOriginal] = useState("");
@@ -310,7 +298,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
 
   const filteredMovs = useMemo(() => {
     let list = movimentacoes;
-    // Filter by marca matching the insumos currently listed for this marca
+    // Filter by CD matching the insumos currently listed
     const allowedCodigos = new Set(insumos.map(i => i.codigo));
     list = list.filter(m => allowedCodigos.has(m.codigo));
 
@@ -348,7 +336,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
           setEditItem(null);
         }} 
         tipo={modalTipo} 
-        marca={activeMarca} 
         cd={cd}
         responsavel={currentUser || 'Usuário Indefinido'} 
         responsavelOriginal={currentUserOriginal}
@@ -371,21 +358,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
       </header>
 
       <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
-        {/* Navegação Superior de Marcas */}
-        {marcas.length > 0 && (
-          <div className="mb-6 flex gap-2">
-            {marcas.map(marca => (
-              <Button 
-                key={marca}
-                variant={activeMarca === marca ? "default" : "outline"}
-                className={activeMarca === marca ? "bg-purple-700 hover:bg-purple-800 text-white" : "text-zinc-600 hover:text-purple-700 border-zinc-200"}
-                onClick={() => setActiveMarca(marca)}
-              >
-                {marca.toUpperCase()}
-              </Button>
-            ))}
-          </div>
-        )}
+
 
         {/* Filtro Principal vs Complementar e Tabs Internas */}
         <div className="mb-6 border-b border-zinc-200">
@@ -465,9 +438,9 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
         {/* Conteúdo de cada Tab */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h2 className="text-lg font-semibold text-purple-900">
-            {activeTab === 'insumos' && `Insumos em Estoque - ${activeMarca}`}
-            {activeTab === 'entradas' && `Registro de Entradas - ${activeMarca}`}
-            {activeTab === 'saidas' && `Registro de Saídas - ${activeMarca}`}
+            {activeTab === 'insumos' && `Insumos em Estoque`}
+            {activeTab === 'entradas' && `Registro de Entradas`}
+            {activeTab === 'saidas' && `Registro de Saídas`}
           </h2>
           {activeTab !== 'insumos' && (
             <Button onClick={() => {
@@ -483,7 +456,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
         
         {activeTab === 'insumos' && (
           <EstoqueInsumosTable 
-            marca={activeMarca} 
+            cd={cd}
             insumos={insumos} 
             loading={loading} 
             error={error} 

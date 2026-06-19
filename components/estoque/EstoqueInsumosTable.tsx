@@ -130,21 +130,21 @@ function NovoInsumoModal({
 }
 
 export function EstoqueInsumosTable({ 
-  marca, 
+  cd, 
   insumos, 
   loading, 
   error, 
   refetch,
   initialStatusFilter
 }: { 
-  marca: string; 
+  cd: string; 
   insumos: any[]; 
   loading: boolean; 
   error: string | null; 
   refetch: () => void; 
   initialStatusFilter?: string;
 }) {
-  const cdTarget = marca.toUpperCase();
+  const cdTarget = cd.toUpperCase();
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'Todos');
 

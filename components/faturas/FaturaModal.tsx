@@ -13,17 +13,15 @@ interface FaturaModalProps {
   isOpen: boolean;
   onClose: () => void;
   fatura: Fatura | null;
-  marcaAtiva: string;
   categoriaAtiva: 'Serviço' | 'Material';
   onSave: (f: Fatura) => void;
 }
 
-export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiva, onSave }: FaturaModalProps) {
+export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }: FaturaModalProps) {
   const isEditing = !!fatura;
   const { fornecedores } = useFornecedores(categoriaAtiva);
 
   const [formData, setFormData] = useState<Partial<Fatura>>({
-    marca: marcaAtiva,
     categoria: categoriaAtiva,
     possui_encargo: false,
     status_pagamento: 'Em andamento',
@@ -46,10 +44,9 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && categoriaAtiva === 'Material' && formData.marca) {
+    if (isOpen && categoriaAtiva === 'Material') {
       supabase?.from('estoque_insumos')
         .select('codigo, item, cd, empresa')
-        .eq('empresa', formData.marca)
         .then(({data}) => {
           if (data) {
             if (formData.cd) {
@@ -64,7 +61,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
     } else {
       setAvailableInsumos([]);
     }
-  }, [isOpen, categoriaAtiva, formData.marca, formData.cd]);
+  }, [isOpen, categoriaAtiva, formData.cd]);
 
   if (!isOpen) return null;
 
@@ -192,16 +189,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Marca</label>
-                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
-                    value={formData.marca || marcaAtiva} onChange={handleSelectChange('marca')} required>
-                    {["SAS", "SAE", "IS", "EI", "Pleno", "MM", "GF", "NSE"].map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Centro de Custo</label>
                   <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" required />
@@ -303,7 +291,7 @@ export function FaturaModal({ isOpen, onClose, fatura, marcaAtiva, categoriaAtiv
 
                 {(!formData.insumos || formData.insumos.length === 0) ? (
                   <div className="text-sm text-zinc-500 text-center py-4 bg-zinc-50 rounded-lg border border-zinc-100">
-                    Nenhum insumo adicionado a esta fatura. (Preencha a Marca para listar os insumos corretamente)
+                    Nenhum insumo adicionado a esta fatura.
                   </div>
                 ) : (
                   <div className="space-y-4">

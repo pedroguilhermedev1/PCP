@@ -60,7 +60,6 @@ export function DashboardClient({
   const [insMes, setInsMes] = useState<string>(currentMonth);
   const [insDia, setInsDia] = useState<string>("todos");
   const [insCD, setInsCD] = useState<string>("todos");
-  const [insMarca, setInsMarca] = useState<string>("todas");
   const [insTipoEnvio, setInsTipoEnvio] = useState<string>("Principal");
 
   // User Dashboard Filters
@@ -92,7 +91,6 @@ export function DashboardClient({
   
   const uniqueCDs = Array.from(new Set(insumos.map(i => i.cd).filter(Boolean)))
     .filter(cd => !['raizes', 'curitiba'].includes((cd as string).toLowerCase()));
-  const uniqueMarcas = Array.from(new Set(insumos.map(i => i.empresa).filter(Boolean)));
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
@@ -159,10 +157,9 @@ export function DashboardClient({
       const tipo = i.tipo_envio || 'Principal';
       if (tipo !== insTipoEnvio) return false;
       if (insCD !== "todos" && i.cd !== insCD) return false;
-      if (insMarca !== "todas" && i.empresa !== insMarca) return false;
       return true;
     });
-  }, [insumos, insCD, insMarca, insTipoEnvio]);
+  }, [insumos, insCD, insTipoEnvio]);
 
   // Filtered Movimentações
   const filteredMovs = useMemo(() => {
@@ -170,14 +167,8 @@ export function DashboardClient({
       const tipo = m.tipo_envio || 'Principal';
       if (tipo !== insTipoEnvio) return false;
       
-      // Filtrar por CD / Marca
+      // Filtrar por CD
       if (insCD !== "todos" && m.cd !== insCD) return false;
-      
-      if (insMarca !== "todas") {
-         // Cross reference to check if the codigo belongs to the marca
-         const matchingInsumo = insumos.find(i => i.codigo === m.codigo && i.cd === m.cd);
-         if (!matchingInsumo || matchingInsumo.empresa !== insMarca) return false;
-      }
 
       // Filtrar por data
       if (!m.data_hora) return false;
@@ -195,7 +186,7 @@ export function DashboardClient({
 
       return true;
     });
-  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD, insMarca, insTipoEnvio]);
+  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD, insTipoEnvio]);
 
 
   // Insumos Stats
@@ -521,17 +512,7 @@ export function DashboardClient({
                     {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Marca</span>
-                  <select 
-                    value={insMarca} 
-                    onChange={(e) => setInsMarca(e.target.value)}
-                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
-                  >
-                    <option value="todas">Todas</option>
-                    {uniqueMarcas.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
+
 
                 <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
 
@@ -553,7 +534,7 @@ export function DashboardClient({
               <InsumoCard 
                 title="Total de Itens Cadastrados"
                 value={insumosStats.totalItens}
-                subtitle="Itens únicos no CD/Marca"
+                subtitle="Itens únicos no CD"
                 icon={Layers}
                 colorClass="text-blue-600"
                 borderClass="border-blue-200"
@@ -587,8 +568,7 @@ export function DashboardClient({
                 bgClass="bg-emerald-50/20"
                 onClick={() => {
                    const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
-                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}&status=CONFORTÁVEL` : `?status=CONFORTÁVEL`;
-                   router.push(`/compras/insumos/${cdPath}${marcaQuery}`);
+                   router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`);
                 }}
               />
               <InsumoCard 
@@ -601,8 +581,7 @@ export function DashboardClient({
                 bgClass="bg-amber-50/20"
                 onClick={() => {
                    const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
-                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}&status=ALERTA` : `?status=ALERTA`;
-                   router.push(`/compras/insumos/${cdPath}${marcaQuery}`);
+                   router.push(`/compras/insumos/${cdPath}?status=ALERTA`);
                 }}
               />
               <InsumoCard 
@@ -615,8 +594,7 @@ export function DashboardClient({
                 bgClass="bg-red-50/20"
                 onClick={() => {
                    const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
-                   const marcaQuery = insMarca !== 'todas' ? `?empresa=${insMarca}&status=CRÍTICO` : `?status=CRÍTICO`;
-                   router.push(`/compras/insumos/${cdPath}${marcaQuery}`);
+                   router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`);
                 }}
               />
             </div>

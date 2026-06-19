@@ -159,7 +159,6 @@ export function RelatoriosClient() {
       exportData = data.filter(d => d.tipo_envio === 'Principal' || !d.tipo_envio).map(d => ({
         "Código": d.codigo,
         "Descrição": d.item,
-        "Empresa/Marca": d.empresa || '-',
         "CD": d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-',
         "Categoria": d.categoria || 'Geral',
         "Conta Contábil": d.conta_contabil || '-',
@@ -180,7 +179,6 @@ export function RelatoriosClient() {
           "Data": d.data_hora ? new Date(d.data_hora).toLocaleDateString('pt-BR') : '-',
           "Tipo": d.tipo,
           "CD": d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-',
-          "Marca": d.empresa || '-',
           "Produto": d.item,
           "Código Produto": d.codigo || '-',
           "Quantidade": d.quantidade,
@@ -207,7 +205,6 @@ export function RelatoriosClient() {
           "Categoria": d.categoria,
           "Centro de Custo": d.centro_custo || '-',
           "Filial": d.filial || '-',
-          "Marca": d.marca || '-',
           "CD": d.cd || d._insumo?.cd || d.insumos?.[0]?.cd || '-',
           "Tipo Documento": d.tipo_documento || '-',
           "Tipo de Serviço": d.tipo_servico || '-',
