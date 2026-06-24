@@ -101,9 +101,10 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     const currentInsumos = formData.insumos || [];
     const metaObj = { _meta: true, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor };
     
+    const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
     const finalFatura = {
       ...formData,
-      id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${categoriaAtiva}`,
+      id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${safeCategoria}`,
       insumos: [
         ...currentInsumos.map(ins => ({ ...ins, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor })),
         metaObj

@@ -87,7 +87,7 @@ export function RelatoriosClient() {
           .lte('data_emissao', dataFinal)
           .order('data_emissao', { ascending: false });
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
-        if (categoriaFiltro === 'Serviços') q = q.like('id', '%__CAT__Serviço%');
+        if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
         query = q;
       }
 
@@ -156,21 +156,27 @@ export function RelatoriosClient() {
         "Data Cadastro": d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '-'
       }));
     } else if (activeTab === 'produtos') {
-      exportData = data.filter(d => d.tipo_envio === 'Principal' || !d.tipo_envio).map(d => ({
-        "Código": d.codigo,
-        "Descrição": d.item,
-        "CD": d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-',
-        "Categoria": d.categoria || 'Geral',
-        "Conta Contábil": d.conta_contabil || '-',
-        "Descrição Contábil": d.descricao_contabil || '-',
-        "Tipo de Envio (Indicadores)": 'Principal',
-        "Estoque Atual": d.estoque_real,
-        "Estoque Mínimo": d.estoque_minimo,
-        "Data Cadastro": d.data_cadastro ? new Date(d.data_cadastro).toLocaleDateString('pt-BR') : '-'
-      }));
+      exportData = data.filter(d => d.tipo_envio === 'Principal' || !d.tipo_envio).map(d => {
+        let cdStr = d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-';
+        if (cdStr === 'Jundiai') cdStr = 'Jundiaí';
+        return {
+          "Código": d.codigo,
+          "Descrição": d.item,
+          "CD": cdStr,
+          "Categoria": d.categoria || 'Geral',
+          "Conta Contábil": d.conta_contabil || '-',
+          "Descrição Contábil": d.descricao_contabil || '-',
+          "Tipo de Envio (Indicadores)": 'Principal',
+          "Estoque Atual": d.estoque_real,
+          "Estoque Mínimo": d.estoque_minimo,
+          "Data Cadastro": d.data_cadastro ? new Date(d.data_cadastro).toLocaleDateString('pt-BR') : '-'
+        };
+      });
     } else if (activeTab === 'movimentacoes') {
       exportData = data.map(d => {
         const contaExtracted = d.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-';
+        let cdStr = d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-';
+        if (cdStr === 'Jundiai') cdStr = 'Jundiaí';
         return {
           "ID Movimentação": d.codigo_movimentacao || '-',
           "ID Geral": d.identificador,
@@ -178,7 +184,7 @@ export function RelatoriosClient() {
           "ID Fatura Vinculada": d.fatura_id || '-',
           "Data": d.data_hora ? new Date(d.data_hora).toLocaleDateString('pt-BR') : '-',
           "Tipo": d.tipo,
-          "CD": d.cd ? d.cd.charAt(0).toUpperCase() + d.cd.slice(1).toLowerCase() : '-',
+          "CD": cdStr,
           "Produto": d.item,
           "Código Produto": d.codigo || '-',
           "Quantidade": d.quantidade,
@@ -192,6 +198,10 @@ export function RelatoriosClient() {
       });
     } else if (activeTab === 'faturas') {
       data.forEach(d => {
+        let rawCd = d.cd || d._insumo?.cd || d.insumos?.[0]?.cd || '-';
+        let cdStr = rawCd !== '-' ? rawCd.charAt(0).toUpperCase() + rawCd.slice(1).toLowerCase() : '-';
+        if (cdStr === 'Jundiai') cdStr = 'Jundiaí';
+
         const baseFatura = {
           "Nota Fiscal": d.numero_documento,
           "Identificador": d.identificador || '-',
@@ -205,7 +215,7 @@ export function RelatoriosClient() {
           "Categoria": d.categoria,
           "Centro de Custo": d.centro_custo || '-',
           "Filial": d.filial || '-',
-          "CD": d.cd || d._insumo?.cd || d.insumos?.[0]?.cd || '-',
+          "CD": cdStr,
           "Tipo Documento": d.tipo_documento || '-',
           "Tipo de Serviço": d.tipo_servico || '-',
           "Conta Contábil": d.conta_contabil || '-',
@@ -241,7 +251,8 @@ export function RelatoriosClient() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Relatorio");
-    XLSX.writeFile(wb, `Relatorio_${activeTab}_${dataInicial}_${dataFinal}.xlsx`);
+    const reportName = activeTab === 'produtos' ? 'insumos' : activeTab;
+    XLSX.writeFile(wb, `Relatorio_${reportName}_${dataInicial}_${dataFinal}.xlsx`);
   };
 
   // Paginacao

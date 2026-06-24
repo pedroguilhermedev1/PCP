@@ -435,23 +435,12 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
           </div>
         </div>
 
-        {/* Conteúdo de cada Tab */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h2 className="text-lg font-semibold text-purple-900">
             {activeTab === 'insumos' && `Insumos em Estoque`}
             {activeTab === 'entradas' && `Registro de Entradas`}
             {activeTab === 'saidas' && `Registro de Saídas`}
           </h2>
-          {activeTab !== 'insumos' && (
-            <Button onClick={() => {
-              setModalTipo(activeTab === 'entradas' ? 'Entrada' : 'Saída');
-              setModalOpen(true);
-            }}>
-              <Plus className="w-4 h-4 mr-2" />
-              {activeTab === 'entradas' && 'Nova Entrada'}
-              {activeTab === 'saidas' && 'Nova Saída'}
-            </Button>
-          )}
         </div>
         
         {activeTab === 'insumos' && (
@@ -564,7 +553,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                         <div className="flex flex-col items-center justify-center space-y-2">
                           {activeTab === 'entradas' ? <LogIn className="w-8 h-8 text-zinc-300" /> : <LogOut className="w-8 h-8 text-zinc-300" />}
                           <p>Nenhum registro de {activeTab} encontrado.</p>
-                          <p className="text-xs">As solicitações feitas na aba Formulários aparecerão aqui.</p>
+                          <p className="text-xs">As solicitações feitas na aba de Faturas ou Formulários aparecerão aqui.</p>
                         </div>
                       </td>
                     </tr>

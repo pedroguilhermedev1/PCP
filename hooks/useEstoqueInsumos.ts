@@ -29,7 +29,9 @@ export function useEstoqueInsumos(filtro_cd?: string, ignored_filtro_empresa?: s
       const timestamp = new Date().getTime();
       let url = `/api/estoque?_t=${timestamp}`;
       if (cd) url += `&cd=${encodeURIComponent(cd)}`;
-      url += `&tipo_envio=${encodeURIComponent(tEnvio || 'Principal')}`;
+      
+      const finalEnvio = (cd && cd.toLowerCase() === 'nse') ? 'Principal' : (tEnvio || 'Principal');
+      url += `&tipo_envio=${encodeURIComponent(finalEnvio)}`;
 
       const res = await fetch(url, { 
         cache: 'no-store',

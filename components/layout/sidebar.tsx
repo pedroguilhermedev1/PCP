@@ -42,17 +42,17 @@ const sidebarItems = [
       {
         title: "Fortaleza",
         href: "/compras/insumos/fortaleza",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+        icon: <Box className="w-4 h-4 flex-shrink-0" />,
       },
       {
         title: "Jundiaí",
         href: "/compras/insumos/jundiai",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+        icon: <Box className="w-4 h-4 flex-shrink-0" />,
       },
       {
         title: "NSE",
         href: "/compras/insumos/nse",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+        icon: <Box className="w-4 h-4 flex-shrink-0" />,
       },
     ]
   },
@@ -81,17 +81,17 @@ const sidebarItems = [
       {
         title: "Fortaleza",
         href: "/compras/formularios/fortaleza",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+        icon: <MessageCircle className="w-4 h-4 flex-shrink-0" />,
       },
       {
         title: "Jundiaí",
         href: "/compras/formularios/jundiai",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+        icon: <MessageCircle className="w-4 h-4 flex-shrink-0" />,
       },
       {
         title: "NSE",
         href: "/compras/formularios/nse",
-        icon: <FileText className="w-4 h-4 flex-shrink-0" />,
+        icon: <MessageCircle className="w-4 h-4 flex-shrink-0" />,
       },
     ]
   },

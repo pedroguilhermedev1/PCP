@@ -339,8 +339,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                       <TableHead>CD</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Item</TableHead>
+                      <TableHead>Setor</TableHead>
                       <TableHead className="text-right">Qtd</TableHead>
                       <TableHead>Usuário</TableHead>
+                      <TableHead>Justificativa</TableHead>
                       {userRole === 'OPERACIONAL' && <TableHead className="text-center">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -357,12 +359,19 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="truncate max-w-[200px]" title={m.item}>{m.item}</span>
-                            {m.setor && <span className="text-xs text-zinc-400">Setor: {m.setor}</span>}
+                            <span className="max-w-[200px]" style={{wordBreak: 'break-word'}}>{m.item}</span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {m.setor || '-'}
                         </TableCell>
                         <TableCell className="text-right font-bold">{m.quantidade}</TableCell>
                         <TableCell>{m.usuario}</TableCell>
+                        <TableCell>
+                          <div className="max-w-[200px] text-xs text-zinc-600" style={{wordBreak: 'break-word'}}>
+                            {m.observacoes || '-'}
+                          </div>
+                        </TableCell>
                         {userRole === 'OPERACIONAL' && (
                           <TableCell className="text-center">
                             <Button 

@@ -20,6 +20,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       let categoria = 'Serviço';
       if (typeof d.id === 'string' && d.id.includes('__CAT__')) {
         categoria = d.id.split('__CAT__')[1];
+        if (categoria === 'Servico') categoria = 'Serviço';
       }
       return {
         ...d,

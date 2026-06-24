@@ -34,16 +34,12 @@ import { cn } from "@/lib/utils";
 import { useCronograma, CronogramaEvento } from "@/hooks/useCronograma";
 import { ADMIN_USERS } from "@/lib/roles";
 
-const CD_OPTIONS = ["SAS", "SAE", "IS", "COC", "NSE", "PSD", "Raízes"];
+const CD_OPTIONS = ["Fortaleza", "Jundiaí", "NSE"];
 
 const CD_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  SAS:    { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",   dot: "bg-blue-500" },
-  SAE:    { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
-  IS:     { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",  dot: "bg-amber-500" },
-  COC:    { bg: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200", dot: "bg-purple-500" },
-  NSE:    { bg: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200",   dot: "bg-rose-500" },
-  PSD:    { bg: "bg-cyan-50",    text: "text-cyan-700",    border: "border-cyan-200",   dot: "bg-cyan-500" },
-  Raízes: { bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200", dot: "bg-orange-500" },
+  Fortaleza: { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",   dot: "bg-blue-500" },
+  Jundiaí:   { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  NSE:       { bg: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200",   dot: "bg-rose-500" },
 };
 
 function getCdColor(cd: string) {
@@ -70,7 +66,7 @@ export function CronogramaClient() {
     date: format(new Date(), "yyyy-MM-dd"),
     time: "08:00",
     description: "",
-    cd: "SAS",
+    cd: "Fortaleza",
   });
 
   useEffect(() => {
@@ -113,7 +109,7 @@ export function CronogramaClient() {
       date: format(date || new Date(), "yyyy-MM-dd"),
       time: "08:00",
       description: "",
-      cd: "SAS",
+      cd: "Fortaleza",
     });
     setModalOpen(true);
   };
