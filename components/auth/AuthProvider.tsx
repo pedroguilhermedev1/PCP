@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         setIsAuthenticated(true);
         if (pathname === '/login' || pathname === '/') {
-          router.push('/compras/faturas/servicos');
+          router.push('/compras/dashboard');
         }
       } else {
         setIsAuthenticated(false);
