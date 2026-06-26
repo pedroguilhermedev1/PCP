@@ -260,11 +260,10 @@ export function FaturasGantt({ faturas }: FaturasGanttProps) {
           </div>
 
           {/* ROWS CONTAINER */}
-          <div className="flex-1 flex flex-col relative overflow-y-auto pb-4">
-            {/* LIMIT LINE */}
-            <div className="absolute top-0 bottom-0 w-px border-l-2 border-dashed border-red-500 z-10 opacity-50" style={{ left: `calc(120px + ${getLeftPos(0)})` }}></div>
+          <div className="flex-1 overflow-y-auto pb-4">
+            <div className="relative min-h-max flex flex-col">
 
-            {processedFaturas.map((pf) => (
+              {processedFaturas.map((pf) => (
               <div 
                 key={pf.fatura.id} 
                 onClick={() => setSelectedFaturaId(pf.fatura.id)}
@@ -288,9 +287,16 @@ export function FaturasGantt({ faturas }: FaturasGanttProps) {
 
                 {/* Row Timeline */}
                 <div className="flex-1 relative h-full">
-                  {/* Grid lines */}
-                  {[-15, -10, -5, 5].map(d => (
-                    <div key={d} className="absolute top-0 bottom-0 w-px bg-zinc-100 z-0" style={{ left: getLeftPos(d) }}></div>
+                  {/* Grid lines & Meta Line */}
+                  {[-15, -10, -5, 0, 5].map(d => (
+                    <div 
+                      key={d} 
+                      className={cn(
+                        "absolute top-0 bottom-0 w-px z-0 pointer-events-none",
+                        d === 0 ? "border-l-2 border-dashed border-red-500 opacity-50" : "bg-zinc-100"
+                      )} 
+                      style={{ left: getLeftPos(d) }}
+                    ></div>
                   ))}
 
                   {/* Integração Bar */}
@@ -343,6 +349,7 @@ export function FaturasGantt({ faturas }: FaturasGanttProps) {
                 </div>
               </div>
             ))}
+            </div>
           </div>
 
         </div>
