@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ArrowRight } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowRight, FileText } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { FaturaModal } from "@/components/faturas/FaturaModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
@@ -152,7 +152,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   });
 
   return (
-    <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
       <ConfirmDeleteModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
@@ -163,8 +163,20 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           }
         }}
       />
-      <div className="mb-6 flex flex-col gap-4">
-        <h1 className="text-2xl font-bold text-purple-900">Gestão de Faturas</h1>
+      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">FATURAS - {categoria.toUpperCase()}</h1>
+            <p className="text-sm text-zinc-500">Gestão e acompanhamento de faturas.</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
+        <div className="mb-6 flex flex-col gap-4">
         
         <div className="flex flex-wrap items-center gap-3">
 
@@ -312,7 +324,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                   </TableRow>
                   
                   {expandedFaturaId === f.id && (
-                    <TableRow className="bg-zinc-50">
+                    <TableRow className="bg-zinc-50 animate-in fade-in slide-in-from-top-2 duration-300">
                       <TableCell colSpan={canEditOrDelete ? 10 : 9} className="p-0 border-b">
                         <div className="p-6">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -465,6 +477,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           onSave={handleSave}
         />
       )}
+      </div>
     </div>
   );
 }

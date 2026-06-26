@@ -104,6 +104,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
     const finalFatura = {
       ...formData,
+      marca: formData.marca || 'PCP',
       id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${safeCategoria}`,
       insumos: [
         ...currentInsumos.map(ins => ({ ...ins, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor })),
@@ -118,7 +119,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pt-10 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl my-auto flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl my-auto flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
         
         <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center z-10 shrink-0 rounded-t-xl">
           <h2 className="text-xl font-bold text-zinc-900">{isEditing ? 'Editar Fatura' : 'Nova Fatura'}</h2>
@@ -211,14 +212,10 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tipo de Documento</label>
                   <Input value={formData.tipo_documento || ""} onChange={handleInputChange('tipo_documento')} placeholder="Ex: NFE" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo de {categoriaAtiva}</label>
-                  <Input value={formData.tipo_servico || ""} onChange={handleInputChange('tipo_servico')} placeholder={`Tipo de ${categoriaAtiva}`} required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cód. {categoriaAtiva}</label>

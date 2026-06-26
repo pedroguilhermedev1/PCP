@@ -6,6 +6,8 @@ import { Fatura, calcularEtapa, calcularSLA, calcularStatus } from "@/modules/co
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
+import { FaturasGantt } from "@/components/faturas/FaturasGantt";
+
 // Components
 function FaturaCard({ title, value, count, colorClass, borderClass, bgClass }: { title: string, value: string, count: number, colorClass: string, borderClass: string, bgClass: string }) {
   return (
@@ -50,7 +52,14 @@ export function DashboardClient({
   const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
   const currentDay = new Date().getDate().toString().padStart(2, '0');
 
-  // Faturas Filters
+  // Auth
+  const [currentUser, setCurrentUser] = useState("");
+  const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'faturas' | 'insumos'>('faturas');
+
+  // Filters Faturas
   const [fatAno, setFatAno] = useState<string>(currentYear);
   const [fatMes, setFatMes] = useState<string>("todos");
   const [fatCategoria, setFatCategoria] = useState<string>("Todas");
@@ -65,16 +74,9 @@ export function DashboardClient({
   // User Dashboard Filters
   const [userCD, setUserCD] = useState<string>("todos");
 
-  const [isAdmin, setIsAdmin] = useState(false);
-
   useEffect(() => {
     const user = localStorage.getItem('pcp_user') || '';
-    const admins = [
-      'pedro.queiroz',
-      'debora.mota',
-      'francisco.edson',
-    ];
-    setIsAdmin(admins.some(a => user.includes(a)));
+    setCurrentUser(user);
   }, []);
 
   // Options
@@ -253,13 +255,139 @@ export function DashboardClient({
           </div>
         </div>
       </header>
+      
+      {isAdmin && (
+        <div className="px-6 md:px-8 pt-6 pb-0">
+          <div className="flex gap-4 border-b border-zinc-200">
+            <button
+              onClick={() => setActiveTab('faturas')}
+              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'faturas' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+            >
+              Faturas
+            </button>
+            <button
+              onClick={() => setActiveTab('insumos')}
+              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'insumos' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+            >
+              Insumos e Movimentações
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 p-6 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-12">
           
-          {/* Sessão Entradas Pendentes (Operacional) */}
-          {!isAdmin && (
+          {/* Sessão Faturas */}
+          {activeTab === 'faturas' && (
             <>
-              <div>
+
+              {isAdmin && (
+                <div>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-zinc-400" />
+                      <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas <span className="text-sm font-normal text-zinc-500">(envio ideal para o time de pagamentos)</span></h2>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Categoria</span>
+                        <select 
+                          value={fatCategoria} 
+                          onChange={(e) => setFatCategoria(e.target.value)}
+                          className="w-[120px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="Todas">Todas</option>
+                          <option value="Material">Material</option>
+                          <option value="Serviço">Serviço</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
+                        <select 
+                          value={fatAno} 
+                          onChange={(e) => setFatAno(e.target.value)}
+                          className="w-[100px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="todos">Todos</option>
+                          {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
+                        <select 
+                          value={fatMes} 
+                          onChange={(e) => setFatMes(e.target.value)}
+                          className="w-[140px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="todos">Todos</option>
+                          {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div 
+                      onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
+                      className="bg-white rounded-xl shadow-sm border border-emerald-200 p-6 flex flex-col justify-between h-full bg-emerald-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                    >
+                      <p className="text-sm font-medium mb-2 text-emerald-600">Dentro do prazo</p>
+                      <div>
+                        <div className="text-3xl font-bold text-emerald-700">{faturasCards.slaNoPrazo}</div>
+                        <p className="text-sm mt-2 font-medium opacity-80 text-emerald-600">faturas no prazo</p>
+                      </div>
+                    </div>
+                    <div 
+                      onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
+                      className="bg-white rounded-xl shadow-sm border border-amber-200 p-6 flex flex-col justify-between h-full bg-amber-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                    >
+                      <p className="text-sm font-medium mb-2 text-amber-600">Próximas do limite</p>
+                      <div>
+                        <div className="text-3xl font-bold text-amber-700">{faturasCards.slaProximo}</div>
+                        <p className="text-sm mt-2 font-medium opacity-80 text-amber-600">faturas em alerta</p>
+                      </div>
+                    </div>
+                    <div 
+                      onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
+                      className="bg-white rounded-xl shadow-sm border border-red-200 p-6 flex flex-col justify-between h-full bg-red-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                    >
+                      <p className="text-sm font-medium mb-2 text-red-600">Atrasadas</p>
+                      <div>
+                        <div className="text-3xl font-bold text-red-700">{faturasCards.slaAtrasado}</div>
+                        <p className="text-sm mt-2 font-medium opacity-80 text-red-600">faturas atrasadas</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 mb-8">
+                    <FaturasGantt faturas={filteredFaturas} />
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-6 mt-8">
+                    <Layers className="w-5 h-5 text-zinc-400" />
+                    <h2 className="text-lg font-bold text-zinc-800">Status das Faturas</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <FaturaCard title="Integração" value={formatBRL(faturasCards.integracao.val)} count={faturasCards.integracao.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
+                    <FaturaCard title="Heflo" value={formatBRL(faturasCards.heflo.val)} count={faturasCards.heflo.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
+                    <FaturaCard title="ERP" value={formatBRL(faturasCards.erp.val)} count={faturasCards.erp.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
+                    <FaturaCard title="V360" value={formatBRL(faturasCards.v360.val)} count={faturasCards.v360.count} colorClass="text-orange-500" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
+                    <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                    <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
+                    <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Sessão Insumos */}
+          {(!isAdmin || activeTab === 'insumos') && (
+            <div>
+              <div className="mb-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-2">
                     <FileText className="w-5 h-5 text-zinc-400" />
@@ -292,314 +420,64 @@ export function DashboardClient({
                   />
                 </div>
               </div>
-              <div className="border-t-2 border-dashed border-zinc-200 my-10"></div>
-            </>
-          )}
 
-          {/* Sessão Faturas */}
-          {isAdmin && (
-            <>
-              <div>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas <span className="text-sm font-normal text-zinc-500">(envio ideal para o time de pagamentos)</span></h2>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Categoria</span>
-                      <select 
-                        value={fatCategoria} 
-                        onChange={(e) => setFatCategoria(e.target.value)}
-                        className="w-[120px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
-                      >
-                        <option value="Todas">Todas</option>
-                        <option value="Material">Material</option>
-                        <option value="Serviço">Serviço</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
-                      <select 
-                        value={fatAno} 
-                        onChange={(e) => setFatAno(e.target.value)}
-                        className="w-[100px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
-                      >
-                        <option value="todos">Todos</option>
-                        {anos.map(a => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
-                      <select 
-                        value={fatMes} 
-                        onChange={(e) => setFatMes(e.target.value)}
-                        className="w-[140px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
-                      >
-                        <option value="todos">Todos</option>
-                        {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                      </select>
-                    </div>
-                  </div>
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5 text-zinc-400" />
+                  <h2 className="text-lg font-bold text-zinc-800">Insumos e Movimentações</h2>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {/* Dentro do prazo */}
-                  <div 
-                    onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
-                    className="bg-white rounded-xl shadow-sm border border-emerald-200 p-6 flex flex-col justify-between h-full bg-emerald-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
-                  >
-                    <p className="text-sm font-medium mb-2 text-emerald-600">Dentro do prazo</p>
-                    <div>
-                      <div className="text-3xl font-bold text-emerald-700">{faturasCards.slaNoPrazo}</div>
-                      <p className="text-sm mt-2 font-medium opacity-80 text-emerald-600">faturas no prazo</p>
-                    </div>
+                
+                <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
+                    <select value={insAno} onChange={(e) => setInsAno(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[55px]">
+                      <option value="todos">Todos</option>
+                      {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
                   </div>
-                  {/* Próximo do Vencimento */}
-                  <div 
-                    onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
-                    className="bg-white rounded-xl shadow-sm border border-amber-200 p-6 flex flex-col justify-between h-full bg-amber-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
-                  >
-                    <p className="text-sm font-medium mb-2 text-amber-600">Próximas do limite</p>
-                    <div>
-                      <div className="text-3xl font-bold text-amber-700">{faturasCards.slaProximo}</div>
-                      <p className="text-sm mt-2 font-medium opacity-80 text-amber-600">faturas em alerta</p>
-                    </div>
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
+                    <select value={insMes} onChange={(e) => setInsMes(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[85px]">
+                      <option value="todos">Todos</option>
+                      {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
                   </div>
-                  {/* Atrasadas */}
-                  <div 
-                    onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
-                    className="bg-white rounded-xl shadow-sm border border-red-200 p-6 flex flex-col justify-between h-full bg-red-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
-                  >
-                    <p className="text-sm font-medium mb-2 text-red-600">Atrasadas</p>
-                    <div>
-                      <div className="text-3xl font-bold text-red-700">{faturasCards.slaAtrasado}</div>
-                      <p className="text-sm mt-2 font-medium opacity-80 text-red-600">faturas atrasadas</p>
-                    </div>
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Dia</span>
+                    <select value={insDia} onChange={(e) => setInsDia(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[50px]">
+                      <option value="todos">Todos</option>
+                      {dias.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 mb-6">
-                  <Layers className="w-5 h-5 text-zinc-400" />
-                  <h2 className="text-lg font-bold text-zinc-800">Status das Faturas</h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Integração → Vermelho suave */}
-                  <FaturaCard 
-                    title="Integração" 
-                    value={formatBRL(faturasCards.integracao.val)} 
-                    count={faturasCards.integracao.count}
-                    colorClass="text-red-500" 
-                    borderClass="border-red-200" 
-                    bgClass="bg-red-50/20" 
-                  />
-                  {/* Heflo → Azul suave */}
-                  <FaturaCard 
-                    title="Heflo" 
-                    value={formatBRL(faturasCards.heflo.val)} 
-                    count={faturasCards.heflo.count}
-                    colorClass="text-blue-500" 
-                    borderClass="border-blue-200" 
-                    bgClass="bg-blue-50/20" 
-                  />
-                  {/* ERP → Cinza suave */}
-                  <FaturaCard 
-                    title="ERP" 
-                    value={formatBRL(faturasCards.erp.val)} 
-                    count={faturasCards.erp.count}
-                    colorClass="text-zinc-500" 
-                    borderClass="border-zinc-200" 
-                    bgClass="bg-zinc-50/20" 
-                  />
-                  {/* V360 → Laranja suave */}
-                  <FaturaCard 
-                    title="V360" 
-                    value={formatBRL(faturasCards.v360.val)} 
-                    count={faturasCards.v360.count}
-                    colorClass="text-orange-500" 
-                    borderClass="border-orange-200" 
-                    bgClass="bg-orange-50/20" 
-                  />
-                  {/* Atrasadas em Aberto → Vermelho escuro */}
-                  <FaturaCard 
-                    title="Atrasadas em Aberto" 
-                    value={formatBRL(faturasCards.atrasadasAberto.val)} 
-                    count={faturasCards.atrasadasAberto.count}
-                    colorClass="text-red-700" 
-                    borderClass="border-red-300" 
-                    bgClass="bg-red-100/50" 
-                  />
-                  {/* Aguardando Pagamento → Verde claro */}
-                  <FaturaCard 
-                    title="Aguardando Pagamento" 
-                    value={formatBRL(faturasCards.aguardando.val)} 
-                    count={faturasCards.aguardando.count}
-                    colorClass="text-emerald-500" 
-                    borderClass="border-emerald-200" 
-                    bgClass="bg-emerald-50/20" 
-                  />
-                  {/* Pago → Verde escuro */}
-                  <FaturaCard 
-                    title="Pago" 
-                    value={formatBRL(faturasCards.pago.val)} 
-                    count={faturasCards.pago.count}
-                    colorClass="text-green-600" 
-                    borderClass="border-green-200" 
-                    bgClass="bg-green-50/20" 
-                  />
+                  <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
+                    <select value={insCD} onChange={(e) => setInsCD(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]">
+                      <option value="todos">Todos</option>
+                      {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
+                    </select>
+                  </div>
+                  <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
+                  <div className="flex items-center gap-2 bg-purple-50/80 px-3 py-1.5 rounded-lg border border-purple-200 shadow-sm transition-colors hover:bg-purple-100/80">
+                    <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Envio</span>
+                    <select value={insTipoEnvio} onChange={(e) => setInsTipoEnvio(e.target.value)} className="text-sm font-bold bg-transparent outline-none text-purple-800 cursor-pointer">
+                      <option value="Principal">Principal</option>
+                      <option value="Complementar">Complementar</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t-2 border-dashed border-zinc-200 my-10"></div>
-            </>
-          )}
-
-          {/* Sessão Insumos */}
-          <div>
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
-              <div className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-zinc-400" />
-                <h2 className="text-lg font-bold text-zinc-800">Insumos e Movimentações</h2>
-              </div>
-              
-              <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
-                  <select 
-                    value={insAno} 
-                    onChange={(e) => setInsAno(e.target.value)}
-                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[55px]"
-                  >
-                    <option value="todos">Todos</option>
-                    {anos.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
-                  <select 
-                    value={insMes} 
-                    onChange={(e) => setInsMes(e.target.value)}
-                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[85px]"
-                  >
-                    <option value="todos">Todos</option>
-                    {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Dia</span>
-                  <select 
-                    value={insDia} 
-                    onChange={(e) => setInsDia(e.target.value)}
-                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[50px]"
-                  >
-                    <option value="todos">Todos</option>
-                    {dias.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-
-                <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
-
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
-                  <select 
-                    value={insCD} 
-                    onChange={(e) => setInsCD(e.target.value)}
-                    className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
-                  >
-                    <option value="todos">Todos</option>
-                    {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
-                  </select>
-                </div>
-
-
-                <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
-
-                <div className="flex items-center gap-2 bg-purple-50/80 px-3 py-1.5 rounded-lg border border-purple-200 shadow-sm transition-colors hover:bg-purple-100/80">
-                  <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Envio</span>
-                  <select 
-                    value={insTipoEnvio} 
-                    onChange={(e) => setInsTipoEnvio(e.target.value)}
-                    className="text-sm font-bold bg-transparent outline-none text-purple-800 cursor-pointer"
-                  >
-                    <option value="Principal">Principal</option>
-                    <option value="Complementar">Complementar</option>
-                  </select>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <InsumoCard title="Total de Itens Cadastrados" value={insumosStats.totalItens} subtitle="Itens únicos no CD" icon={Layers} colorClass="text-blue-600" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
+                <InsumoCard title="Entradas (Período Selecionado)" value={insumosStats.entradas} subtitle="Qtd adicionada ao estoque" icon={TrendingUp} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
+                <InsumoCard title="Saídas (Período Selecionado)" value={insumosStats.saidas} subtitle="Qtd retirada do estoque" icon={TrendingDown} colorClass="text-orange-600" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
+                <InsumoCard title="Itens em Situação Normal" value={insumosStats.confortaveis} subtitle="Acima do Lead Time + 3 dias" icon={CheckCircle} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`); }} />
+                <InsumoCard title="Itens em Alerta" value={insumosStats.alertas} subtitle="Entre Lead Time e +3 dias" icon={AlertTriangle} colorClass="text-amber-500" borderClass="border-amber-200" bgClass="bg-amber-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} />
+                <InsumoCard title="Itens Críticos" value={insumosStats.criticos} subtitle="Cobertura ≤ Lead Time" icon={AlertTriangle} colorClass="text-red-600" borderClass="border-red-200" bgClass="bg-red-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} />
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <InsumoCard 
-                title="Total de Itens Cadastrados"
-                value={insumosStats.totalItens}
-                subtitle="Itens únicos no CD"
-                icon={Layers}
-                colorClass="text-blue-600"
-                borderClass="border-blue-200"
-                bgClass="bg-blue-50/20"
-              />
-              <InsumoCard 
-                title="Entradas (Período Selecionado)"
-                value={insumosStats.entradas}
-                subtitle="Qtd adicionada ao estoque"
-                icon={TrendingUp}
-                colorClass="text-emerald-600"
-                borderClass="border-emerald-200"
-                bgClass="bg-emerald-50/20"
-              />
-              <InsumoCard 
-                title="Saídas (Período Selecionado)"
-                value={insumosStats.saidas}
-                subtitle="Qtd retirada do estoque"
-                icon={TrendingDown}
-                colorClass="text-orange-600"
-                borderClass="border-orange-200"
-                bgClass="bg-orange-50/20"
-              />
-              <InsumoCard 
-                title="Itens em Situação Normal"
-                value={insumosStats.confortaveis}
-                subtitle="Acima do Lead Time + 3 dias"
-                icon={CheckCircle}
-                colorClass="text-emerald-600"
-                borderClass="border-emerald-200"
-                bgClass="bg-emerald-50/20"
-                onClick={() => {
-                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
-                   router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`);
-                }}
-              />
-              <InsumoCard 
-                title="Itens em Alerta"
-                value={insumosStats.alertas}
-                subtitle="Entre Lead Time e +3 dias"
-                icon={AlertTriangle}
-                colorClass="text-amber-500"
-                borderClass="border-amber-200"
-                bgClass="bg-amber-50/20"
-                onClick={() => {
-                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
-                   router.push(`/compras/insumos/${cdPath}?status=ALERTA`);
-                }}
-              />
-              <InsumoCard 
-                title="Itens Críticos"
-                value={insumosStats.criticos}
-                subtitle="Cobertura ≤ Lead Time"
-                icon={AlertTriangle}
-                colorClass="text-red-600"
-                borderClass="border-red-200"
-                bgClass="bg-red-50/20"
-                onClick={() => {
-                   const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas';
-                   router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`);
-                }}
-              />
-            </div>
-          </div>
-
+          )}
         </div>
       </div>
     </div>
