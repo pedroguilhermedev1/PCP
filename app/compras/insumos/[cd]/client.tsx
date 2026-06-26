@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Plus, LogIn, LogOut, Trash2, Edit, X, AlertCircle } from "lucide-react";
+import { Box, Plus, LogIn, LogOut, Trash2, Edit, X, AlertCircle, Package } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -347,8 +347,8 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
       />
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
-            <Box className="w-5 h-5" />
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <Package className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-zinc-900 leading-tight">Insumos - CD {cdName}</h1>

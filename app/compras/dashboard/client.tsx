@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers } from "lucide-react";
+import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Fatura, calcularEtapa, calcularSLA, calcularStatus } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
@@ -246,8 +246,8 @@ export function DashboardClient({
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-zinc-50/30">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
-            <LayoutDashboard className="w-5 h-5" />
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <BarChart2 className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-zinc-900 leading-tight">Dashboard</h1>

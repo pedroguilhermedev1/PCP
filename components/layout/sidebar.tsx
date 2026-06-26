@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle } from "lucide-react"
+import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle, Package, Handshake, MessageSquare, BarChart2, ShoppingCart } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLembretes } from "@/components/lembretes/LembretesContext"
@@ -15,83 +15,83 @@ const sidebarItems = [
     type: 'link',
     title: "DASHBOARD",
     href: "/compras/dashboard",
-    icon: <LayoutDashboard className="w-5 h-5 flex-shrink-0" />,
+    icon: <BarChart2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
   {
     type: 'group',
     title: "FATURAS",
-    icon: <DollarSign className="w-5 h-5 flex-shrink-0" />,
+    icon: <DollarSign className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
         title: "Materiais",
         href: "/compras/faturas/materiais",
-        icon: <Box className="w-4 h-4 flex-shrink-0" />,
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
       {
         title: "Serviços",
         href: "/compras/faturas/servicos",
-        icon: <Briefcase className="w-4 h-4 flex-shrink-0" />,
+        icon: <Handshake className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       }
     ]
   },
   {
     type: 'group',
     title: "INSUMOS",
-    icon: <Box className="w-5 h-5 flex-shrink-0" />,
+    icon: <Package className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
         title: "Fortaleza",
         href: "/compras/insumos/fortaleza",
-        icon: <Box className="w-4 h-4 flex-shrink-0" />,
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
       {
         title: "Jundiaí",
         href: "/compras/insumos/jundiai",
-        icon: <Box className="w-4 h-4 flex-shrink-0" />,
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
       {
         title: "NSE",
         href: "/compras/insumos/nse",
-        icon: <Box className="w-4 h-4 flex-shrink-0" />,
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
     ]
   },
   {
     type: 'group',
     title: "FORNECEDORES",
-    icon: <Briefcase className="w-5 h-5 flex-shrink-0" />,
+    icon: <Handshake className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
         title: "Materiais",
         href: "/compras/fornecedores/materiais",
-        icon: <Box className="w-4 h-4 flex-shrink-0" />,
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
       {
         title: "Serviços",
         href: "/compras/fornecedores/servicos",
-        icon: <Briefcase className="w-4 h-4 flex-shrink-0" />,
+        icon: <Handshake className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       }
     ]
   },
   {
     type: 'group',
     title: "SOLICITAÇÕES",
-    icon: <MessageCircle className="w-5 h-5 flex-shrink-0" />,
+    icon: <MessageSquare className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
         title: "Fortaleza",
         href: "/compras/formularios/fortaleza",
-        icon: <MessageCircle className="w-4 h-4 flex-shrink-0" />,
+        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
       {
         title: "Jundiaí",
         href: "/compras/formularios/jundiai",
-        icon: <MessageCircle className="w-4 h-4 flex-shrink-0" />,
+        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
       {
         title: "NSE",
         href: "/compras/formularios/nse",
-        icon: <MessageCircle className="w-4 h-4 flex-shrink-0" />,
+        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
     ]
   },
@@ -99,19 +99,19 @@ const sidebarItems = [
     type: 'link',
     title: "CRONOGRAMA",
     href: "/compras/cronograma",
-    icon: <Calendar className="w-5 h-5 flex-shrink-0" />,
+    icon: <Calendar className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
   {
     type: 'link',
     title: "RELATÓRIOS",
     href: "/compras/relatorios",
-    icon: <FileText className="w-5 h-5 flex-shrink-0" />,
+    icon: <FileText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
   {
     type: 'link',
     title: "LEMBRETES",
     href: "/compras/lembretes",
-    icon: <Bell className="w-5 h-5 flex-shrink-0" />,
+    icon: <Bell className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
 ]
 
@@ -193,7 +193,7 @@ export function Sidebar() {
     <>
       <div className="md:hidden flex flex-row items-center justify-between p-4 border-b border-zinc-200 bg-zinc-50 flex-shrink-0">
         <Link href="/" className="flex items-center gap-2 font-bold text-purple-900">
-          <Building className="w-5 h-5 text-purple-800 flex-shrink-0" />
+          <ShoppingCart className="w-6 h-6 text-purple-800 flex-shrink-0" strokeWidth={2.5} />
           <span>PCP Compras</span>
         </Link>
         <button onClick={() => setIsOpen(true)} className="p-2 -mr-2 text-zinc-600">
@@ -209,7 +209,7 @@ export function Sidebar() {
         <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-200 overflow-hidden">
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-2 font-bold text-purple-900 overflow-hidden transition-all justify-start">
-              <Building className="w-5 h-5 text-purple-800 flex-shrink-0" />
+              <ShoppingCart className="w-6 h-6 text-purple-800 flex-shrink-0" strokeWidth={2.5} />
               <span className="whitespace-nowrap text-sm">PCP Compras</span>
             </Link>
           )}

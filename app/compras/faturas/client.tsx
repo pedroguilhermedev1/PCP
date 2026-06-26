@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ArrowRight, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { FaturaModal } from "@/components/faturas/FaturaModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
@@ -31,6 +31,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
   const [filterAno, setFilterAno] = useState<string>(qAno);
   const [filterMes, setFilterMes] = useState<string>(qMes);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
     setFaturas(initialFaturas);
@@ -67,6 +68,19 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       
       if (filterAno !== "todos" && y !== filterAno) return false;
       if (filterMes !== "todos" && m !== filterMes) return false;
+    }
+
+    if (searchTerm.trim() !== "") {
+      const term = searchTerm.toLowerCase().trim();
+      const matchFornecedor = f.fornecedor?.toLowerCase().startsWith(term);
+      const matchNumero = f.numero_documento?.toLowerCase().startsWith(term);
+      const matchHeflo = f.heflo?.toLowerCase().startsWith(term);
+      const matchErp = f.erp?.toLowerCase().startsWith(term);
+      const matchV360 = f.v360?.toLowerCase().startsWith(term);
+      
+      if (!matchFornecedor && !matchNumero && !matchHeflo && !matchErp && !matchV360) {
+        return false;
+      }
     }
 
     return true;
@@ -165,11 +179,11 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       />
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
-            <FileText className="w-5 h-5" />
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <DollarSign className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">FATURAS - {categoria.toUpperCase()}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas - {categoria}</h1>
             <p className="text-sm text-zinc-500">Gestão e acompanhamento de faturas.</p>
           </div>
         </div>
@@ -177,8 +191,18 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
       <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
         <div className="mb-6 flex flex-col gap-4">
-        
-        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <input 
+              type="text" 
+              placeholder="Pesquisar por Fornecedor, Fatura, Heflo, ERP ou V360..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all shadow-sm"
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
 
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
             <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>

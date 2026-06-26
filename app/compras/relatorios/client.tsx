@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, Download, FileSpreadsheet, Search, RefreshCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Box, Download, FileSpreadsheet, Search, RefreshCcw, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -263,8 +263,8 @@ export function RelatoriosClient() {
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-zinc-50/30">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
-            <FileSpreadsheet className="w-5 h-5" />
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <FileText className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-zinc-900 leading-tight">Relatórios Gerenciais</h1>

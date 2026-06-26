@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Plus, Briefcase, Trash2, Edit, X, Search, Building2 } from "lucide-react";
+import { Box, Plus, Briefcase, Trash2, Edit, X, Search, Building2, Handshake } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,11 +252,11 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
       
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-200 p-2 rounded-lg text-purple-900">
-            {tipo === 'Material' ? <Box className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <Handshake className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">FORNECEDORES - {tipo === 'Material' ? 'MATERIAIS' : 'SERVIÇOS'}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Fornecedores - {tipo === 'Material' ? 'Materiais' : 'Serviços'}</h1>
             <p className="text-sm text-zinc-500">Gestão do cadastro de fornecedores.</p>
           </div>
         </div>
