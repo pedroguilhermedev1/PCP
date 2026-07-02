@@ -156,11 +156,15 @@ export function Sidebar() {
   }
 }, [pathname]);
 
+  const isReportsOnly = currentUser === 'ivna.teixeira';
+
   const visibleItems = isAdmin
   ? sidebarItems
-  : sidebarItems.filter(item =>
-      item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
-    )
+  : isReportsOnly 
+    ? sidebarItems.filter(item => item.title === 'RELATÓRIOS')
+    : sidebarItems.filter(item =>
+        item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
+      )
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');

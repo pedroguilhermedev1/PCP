@@ -84,7 +84,7 @@ export function RelatoriosClient() {
         let q = supabase.from('faturas')
           .select('*')
           .gte('data_emissao', dataInicial)
-          .lte('data_emissao', dataFinal)
+          .lte('data_emissao', dataFinal + 'T23:59:59')
           .order('data_emissao', { ascending: false });
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
@@ -106,6 +106,7 @@ export function RelatoriosClient() {
           for (const d of finalData) {
             if (d.categoria === 'Material' && d.insumos && d.insumos.length > 0) {
               for (const ins of d.insumos) {
+                if (ins._meta) continue;
                 flattened.push({ ...d, _insumo: ins });
               }
             } else {
@@ -204,7 +205,7 @@ export function RelatoriosClient() {
 
         const baseFatura = {
           "Nota Fiscal": d.numero_documento,
-          "Identificador": d.identificador || '-',
+          "Identificador": d.codigo_fatura || d.tipo_documento || '-',
           "Fornecedor": d.fornecedor,
           "CNPJ": d.cnpj || '-',
           "Data de Emissão": d.data_emissao,
@@ -394,7 +395,7 @@ export function RelatoriosClient() {
                       <TableRow key={i}>
                         {activeTab === 'fornecedores' && (
                           <>
-                            <TableCell className="font-medium">{d.nome}</TableCell>
+                            <TableCell className="font-medium">{d.nome_fantasia || d.razao_social || d.nome || '-'}</TableCell>
                             <TableCell>{d.cnpj}</TableCell>
                             <TableCell>{d.contato}</TableCell>
                             <TableCell>{new Date(d.created_at).toLocaleDateString('pt-BR')}</TableCell>

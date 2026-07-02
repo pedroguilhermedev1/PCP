@@ -54,7 +54,7 @@ export function DashboardClient({
 
   // Auth
   const [currentUser, setCurrentUser] = useState("");
-  const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+  const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   // Tabs
   const [activeTab, setActiveTab] = useState<'faturas' | 'insumos'>('faturas');
@@ -353,7 +353,7 @@ export function DashboardClient({
                       onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
                       className="bg-white rounded-xl shadow-sm border border-red-200 p-6 flex flex-col justify-between h-full bg-red-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
                     >
-                      <p className="text-sm font-medium mb-2 text-red-600">Atrasadas</p>
+                      <p className="text-sm font-medium mb-2 text-red-600">Atrasadas no Fluxo</p>
                       <div>
                         <div className="text-3xl font-bold text-red-700">{faturasCards.slaAtrasado}</div>
                         <p className="text-sm mt-2 font-medium opacity-80 text-red-600">faturas atrasadas</p>
@@ -371,11 +371,13 @@ export function DashboardClient({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                    </div>
                     <FaturaCard title="Integração" value={formatBRL(faturasCards.integracao.val)} count={faturasCards.integracao.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
                     <FaturaCard title="Heflo" value={formatBRL(faturasCards.heflo.val)} count={faturasCards.heflo.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
                     <FaturaCard title="ERP" value={formatBRL(faturasCards.erp.val)} count={faturasCards.erp.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
                     <FaturaCard title="V360" value={formatBRL(faturasCards.v360.val)} count={faturasCards.v360.count} colorClass="text-orange-500" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
-                    <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
                     <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
                     <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
                   </div>

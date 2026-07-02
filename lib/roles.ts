@@ -4,6 +4,10 @@ export const ADMIN_USERS = [
   'francisco.edson',
 ];
 
+export const REPORTS_USERS = [
+  'ivna.teixeira'
+];
+
 export const OPERACIONAL_USERS = [
   'user01.arco',
   'user02.arco',
@@ -23,6 +27,10 @@ export function getUserRole(username?: string) {
 
   if (OPERACIONAL_USERS.includes(normalized)) {
     return 'OPERACIONAL';
+  }
+
+  if (REPORTS_USERS.includes(normalized)) {
+    return 'REPORTS';
   }
 
   return null;

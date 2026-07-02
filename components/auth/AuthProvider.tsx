@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
+import { getUserRole } from '@/lib/roles';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -16,7 +18,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         setIsAuthenticated(true);
         if (pathname === '/login' || pathname === '/') {
-          router.push('/compras/dashboard');
+          const role = getUserRole(user);
+          if (role === 'REPORTS') {
+            router.push('/compras/relatorios');
+          } else {
+            router.push('/compras/dashboard');
+          }
         }
       } else {
         setIsAuthenticated(false);

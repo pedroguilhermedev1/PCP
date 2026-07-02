@@ -78,7 +78,9 @@ function FornecedorModal({
       email,
       categoria,
       observacoes,
-      tipo
+      tipo,
+      codigo_fornecedor: codigoFornecedor,
+      tipo_servico: tipoServico
     };
 
     try {

@@ -31,6 +31,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
   const [filterAno, setFilterAno] = useState<string>(qAno);
   const [filterMes, setFilterMes] = useState<string>(qMes);
+  const [filterStatus, setFilterStatus] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
@@ -68,6 +69,11 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       
       if (filterAno !== "todos" && y !== filterAno) return false;
       if (filterMes !== "todos" && m !== filterMes) return false;
+    }
+
+    if (filterStatus !== "todos") {
+      const stat = calcularStatus(f);
+      if (stat.toLowerCase() !== filterStatus.toLowerCase()) return false;
     }
 
     if (searchTerm.trim() !== "") {
@@ -160,8 +166,11 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   };
 
   const faturasOrdenadas = faturasFiltradas.sort((a, b) => {
-    const da = new Date(a.data_vencimento || '2099-12-31').getTime();
-    const db = new Date(b.data_vencimento || '2099-12-31').getTime();
+    const codeA = (a.codigo_fatura || a.tipo_documento || '').toLowerCase();
+    const codeB = (b.codigo_fatura || b.tipo_documento || '').toLowerCase();
+    if (codeA && codeB) return codeA.localeCompare(codeB);
+    const da = new Date(a.data_emissao || '2099-12-31').getTime();
+    const db = new Date(b.data_emissao || '2099-12-31').getTime();
     return da - db;
   });
 
@@ -216,7 +225,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             </select>
           </div>
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">SLA / Prazo</span>
+            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">SLA Operacional</span>
             <select 
               value={filterSLA} 
               onChange={(e) => setFilterSLA(e.target.value)}
@@ -225,7 +234,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <option value="todos">Todos</option>
               <option value="No prazo">Dentro do prazo</option>
               <option value="Próximas">Próximas do limite</option>
-              <option value="Atrasadas">Atrasadas</option>
+              <option value="Atrasadas">Atrasadas no Fluxo</option>
             </select>
           </div>
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
@@ -261,6 +270,20 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <option value="12">Dezembro</option>
             </select>
           </div>
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Status</span>
+            <select 
+              value={filterStatus} 
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
+            >
+              <option value="todos">Todos</option>
+              <option value="Pago">Pago</option>
+              <option value="Pago (Vencida)">Pago (Vencida)</option>
+              <option value="A Vencer">A Vencer</option>
+              <option value="Vencido">Vencida</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -277,6 +300,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 text-center">#</TableHead>
+              <TableHead>Código</TableHead>
               <TableHead>CD</TableHead>
               <TableHead>Fornecedor</TableHead>
               <TableHead>Local</TableHead>
@@ -301,6 +325,9 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                   >
                     <TableCell className="text-center font-medium text-zinc-400 text-xs">
                       {index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-zinc-100 font-mono text-zinc-600">{f.codigo_fatura || f.tipo_documento || 'S/ CÓD'}</Badge>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '-'}</span>
@@ -399,10 +426,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                               <div className="space-y-1">
                                 <span className="text-xs text-zinc-500 block">Filial</span>
                                 <span className="text-sm font-medium">{f.filial}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Tipo Doc</span>
-                                <span className="text-sm font-medium">{f.tipo_documento}</span>
                               </div>
                               <div className="space-y-1">
                                 <span className="text-xs text-zinc-500 block">Conta Contábil</span>

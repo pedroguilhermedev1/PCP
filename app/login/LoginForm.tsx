@@ -22,7 +22,11 @@ export function LoginForm() {
     const validUsers = [...ADMIN_USERS, ...OPERACIONAL_USERS];
     
     // allow the specific string 'debora.mota' to match 'debora.mora' as there is a typo seen in previous codes
-    if ((validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') && password === '123@456') {
+    if (parsedUsername === 'ivna.teixeira' && password === 'ivna@2026') {
+      localStorage.setItem('pcp_user', parsedUsername);
+      toast.success('Login efetuado com sucesso!');
+      router.push('/compras/relatorios');
+    } else if ((validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') && password === '123@456') {
       localStorage.setItem('pcp_user', parsedUsername);
       toast.success('Login efetuado com sucesso!');
       router.push('/compras/dashboard');

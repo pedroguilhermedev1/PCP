@@ -25,6 +25,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     categoria: categoriaAtiva,
     possui_encargo: false,
     status_pagamento: 'Em andamento',
+    forma_pagamento: fatura?.forma_pagamento || 'Boleto',
     ...fatura,
     cd: fatura?.cd || fatura?.insumos?.find(i => (i as any)._meta)?.cd || fatura?.insumos?.[0]?.cd || '',
     codigo_fornecedor: fatura?.codigo_fornecedor || fatura?.insumos?.find(i => (i as any)._meta)?.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
@@ -104,10 +105,12 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
     const finalFatura = {
       ...formData,
+      conta_contabil: formData.conta_protheus || formData.conta_contabil,
+      descricao_contabil: formData.desc_conta_protheus || formData.descricao_contabil,
       marca: formData.marca || 'PCP',
       id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${safeCategoria}`,
       insumos: [
-        ...currentInsumos.map(ins => ({ ...ins, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor })),
+        ...currentInsumos.map(ins => ({ ...ins, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor, conta_contabil: ins.conta_protheus, descricao_contabil: ins.desc_conta_protheus })),
         metaObj
       ],
     } as Fatura;
@@ -144,7 +147,13 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                     const value = e.target.value;
                     const fornecedorMatch = fornecedores.find(f => (f.nome_fantasia || f.razao_social) === value);
                     if (fornecedorMatch) {
-                      setFormData(prev => ({ ...prev, fornecedor: value, cnpj: formatCNPJ(fornecedorMatch.cnpj), codigo_fornecedor: fornecedorMatch.codigo_fornecedor }));
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        fornecedor: value, 
+                        cnpj: formatCNPJ(fornecedorMatch.cnpj), 
+                        codigo_fornecedor: fornecedorMatch.codigo_fornecedor,
+                        tipo_servico: fornecedorMatch.tipo_servico || prev.tipo_servico
+                      }));
                     } else {
                       setFormData(prev => ({ ...prev, fornecedor: value }));
                     }
@@ -212,18 +221,19 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo de Documento</label>
-                  <Input value={formData.tipo_documento || ""} onChange={handleInputChange('tipo_documento')} placeholder="Ex: NFE" />
+                  <label className="text-sm font-medium">Forma de Pagamento</label>
+                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    value={formData.forma_pagamento || "Boleto"} onChange={handleSelectChange('forma_pagamento')} required>
+                    <option value="Boleto">Boleto</option>
+                    <option value="Pix">Pix</option>
+                    <option value="TED">TED</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cód. {categoriaAtiva}</label>
                   <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Conta Contábil</label>
-                  <Input value={formData.conta_contabil || ""} onChange={handleInputChange('conta_contabil')} placeholder="Conta Contábil" />
                 </div>
               </div>
 

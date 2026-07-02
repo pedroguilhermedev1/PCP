@@ -12,7 +12,12 @@ export default function Home() {
       router.push('/login');
       return;
     }
-    router.push('/compras/dashboard');
+    const role = getUserRole(user);
+    if (role === 'REPORTS') {
+      router.push('/compras/relatorios');
+    } else {
+      router.push('/compras/dashboard');
+    }
   }, [router]);
 
   return <div className="p-8 text-center text-zinc-500">Redirecionando...</div>;

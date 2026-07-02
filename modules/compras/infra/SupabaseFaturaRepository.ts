@@ -24,7 +24,9 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       }
       return {
         ...d,
-        categoria: d.categoria || categoria
+        categoria: d.categoria || categoria,
+        codigo_fatura: d.tipo_documento,
+        tipo_documento: undefined
       };
     }) as Fatura[];
   }
@@ -32,7 +34,27 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async saveFatura(fatura: Fatura): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, descricao_contabil, tipo_servico, ...faturaData } = fatura as any;
+    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, descricao_contabil, tipo_servico, codigo_fatura, ...faturaData } = fatura as any;
+
+    let nextCodigoFatura = codigo_fatura;
+    if (!nextCodigoFatura && !faturaData.id?.includes('FAT-') && !faturaData.id?.match(/^[a-zA-Z0-9-]+$/)) {
+      // It's a new fatura, let's generate FAT-XXXXXX
+      const { data: lastFatura } = await supabase
+        .from('faturas')
+        .select('tipo_documento')
+        .ilike('tipo_documento', 'FAT-%')
+        .order('tipo_documento', { ascending: false })
+        .limit(1);
+
+      let nextNum = 1;
+      if (lastFatura && lastFatura.length > 0 && lastFatura[0].tipo_documento) {
+        const match = lastFatura[0].tipo_documento.match(/FAT-(\d+)/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+      nextCodigoFatura = `FAT-${String(nextNum).padStart(6, '0')}`;
+    }
     
     // Ensure text fields are explicitly populated to avoid not-null constraint errors
     const sanitizedData = {
@@ -41,7 +63,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       cnpj: faturaData.cnpj || '',
       centro_custo: faturaData.centro_custo || '',
       filial: faturaData.filial || '',
-      tipo_documento: faturaData.tipo_documento || '',
+      tipo_documento: nextCodigoFatura || '',
       codigo_servico: faturaData.codigo_servico || '',
       responsavel: faturaData.responsavel || '',
       forma_pagamento: faturaData.forma_pagamento || 'Boleto',
