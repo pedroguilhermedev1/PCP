@@ -19,6 +19,7 @@ export interface FaturaInsumo {
 export interface Fatura {
   id: string;
   identificador?: string;
+  codigo_fatura?: string;
 
   marca: string;
   categoria: 'Serviço' | 'Material';
