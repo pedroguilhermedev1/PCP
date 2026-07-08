@@ -516,10 +516,11 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                         )}
                         <td className="px-6 py-4">
                           <Badge className={
-                            mov.status === 'CONFIRMADO' ? 'bg-green-600' :
-                            mov.status === 'REJEITADO' ? 'bg-red-600' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                            mov.status === 'PENDENTE' ? 'bg-orange-500' : 
+                            mov.status === 'Aprovada' || mov.status === 'CONFIRMADO' ? 'bg-green-600' :
+                            'bg-zinc-500'
                           }>
-                            {mov.status || 'CONFIRMADO'}
+                            {mov.status === 'CONFIRMADO' ? 'APROVADA' : (mov.status || 'APROVADA')}
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-zinc-600">

@@ -54,9 +54,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   else if (cobertura > currentLt && cobertura <= (currentLt + 3)) novoStatus = 'ALERTA';
   else novoStatus = 'CONFORTÁVEL';
 
-  // Perform updates in parallel
   const [updateMov, updateIns] = await Promise.all([
-    supabase.from('estoque_movimentacoes').update({ status: 'CONFIRMADO' }).eq('id', id),
+    supabase.from('estoque_movimentacoes').update({ status: 'Aprovada' }).eq('id', id),
     supabase.from('estoque_insumos').update({ estoque_real: newReal, status: novoStatus }).eq('id', insumo.id)
   ]);
 

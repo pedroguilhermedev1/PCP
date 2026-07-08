@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getUserRole } from "@/lib/roles";
 
-type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas';
+type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas' | 'faturas-sap';
 
 export function RelatoriosClient() {
   const [activeTab, setActiveTab] = useState<ReportType>('fornecedores');
@@ -44,7 +44,7 @@ export function RelatoriosClient() {
     }
   }, []);
 
-  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas'];
+  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas', 'faturas-sap'];
   const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
@@ -69,23 +69,36 @@ export function RelatoriosClient() {
         if (categoriaFiltro === 'Serviços') q = q.eq('tipo', 'Serviço');
         query = q;
       } else if (activeTab === 'produtos') {
-        query = supabase.from('estoque_insumos')
+        let q = supabase.from('estoque_insumos')
           .select('*')
-          .gte('created_at', start)
-          .lte('created_at', end)
           .order('created_at', { ascending: false });
+        q = q.gte('created_at', start);
+        q = q.lte('created_at', end);
+        query = q;
       } else if (activeTab === 'movimentacoes') {
-        query = supabase.from('estoque_movimentacoes')
+        let q = supabase.from('estoque_movimentacoes')
           .select('*')
-          .gte('data_hora', start)
-          .lte('data_hora', end)
           .order('data_hora', { ascending: false });
+        q = q.gte('data_hora', start);
+        q = q.lte('data_hora', end);
+        query = q;
       } else if (activeTab === 'faturas') {
         let q = supabase.from('faturas')
           .select('*')
-          .gte('data_emissao', dataInicial)
-          .lte('data_emissao', dataFinal + 'T23:59:59')
-          .order('data_emissao', { ascending: false });
+          .order('data_emissao', { ascending: false })
+          .is('is_sap', false);
+        q = q.gte('data_emissao', dataInicial);
+        q = q.lte('data_emissao', dataFinal + 'T23:59:59');
+        if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
+        if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
+        query = q;
+      } else if (activeTab === 'faturas-sap') {
+        let q = supabase.from('faturas')
+          .select('*')
+          .order('data_emissao', { ascending: false })
+          .eq('is_sap', true);
+        q = q.gte('data_emissao', dataInicial);
+        q = q.lte('data_emissao', dataFinal + 'T23:59:59');
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
         query = q;
@@ -96,7 +109,7 @@ export function RelatoriosClient() {
         if (error) throw new Error(error.message);
         
         let finalData = result || [];
-        if (activeTab === 'faturas') {
+        if (activeTab === 'faturas' || activeTab === 'faturas-sap') {
           finalData = finalData.map(d => ({
             ...d,
             categoria: d.id.includes('__CAT__Material') ? 'Material' : 'Serviço'
@@ -193,11 +206,11 @@ export function RelatoriosClient() {
           "Conta Protheus": contaExtracted,
           "Descrição Conta Protheus": contasMap[contaExtracted] || '-',
           "Usuário Responsável": d.usuario,
-          "Status": d.status || 'CONFIRMADO',
+          "Status": d.status || 'Aprovada',
           "Observações": d.observacoes || '-'
         };
       });
-    } else if (activeTab === 'faturas') {
+    } else if (activeTab === 'faturas' || activeTab === 'faturas-sap') {
       data.forEach(d => {
         let rawCd = d.cd || d._insumo?.cd || d.insumos?.[0]?.cd || '-';
         let cdStr = rawCd !== '-' ? rawCd.charAt(0).toUpperCase() + rawCd.slice(1).toLowerCase() : '-';
@@ -222,6 +235,16 @@ export function RelatoriosClient() {
           "Conta Contábil": d.conta_contabil || '-',
           "Responsável": d.responsavel || '-'
         };
+        
+        if (activeTab === 'faturas-sap') {
+          Object.assign(baseFatura, {
+            "RC SAP": d.rc_sap || '-',
+            "Data RC SAP": d.data_rc_sap || '-',
+            "Pedido SAP": d.pedido_sap || '-',
+            "Data Pedido SAP": d.data_pedido_sap || '-',
+            "Doc Subsequente Criado": d.doc_subsequente_criado ? 'Sim' : 'Não'
+          });
+        }
 
         if (d._insumo) {
           exportData.push({
@@ -288,7 +311,7 @@ export function RelatoriosClient() {
                     : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                 }`}
               >
-                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab === 'faturas' ? 'Faturas 1.0' : tab === 'faturas-sap' ? 'Faturas SAP' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -307,7 +330,7 @@ export function RelatoriosClient() {
                   </div>
                 </>
               )}
-              {(activeTab === 'faturas' || activeTab === 'fornecedores') && (
+              {(activeTab === 'faturas' || activeTab === 'faturas-sap' || activeTab === 'fornecedores') && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Tipo</label>
                   <select 
@@ -365,7 +388,7 @@ export function RelatoriosClient() {
                         <TableHead>Observações</TableHead>
                       </>
                     )}
-                    {activeTab === 'faturas' && (
+                    {(activeTab === 'faturas' || activeTab === 'faturas-sap') && (
                       <>
                         <TableHead>Nota Fiscal</TableHead>
                         <TableHead>Fornecedor</TableHead>
@@ -426,7 +449,7 @@ export function RelatoriosClient() {
                             <TableCell className="text-zinc-500 text-xs truncate max-w-[150px]">{d.observacoes || '-'}</TableCell>
                           </>
                         )}
-                        {activeTab === 'faturas' && (
+                        {(activeTab === 'faturas' || activeTab === 'faturas-sap') && (
                           <>
                             <TableCell className="font-medium">{d.numero_documento}</TableCell>
                             <TableCell>{d.fornecedor}</TableCell>

@@ -34,7 +34,6 @@ function FornecedorModal({
   const [categoria, setCategoria] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [codigoFornecedor, setCodigoFornecedor] = useState("");
-  const [tipoServico, setTipoServico] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -48,7 +47,6 @@ function FornecedorModal({
         setCategoria(editItem.categoria || "");
         setObservacoes(editItem.observacoes || "");
         setCodigoFornecedor(editItem.codigo_fornecedor || "");
-        setTipoServico(editItem.tipo_servico || "");
       } else {
         setCnpj("");
         setRazaoSocial("");
@@ -59,7 +57,6 @@ function FornecedorModal({
         setCategoria("");
         setObservacoes("");
         setCodigoFornecedor("");
-        setTipoServico("");
       }
     }
   }, [isOpen, editItem]);
@@ -79,8 +76,7 @@ function FornecedorModal({
       categoria,
       observacoes,
       tipo,
-      codigo_fornecedor: codigoFornecedor,
-      tipo_servico: tipoServico
+      codigo_fornecedor: codigoFornecedor
     };
 
     try {
@@ -125,18 +121,13 @@ function FornecedorModal({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Categoria / Segmento</label>
+              <label className="text-sm font-medium text-zinc-700">Tipo de Serviço</label>
               <Input value={categoria} onChange={e => setCategoria(e.target.value)} placeholder="Ex: Limpeza, Gráfica, TI..." />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Cód. Fornecedor</label>
               <Input value={codigoFornecedor} onChange={e => setCodigoFornecedor(e.target.value)} placeholder="Ex: 000100" />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Tipo de {tipo}</label>
-              <Input value={tipoServico} onChange={e => setTipoServico(e.target.value)} placeholder={`Ex: ${tipo} de consumo`} />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -292,7 +283,7 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
                 <tr>
                   <th className="px-6 py-4 font-semibold">Empresa</th>
                   <th className="px-6 py-4 font-semibold">Contato</th>
-                  <th className="px-6 py-4 font-semibold">Categoria</th>
+                  <th className="px-6 py-4 font-semibold">Tipo de Serviço</th>
                   {canEditOrDelete && (
                     <th className="px-6 py-4 font-semibold text-right">Ações</th>
                   )}

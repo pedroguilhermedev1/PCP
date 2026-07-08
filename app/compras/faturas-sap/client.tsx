@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { FaturaModal } from "@/components/faturas/FaturaModal";
+import { FaturaSAPModal } from "@/components/faturas/FaturaSAPModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
@@ -49,7 +49,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const uniqueCDs = Array.from(new Set(faturas.map(f => f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd).filter(Boolean)));
 
-  const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria && !f.is_sap);
+  const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria && f.is_sap);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {
     const fCD = (f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '').toLowerCase();
     if (filterCD !== 'todos' && fCD !== filterCD.toLowerCase()) return false;
@@ -192,7 +192,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <DollarSign className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas - {categoria}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas SAP - {categoria}</h1>
             <p className="text-sm text-zinc-500">Gestão e acompanhamento de faturas.</p>
           </div>
         </div>
@@ -288,7 +288,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
-        <h2 className="text-lg font-semibold text-purple-900">LISTA DE FATURAS</h2>
+        <h2 className="text-lg font-semibold text-purple-900">LISTA DE FATURAS SAP</h2>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
           NOVA FATURA
@@ -446,21 +446,20 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                             </div>
 
                             <div className="space-y-4">
-                              <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Processos</h4>
-                              <div className="p-2 bg-blue-50/50 rounded border border-blue-100 flex flex-col gap-1">
-                                <span className="text-xs font-bold text-blue-800">HEFLO</span>
-                                <span className="text-sm">{f.heflo || '-'}</span>
-                                <span className="text-xs text-zinc-500">{f.data_abertura_heflo?.split('-').reverse().join('/') || '-'}</span>
+                              <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Processos SAP</h4>
+                              <div className="p-2 bg-purple-50/50 rounded border border-purple-100 flex flex-col gap-1">
+                                <span className="text-xs font-bold text-purple-800">RC SAP</span>
+                                <span className="text-sm">{f.rc_sap || '-'}</span>
+                                <span className="text-xs text-zinc-500">{f.data_rc_sap?.split('-').reverse().join('/') || '-'}</span>
                               </div>
-                              <div className="p-2 bg-zinc-50/50 rounded border border-zinc-200 flex flex-col gap-1">
-                                <span className="text-xs font-bold text-zinc-600">ERP</span>
-                                <span className="text-sm">{f.erp || '-'}</span>
-                                <span className="text-xs text-zinc-500">{f.data_aprovacao?.split('-').reverse().join('/') || '-'}</span>
+                              <div className="p-2 bg-indigo-50/50 rounded border border-indigo-100 flex flex-col gap-1">
+                                <span className="text-xs font-bold text-indigo-800">Pedido SAP</span>
+                                <span className="text-sm">{f.pedido_sap || '-'}</span>
+                                <span className="text-xs text-zinc-500">{f.data_pedido_sap?.split('-').reverse().join('/') || '-'}</span>
                               </div>
-                              <div className="p-2 bg-orange-50/50 rounded border border-orange-100 flex flex-col gap-1">
-                                <span className="text-xs font-bold text-orange-800">V360</span>
-                                <span className="text-sm">{f.v360 || '-'}</span>
-                                <span className="text-xs text-zinc-500">{f.data_abertura_v360?.split('-').reverse().join('/') || '-'}</span>
+                              <div className="p-2 bg-emerald-50/50 rounded border border-emerald-100 flex flex-col gap-1">
+                                <span className="text-xs font-bold text-emerald-800">Doc. Subsequente</span>
+                                <span className="text-sm font-semibold">{f.doc_subsequente_criado ? 'Criado' : 'Não criado'}</span>
                               </div>
                             </div>
 
@@ -516,7 +515,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       </div>
       
       {isModalOpen && (
-        <FaturaModal 
+        <FaturaSAPModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           fatura={faturaToEdit}

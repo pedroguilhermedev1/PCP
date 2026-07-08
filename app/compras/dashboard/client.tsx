@@ -183,8 +183,8 @@ export function DashboardClient({
       if (insMes !== "todos" && mes !== insMes) return false;
       if (insDia !== "todos" && dia !== insDia) return false;
       
-      // Considerar apenas movimentações confirmadas
-      if (m.status !== 'CONFIRMADO') return false;
+      // Considerar apenas movimentações aprovadas
+      if (m.status !== 'Aprovada' && m.status !== 'CONFIRMADO') return false;
 
       return true;
     });

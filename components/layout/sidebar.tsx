@@ -19,7 +19,7 @@ const sidebarItems = [
   },
   {
     type: 'group',
-    title: "FATURAS",
+    title: "FATURAS 1.0",
     icon: <DollarSign className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -30,6 +30,23 @@ const sidebarItems = [
       {
         title: "Serviços",
         href: "/compras/faturas/servicos",
+        icon: <Handshake className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
+      }
+    ]
+  },
+  {
+    type: 'group',
+    title: "FATURAS SAP",
+    icon: <DollarSign className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
+    items: [
+      {
+        title: "Materiais",
+        href: "/compras/faturas-sap/materiais",
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
+      },
+      {
+        title: "Serviços",
+        href: "/compras/faturas-sap/servicos",
         icon: <Handshake className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       }
     ]
@@ -137,7 +154,8 @@ export function Sidebar() {
   ].includes(currentUser || '')
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-  FATURAS: false,
+  "FATURAS 1.0": false,
+  "FATURAS SAP": false,
   INSUMOS: false,
   SOLICITAÇÕES: false,
   FORNECEDORES: false,
@@ -145,7 +163,8 @@ export function Sidebar() {
 
   useEffect(() => {
   setExpandedGroups({
-    FATURAS: pathname?.startsWith('/compras/faturas') ?? false,
+    "FATURAS 1.0": pathname?.startsWith('/compras/faturas') && !pathname?.startsWith('/compras/faturas-sap'),
+    "FATURAS SAP": pathname?.startsWith('/compras/faturas-sap') ?? false,
     INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
     SOLICITAÇÕES: pathname?.startsWith('/compras/formularios') ?? false,
     FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false,
@@ -159,7 +178,7 @@ export function Sidebar() {
   const isReportsOnly = currentUser === 'ivna.teixeira';
 
   const visibleItems = isAdmin
-  ? sidebarItems
+  ? sidebarItems.filter(item => item.title !== 'SOLICITAÇÕES')
   : isReportsOnly 
     ? sidebarItems.filter(item => item.title === 'RELATÓRIOS')
     : sidebarItems.filter(item =>

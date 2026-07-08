@@ -56,6 +56,15 @@ export interface Fatura {
   v360?: string;
   data_abertura_v360?: string;
   
+  // SAP
+  is_sap?: boolean;
+  rc_sap?: string;
+  data_rc_sap?: string;
+  pedido_sap?: string;
+  data_pedido_sap?: string;
+  doc_subsequente_criado?: boolean;
+  numero_doc_subsequente?: string;
+  
   data_pagamento_real?: string;
   observacoes?: string;
   

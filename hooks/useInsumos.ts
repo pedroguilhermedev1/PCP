@@ -17,7 +17,7 @@ export type InsumoMovimentacao = {
   fatura_id?: string;
   observacoes?: string;
   empresa?: string;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'REJEITADO';
+  status: 'PENDENTE' | 'Aprovada' | 'CONFIRMADO' | 'REJEITADO';
 };
 
 export function useInsumosMovimentacoes(cdTarget?: string, tipo_envio?: string) {
