@@ -139,7 +139,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       toast.success("Registro salvo com sucesso.");
     } catch (error) {
       console.error("Failed to save", error);
-      toast.error("Erro ao salvar registro. Verifique os dados e tente novamente.");
+      toast.error(`Erro ao salvar registro: ${error?.message || 'Verifique os dados e tente novamente.'}`);
     }
   };
 

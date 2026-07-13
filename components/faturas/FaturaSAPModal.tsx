@@ -158,7 +158,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                     } else {
                       setFormData(prev => ({ ...prev, fornecedor: value }));
                     }
-                  }} required placeholder="Nome do Fornecedor" />
+                  }} placeholder="Nome do Fornecedor" />
                   <datalist id="fornecedores-list">
                     {fornecedores.map(f => (
                       <option key={f.id} value={f.nome_fantasia || f.razao_social} />
@@ -167,7 +167,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">CNPJ</label>
-                  <Input value={formData.cnpj || ""} onChange={(e) => handleChange('cnpj', formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" required />
+                  <Input value={formData.cnpj || ""} onChange={(e) => handleChange('cnpj', formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cód. Fornecedor</label>
@@ -193,18 +193,18 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Nota Fiscal</label>
-                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} required />
+                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Valor Total</label>
-                  <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} required />
+                  <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Centro de Custo</label>
-                  <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" required />
+                  <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Conta Contábil</label>
@@ -224,7 +224,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 <div className="space-y-2">
                   <label className="text-sm font-medium">CD / Unidade</label>
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
-                    value={formData.cd || ""} onChange={handleSelectChange('cd')} required>
+                    value={formData.cd || ""} onChange={handleSelectChange('cd')}>
                     <option value="" disabled>Selecione um CD</option>
                     {["Fortaleza", "Jundiaí", "NSE", "COC"].map(cd => (
                       <option key={cd} value={cd}>{cd}</option>
@@ -237,7 +237,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Forma de Pagamento</label>
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
-                    value={formData.forma_pagamento || "Boleto"} onChange={handleSelectChange('forma_pagamento')} required>
+                    value={formData.forma_pagamento || "Boleto"} onChange={handleSelectChange('forma_pagamento')}>
                     <option value="Boleto">Boleto</option>
                     <option value="Pix">Pix</option>
                     <option value="TED">TED</option>
@@ -245,7 +245,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Cód. {categoriaAtiva}</label>
-                  <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" required />
+                  <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" />
                 </div>
               </div>
 
@@ -329,7 +329,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                                 setFormData({ ...formData, insumos: newInsumos });
                               }} 
                               placeholder="Selecione o insumo..." 
-                              required
+                             
                             />
                             <datalist id={`insumos-list-${index}`}>
                               {availableInsumos.map((a, i) => {
@@ -354,7 +354,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               newInsumos[index].quantidade = qtd;
                               newInsumos[index].valor_total = parseFloat((qtd * preco).toFixed(2));
                               setFormData({ ...formData, insumos: newInsumos });
-                            }} required />
+                            }} />
                           </div>
                           <div className="space-y-2 md:col-span-2">
                             <label className="text-xs font-medium text-zinc-700">Preço Unit.</label>
@@ -365,7 +365,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               newInsumos[index].preco_unitario = preco;
                               newInsumos[index].valor_total = parseFloat((qtd * preco).toFixed(2));
                               setFormData({ ...formData, insumos: newInsumos });
-                            }} required placeholder="R$ 0,00" />
+                            }} placeholder="R$ 0,00" />
                           </div>
                           <div className="space-y-2 md:col-span-2">
                             <label className="text-xs font-medium text-zinc-700">Total (Auto)</label>
