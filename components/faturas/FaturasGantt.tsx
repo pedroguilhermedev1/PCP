@@ -63,7 +63,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
         const prazoTotalOperacional = calculateDaysDiff(dataBase, metaDate);
         const diasAteVencimento = calculateDaysDiff(todayStr, f.data_vencimento);
 
-        const calcRelativeDay = (dateStr?: string) => {
+        const calcRelativeDay = (dateStr?: string | null) => {
           if (!dateStr) return null;
           return calculateDaysDiff(dataBase, dateStr);
         };
