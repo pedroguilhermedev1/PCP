@@ -544,10 +544,11 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
 
                 <div className={cn("p-3 rounded-md border space-y-1 transition-colors",
-                  autoEtapa === 'Integração' ? 'bg-red-500 border-red-600' :
-                  autoEtapa === 'HEFLO' ? 'bg-blue-500 border-blue-600' :
-                  autoEtapa === 'ERP' ? 'bg-zinc-500 border-zinc-600' :
-                  autoEtapa === 'V360' ? 'bg-orange-500 border-orange-600' :
+                  autoEtapa === 'Cadastro da NF' ? 'bg-red-500 border-red-600' :
+                  autoEtapa === 'Requisição de Compras' ? 'bg-blue-500 border-blue-600' :
+                  autoEtapa === 'Aprovação' ? 'bg-zinc-500 border-zinc-600' :
+                  autoEtapa === 'Inclusão no V360' ? 'bg-orange-500 border-orange-600' :
+                  autoEtapa === 'Pedido de Compras' ? 'bg-purple-500 border-purple-600' :
                   autoEtapa === 'Aguardando pagamento' ? 'bg-green-300 border-green-400' :
                   autoEtapa === 'Pago' ? 'bg-green-700 border-green-800' :
                   'bg-zinc-500 border-zinc-600'
