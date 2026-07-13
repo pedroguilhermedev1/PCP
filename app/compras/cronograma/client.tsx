@@ -34,12 +34,13 @@ import { cn } from "@/lib/utils";
 import { useCronograma, CronogramaEvento } from "@/hooks/useCronograma";
 import { ADMIN_USERS } from "@/lib/roles";
 
-const CD_OPTIONS = ["Fortaleza", "Jundiaí", "NSE"];
+const CD_OPTIONS = ["Fortaleza", "Jundiaí", "NSE", "COC"];
 
 const CD_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
   Fortaleza: { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",   dot: "bg-blue-500" },
   Jundiaí:   { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
   NSE:       { bg: "bg-rose-50",    text: "text-rose-700",    border: "border-rose-200",   dot: "bg-rose-500" },
+  COC:       { bg: "bg-orange-50",  text: "text-orange-700",  border: "border-orange-200", dot: "bg-orange-500" },
 };
 
 function getCdColor(cd: string) {

@@ -71,6 +71,11 @@ const sidebarItems = [
         href: "/compras/insumos/nse",
         icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
+      {
+        title: "COC",
+        href: "/compras/insumos/coc",
+        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
+      },
     ]
   },
   {
@@ -108,6 +113,11 @@ const sidebarItems = [
       {
         title: "NSE",
         href: "/compras/formularios/nse",
+        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
+      },
+      {
+        title: "COC",
+        href: "/compras/formularios/coc",
         icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
     ]

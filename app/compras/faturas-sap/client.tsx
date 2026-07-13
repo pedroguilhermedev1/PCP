@@ -47,7 +47,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
 
-  const uniqueCDs = Array.from(new Set(faturas.map(f => f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd).filter(Boolean)));
+  const uniqueCDs = Array.from(new Set([
+    "Fortaleza", "Jundiaí", "NSE", "COC",
+    ...faturas.map(f => f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd)
+  ].filter(Boolean)));
 
   const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria && f.is_sap);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {

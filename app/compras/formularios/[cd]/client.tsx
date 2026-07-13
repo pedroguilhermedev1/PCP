@@ -15,7 +15,8 @@ import { getUserRole } from "@/lib/roles";
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
   jundiai: 'Jundiaí',
-  nse: 'NSE'
+  nse: 'NSE',
+  coc: 'COC'
 };
 
 function FormulariosModuleClientInner({ cd }: { cd: string }) {
