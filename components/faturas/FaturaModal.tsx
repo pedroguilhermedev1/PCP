@@ -105,8 +105,8 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
     const finalFatura = {
       ...formData,
-      conta_contabil: formData.conta_protheus || formData.conta_contabil,
-      descricao_contabil: formData.desc_conta_protheus || formData.descricao_contabil,
+      conta_contabil: formData.conta_contabil,
+      descricao_contabil: formData.descricao_contabil,
       marca: formData.marca || 'PCP',
       id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${safeCategoria}`,
       insumos: [
@@ -206,6 +206,17 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                   <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" required />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-medium">Conta Contábil</label>
+                  <Input value={formData.conta_contabil || ""} onChange={handleInputChange('conta_contabil')} placeholder="Conta Contábil" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Descrição Contábil</label>
+                  <Input value={formData.descricao_contabil || ""} onChange={handleInputChange('descricao_contabil')} placeholder="Descrição da Conta Contábil" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <label className="text-sm font-medium">Filial</label>
                   <Input value={formData.filial || ""} onChange={handleInputChange('filial')} placeholder="Filial" />
                 </div>
@@ -214,7 +225,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
                     value={formData.cd || ""} onChange={handleSelectChange('cd')} required>
                     <option value="" disabled>Selecione um CD</option>
-                    {["Fortaleza", "Jundiaí", "NSE"].map(cd => (
+                    {["Fortaleza", "Jundiaí", "NSE", "COC"].map(cd => (
                       <option key={cd} value={cd}>{cd}</option>
                     ))}
                   </select>

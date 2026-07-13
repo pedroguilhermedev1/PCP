@@ -192,7 +192,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <DollarSign className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas SAP - {categoria}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas 2.0 - {categoria}</h1>
             <p className="text-sm text-zinc-500">Gestão e acompanhamento de faturas.</p>
           </div>
         </div>
@@ -288,7 +288,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
-        <h2 className="text-lg font-semibold text-purple-900">LISTA DE FATURAS SAP</h2>
+        <h2 className="text-lg font-semibold text-purple-900">LISTA DE FATURAS 2.0</h2>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
           NOVA FATURA

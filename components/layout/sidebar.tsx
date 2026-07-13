@@ -36,7 +36,7 @@ const sidebarItems = [
   },
   {
     type: 'group',
-    title: "FATURAS SAP",
+    title: "FATURAS 2.0",
     icon: <DollarSign className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -155,7 +155,7 @@ export function Sidebar() {
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
   "FATURAS 1.0": false,
-  "FATURAS SAP": false,
+  "FATURAS 2.0": false,
   INSUMOS: false,
   SOLICITAÇÕES: false,
   FORNECEDORES: false,
@@ -164,7 +164,7 @@ export function Sidebar() {
   useEffect(() => {
   setExpandedGroups({
     "FATURAS 1.0": pathname?.startsWith('/compras/faturas') && !pathname?.startsWith('/compras/faturas-sap'),
-    "FATURAS SAP": pathname?.startsWith('/compras/faturas-sap') ?? false,
+    "FATURAS 2.0": pathname?.startsWith('/compras/faturas-sap') ?? false,
     INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
     SOLICITAÇÕES: pathname?.startsWith('/compras/formularios') ?? false,
     FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false,

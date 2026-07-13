@@ -34,7 +34,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async saveFatura(fatura: Fatura): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, descricao_contabil, tipo_servico, codigo_fatura, ...faturaData } = fatura as any;
+    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, tipo_servico, codigo_fatura, ...faturaData } = fatura as any;
 
     let nextCodigoFatura = codigo_fatura;
     if (!nextCodigoFatura && !faturaData.id?.includes('FAT-') && !faturaData.id?.match(/^[a-zA-Z0-9-]+$/)) {
@@ -74,6 +74,9 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       valor: faturaData.valor || 0,
       conta_protheus: faturaData.conta_protheus || null,
       desc_conta_protheus: faturaData.desc_conta_protheus || null,
+      conta_contabil: faturaData.conta_contabil || null,
+      descricao_contabil: faturaData.descricao_contabil || null,
+      is_sap: faturaData.is_sap || false,
       insumos: faturaData.insumos || []
     };
     
@@ -90,7 +93,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
 
   async updateFatura(id: string, fatura: Partial<Fatura>): Promise<void> {
     if (!supabase) return;
-    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, descricao_contabil, tipo_servico, ...faturaData } = fatura as any;
+    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, tipo_servico, ...faturaData } = fatura as any;
 
     const { error } = await supabase
       .from('faturas')

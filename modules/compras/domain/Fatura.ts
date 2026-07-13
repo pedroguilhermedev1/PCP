@@ -2,7 +2,7 @@
 export type StatusFatura = 'A vencer' | 'Vencido' | 'Pago';
 // Status do Pagamento: Estágio no fluxo manual
 export type StatusPagamento = 'Em andamento' | 'Aguardando pagamento' | 'Pago' | 'ERP' | 'V360' | 'HEFLO';
-export type Etapa = 'Integração' | 'HEFLO' | 'ERP' | 'V360' | 'Aguardando pagamento' | 'Pago';
+export type Etapa = 'Cadastro da NF' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando pagamento' | 'Pago';
 
 export interface FaturaInsumo {
   codigo: string;
@@ -116,16 +116,22 @@ export function calcularStatus(fatura: Partial<Fatura>): string {
 export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
   if (fatura.status_pagamento === 'Pago') return 'Pago';
   if (fatura.status_pagamento === 'Aguardando pagamento') return 'Aguardando pagamento';
-  if (fatura.status_pagamento === 'ERP') return 'ERP';
-  if (fatura.status_pagamento === 'V360') return 'V360';
-  if (fatura.status_pagamento === 'HEFLO') return 'HEFLO';
   
-  // Se está 'Em andamento', calcula pela fase operacional
-  if (fatura.v360 && fatura.data_abertura_v360) return 'V360';
-  if (fatura.erp && fatura.data_aprovacao) return 'ERP';
-  if (fatura.heflo && fatura.data_abertura_heflo) return 'HEFLO';
+  if (fatura.status_pagamento === 'ERP') return 'Aprovação';
+  if (fatura.status_pagamento === 'V360') return 'Inclusão no V360';
+  if (fatura.status_pagamento === 'HEFLO') return 'Requisição de Compras';
   
-  return 'Integração';
+  if (fatura.is_sap) {
+    if (fatura.doc_subsequente_criado) return 'Aguardando pagamento';
+    if (fatura.pedido_sap || fatura.data_pedido_sap) return 'Pedido de Compras';
+    if (fatura.rc_sap || fatura.data_rc_sap) return 'Requisição de Compras';
+    return 'Cadastro da NF';
+  } else {
+    if (fatura.v360 && fatura.data_abertura_v360) return 'Inclusão no V360';
+    if (fatura.erp && fatura.data_aprovacao) return 'Aprovação';
+    if (fatura.heflo && fatura.data_abertura_heflo) return 'Requisição de Compras';
+    return 'Cadastro da NF';
+  }
 }
 
 export type SLAStatus = 'Dentro do prazo' | 'Próximo do vencimento' | 'Atrasado';
@@ -146,6 +152,13 @@ export function getBusinessDaysDifference(startDateStr: string, endDate: Date = 
     }
   }
   return days;
+}
+
+export function getDataMetaOperacional(data_vencimento?: string): string | null {
+  if (!data_vencimento) return null;
+  const d = new Date(data_vencimento + 'T00:00:00');
+  d.setDate(d.getDate() - 10);
+  return d.toISOString().split('T')[0];
 }
 
 export function calcularDiasRestantesUteis(data_vencimento: string): number {
@@ -180,32 +193,51 @@ export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
   const etapa = calcularEtapa(fatura);
   
   if (etapa === 'Aguardando pagamento' || etapa === 'Pago') {
-    return null;
+    return null; // Operação concluída
   }
 
-  // 1. Prioridade para a Data de Vencimento (Global SLA)
-  if (fatura.data_vencimento) {
-    const diasVenc = calcularDiasRestantesUteis(fatura.data_vencimento);
+  const metaOperacional = getDataMetaOperacional(fatura.data_vencimento);
+  if (metaOperacional) {
+    const metaDate = new Date(metaOperacional + 'T00:00:00');
+    metaDate.setHours(0,0,0,0);
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    
+    const diffTime = metaDate.getTime() - hoje.getTime();
+    const diasVenc = Math.ceil(diffTime / (1000 * 3600 * 24));
+    
     if (diasVenc < 0) return 'Atrasado';
     if (diasVenc >= 0 && diasVenc <= 3) return 'Próximo do vencimento';
   }
 
-  // 2. Análise da Etapa Atual (Workflow SLA)
   let startDateStr = '';
   let limiteDias = 0;
 
-  if (etapa === 'Integração') {
-    startDateStr = fatura.data_recebimento || '';
-    limiteDias = 1;
-  } else if (etapa === 'HEFLO') {
-    startDateStr = fatura.data_abertura_heflo || '';
-    limiteDias = 4;
-  } else if (etapa === 'ERP') {
-    startDateStr = fatura.data_aprovacao || '';
-    limiteDias = 1;
-  } else if (etapa === 'V360') {
-    startDateStr = fatura.data_abertura_v360 || '';
-    limiteDias = 4;
+  if (fatura.is_sap) {
+    if (etapa === 'Cadastro da NF') {
+      startDateStr = fatura.data_recebimento || '';
+      limiteDias = 1;
+    } else if (etapa === 'Requisição de Compras') {
+      startDateStr = fatura.data_rc_sap || '';
+      limiteDias = 3;
+    } else if (etapa === 'Pedido de Compras') {
+      startDateStr = fatura.data_pedido_sap || '';
+      limiteDias = 2;
+    }
+  } else {
+    if (etapa === 'Cadastro da NF') {
+      startDateStr = fatura.data_recebimento || '';
+      limiteDias = 1;
+    } else if (etapa === 'Requisição de Compras') {
+      startDateStr = fatura.data_abertura_heflo || '';
+      limiteDias = 4;
+    } else if (etapa === 'Aprovação') {
+      startDateStr = fatura.data_aprovacao || '';
+      limiteDias = 1;
+    } else if (etapa === 'Inclusão no V360') {
+      startDateStr = fatura.data_abertura_v360 || '';
+      limiteDias = 4;
+    }
   }
 
   if (startDateStr) {

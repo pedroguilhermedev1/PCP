@@ -57,7 +57,7 @@ export function DashboardClient({
   const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'faturas' | 'insumos'>('faturas');
+  const [activeTab, setActiveTab] = useState<'faturas1' | 'faturas2' | 'insumos' | 'nexa'>('faturas1');
 
   // Filters Faturas
   const [fatAno, setFatAno] = useState<string>(currentYear);
@@ -99,6 +99,10 @@ export function DashboardClient({
   // Filtered Faturas
   const filteredFaturas = useMemo(() => {
     return faturas.filter(f => {
+      if (activeTab === 'faturas1' && f.is_sap) return false;
+      if (activeTab === 'faturas2' && !f.is_sap) return false;
+      if (activeTab === 'insumos') return false;
+
       if (fatCategoria !== "Todas" && f.categoria !== fatCategoria) return false;
 
       // Usando data_emissao para filtro de Faturas, fallback para created_at ou hoje
@@ -111,13 +115,13 @@ export function DashboardClient({
       if (fatMes !== "todos" && m !== fatMes) return false;
       return true;
     });
-  }, [faturas, fatAno, fatMes, fatCategoria]);
+  }, [faturas, fatAno, fatMes, fatCategoria, activeTab]);
 
   // Faturas Status
   const faturasCards = useMemo(() => {
-    let integracao = { count: 0, val: 0 };
-    let heflo = { count: 0, val: 0 };
-    let erp = { count: 0, val: 0 };
+    let cadastro = { count: 0, val: 0 };
+    let requisicao = { count: 0, val: 0 };
+    let aprovacaoOuPedido = { count: 0, val: 0 };
     let v360 = { count: 0, val: 0 };
     let aguardando = { count: 0, val: 0 };
     let pago = { count: 0, val: 0 };
@@ -130,10 +134,10 @@ export function DashboardClient({
     filteredFaturas.forEach(f => {
       const etapa = calcularEtapa(f);
       const v = f.valor || 0;
-      if (etapa === 'Integração') { integracao.count++; integracao.val += v; }
-      else if (etapa === 'HEFLO') { heflo.count++; heflo.val += v; }
-      else if (etapa === 'ERP') { erp.count++; erp.val += v; }
-      else if (etapa === 'V360') { v360.count++; v360.val += v; }
+      if (etapa === 'Cadastro da NF') { cadastro.count++; cadastro.val += v; }
+      else if (etapa === 'Requisição de Compras') { requisicao.count++; requisicao.val += v; }
+      else if (etapa === 'Aprovação' || etapa === 'Pedido de Compras') { aprovacaoOuPedido.count++; aprovacaoOuPedido.val += v; }
+      else if (etapa === 'Inclusão no V360') { v360.count++; v360.val += v; }
       else if (etapa === 'Aguardando pagamento') { aguardando.count++; aguardando.val += v; }
       else if (etapa === 'Pago') { pago.count++; pago.val += v; }
 
@@ -149,7 +153,7 @@ export function DashboardClient({
       }
     });
 
-    return { integracao, heflo, erp, v360, aguardando, pago, atrasadasAberto, slaNoPrazo, slaProximo, slaAtrasado };
+    return { cadastro, requisicao, aprovacaoOuPedido, v360, aguardando, pago, atrasadasAberto, slaNoPrazo, slaProximo, slaAtrasado };
   }, [filteredFaturas]);
 
 
@@ -260,16 +264,28 @@ export function DashboardClient({
         <div className="px-6 md:px-8 pt-6 pb-0">
           <div className="flex gap-4 border-b border-zinc-200">
             <button
-              onClick={() => setActiveTab('faturas')}
-              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'faturas' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+              onClick={() => setActiveTab('faturas1')}
+              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'faturas1' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
             >
-              Faturas
+              Faturas 1.0
+            </button>
+            <button
+              onClick={() => setActiveTab('faturas2')}
+              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'faturas2' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+            >
+              Faturas 2.0
             </button>
             <button
               onClick={() => setActiveTab('insumos')}
               className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'insumos' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
             >
               Insumos e Movimentações
+            </button>
+            <button
+              onClick={() => setActiveTab('nexa')}
+              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'nexa' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+            >
+              NEXA
             </button>
           </div>
         </div>
@@ -279,7 +295,7 @@ export function DashboardClient({
         <div className="max-w-7xl mx-auto space-y-12">
           
           {/* Sessão Faturas */}
-          {activeTab === 'faturas' && (
+          {(activeTab === 'faturas1' || activeTab === 'faturas2') && (
             <>
 
               {isAdmin && (
@@ -362,7 +378,7 @@ export function DashboardClient({
                   </div>
 
                   <div className="mt-8 mb-8">
-                    <FaturasGantt faturas={filteredFaturas} />
+                    <FaturasGantt faturas={filteredFaturas} flowType={activeTab === 'faturas1' ? '1.0' : '2.0'} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-6 mt-8">
@@ -370,17 +386,32 @@ export function DashboardClient({
                     <h2 className="text-lg font-bold text-zinc-800">Status das Faturas</h2>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
-                      <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                  {activeTab === 'faturas1' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                        <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                      </div>
+                      <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
+                      <FaturaCard title="Requisição de Compras" value={formatBRL(faturasCards.requisicao.val)} count={faturasCards.requisicao.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
+                      <FaturaCard title="Aprovação" value={formatBRL(faturasCards.aprovacaoOuPedido.val)} count={faturasCards.aprovacaoOuPedido.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
+                      <FaturaCard title="Inclusão no V360" value={formatBRL(faturasCards.v360.val)} count={faturasCards.v360.count} colorClass="text-orange-500" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
+                      <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
+                      <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
                     </div>
-                    <FaturaCard title="Integração" value={formatBRL(faturasCards.integracao.val)} count={faturasCards.integracao.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
-                    <FaturaCard title="Heflo" value={formatBRL(faturasCards.heflo.val)} count={faturasCards.heflo.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
-                    <FaturaCard title="ERP" value={formatBRL(faturasCards.erp.val)} count={faturasCards.erp.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
-                    <FaturaCard title="V360" value={formatBRL(faturasCards.v360.val)} count={faturasCards.v360.count} colorClass="text-orange-500" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
-                    <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
-                    <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
-                  </div>
+                  )}
+
+                  {activeTab === 'faturas2' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                        <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                      </div>
+                      <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
+                      <FaturaCard title="Requisição de Compras" value={formatBRL(faturasCards.requisicao.val)} count={faturasCards.requisicao.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
+                      <FaturaCard title="Pedido de Compras" value={formatBRL(faturasCards.aprovacaoOuPedido.val)} count={faturasCards.aprovacaoOuPedido.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
+                      <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
+                      <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -478,6 +509,16 @@ export function DashboardClient({
                 <InsumoCard title="Itens em Alerta" value={insumosStats.alertas} subtitle="Entre Lead Time e +3 dias" icon={AlertTriangle} colorClass="text-amber-500" borderClass="border-amber-200" bgClass="bg-amber-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} />
                 <InsumoCard title="Itens Críticos" value={insumosStats.criticos} subtitle="Cobertura ≤ Lead Time" icon={AlertTriangle} colorClass="text-red-600" borderClass="border-red-200" bgClass="bg-red-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} />
               </div>
+            </div>
+          )}
+          {/* Sessão NEXA */}
+          {activeTab === 'nexa' && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Package className="w-16 h-16 text-zinc-300 mb-4" />
+              <h2 className="text-xl font-bold text-zinc-800 mb-2">Módulo NEXA em Breve</h2>
+              <p className="text-zinc-500 max-w-md">
+                Esta área está reservada para os futuros indicadores e fluxos do processo NEXA.
+              </p>
             </div>
           )}
         </div>

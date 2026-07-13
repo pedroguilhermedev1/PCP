@@ -311,7 +311,7 @@ export function RelatoriosClient() {
                     : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                 }`}
               >
-                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab === 'faturas' ? 'Faturas 1.0' : tab === 'faturas-sap' ? 'Faturas SAP' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab === 'faturas' ? 'Faturas 1.0' : tab === 'faturas-sap' ? 'Faturas 2.0' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
