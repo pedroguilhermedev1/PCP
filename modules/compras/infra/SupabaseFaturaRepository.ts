@@ -74,11 +74,14 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       valor: faturaData.valor || 0,
       conta_protheus: faturaData.conta_protheus || null,
       desc_conta_protheus: faturaData.desc_conta_protheus || null,
-      conta_contabil: faturaData.conta_contabil || null,
-      descricao_contabil: faturaData.descricao_contabil || null,
+      // conta_contabil e descricao_contabil removidos temporariamente pois não existem no banco de dados
       is_sap: faturaData.is_sap || false,
       insumos: faturaData.insumos || []
     };
+    
+    // Removemos do payload as chaves que não existem na tabela faturas
+    delete (sanitizedData as any).descricao_contabil;
+    delete (sanitizedData as any).conta_contabil;
     
     // Convert undefined to null or omit, as supabase expects certain formats
     const { error } = await supabase
