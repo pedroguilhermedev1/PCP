@@ -251,7 +251,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
               {categoriaAtiva === 'Serviço' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-zinc-100 pt-4">
                   <div className="space-y-2 relative">
-                    <label className="text-sm font-medium">Conta Protheus *</label>
+                    <label className="text-sm font-medium">Conta Protheus</label>
                     <Input 
                       value={formData.conta_protheus || ""} 
                       onChange={(e) => {
@@ -262,7 +262,6 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                       }}
                       list="contas-protheus-list"
                       placeholder="Ex: 102030" 
-                      required={categoriaAtiva === 'Serviço'} 
                     />
                     <datalist id="contas-protheus-list">
                       {contasProtheus.map(c => (
@@ -271,7 +270,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                     </datalist>
                   </div>
                   <div className="space-y-2 relative">
-                    <label className="text-sm font-medium">Descrição Conta Protheus *</label>
+                    <label className="text-sm font-medium">Descrição Conta Protheus</label>
                     <Input 
                       value={formData.desc_conta_protheus || ""} 
                       onChange={(e) => {
@@ -282,7 +281,6 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                       }}
                       list="desc-contas-protheus-list"
                       placeholder="Descrição da conta" 
-                      required={categoriaAtiva === 'Serviço'} 
                     />
                     <datalist id="desc-contas-protheus-list">
                       {contasProtheus.map(c => (
@@ -392,7 +390,6 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                               }}
                               list={`contas-insumo-list-${index}`}
                               placeholder="Ex: 102030" 
-                              required 
                             />
                             <datalist id={`contas-insumo-list-${index}`}>
                               {contasProtheus.map(c => (
@@ -417,7 +414,6 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                               }}
                               list={`desc-contas-insumo-list-${index}`}
                               placeholder="Descrição..." 
-                              required 
                             />
                             <datalist id={`desc-contas-insumo-list-${index}`}>
                               {contasProtheus.map(c => (

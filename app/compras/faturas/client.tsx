@@ -128,21 +128,18 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   };
 
   const handleSave = async (savedFatura: Fatura) => {
-    const prevFaturas = [...faturas];
-    if (faturaToEdit) {
-      setFaturas(prev => prev.map(f => f.id === savedFatura.id ? savedFatura : f));
-    } else {
-      setFaturas(prev => [...prev, savedFatura]);
-    }
-    setIsModalOpen(false);
-    
     try {
       await saveFaturaAction(savedFatura);
+      if (faturaToEdit) {
+        setFaturas(prev => prev.map(f => f.id === savedFatura.id ? savedFatura : f));
+      } else {
+        setFaturas(prev => [...prev, savedFatura]);
+      }
+      setIsModalOpen(false);
       toast.success("Registro salvo com sucesso.");
     } catch (error) {
       console.error("Failed to save", error);
-      toast.error("Erro ao salvar registro.");
-      setFaturas(prevFaturas);
+      toast.error("Erro ao salvar registro. Verifique os dados e tente novamente.");
     }
   };
 
