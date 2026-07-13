@@ -6,42 +6,47 @@ import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 
 export async function saveFaturaAction(fatura: Object) {
-  const faturaData = fatura as Fatura;
-  await faturaRepository.saveFatura(faturaData);
-  
-  if (faturaData.categoria === 'Material' && faturaData.insumos && faturaData.insumos.length > 0) {
-    if (supabase) {
-      await supabase.from('estoque_movimentacoes')
-        .delete()
-        .eq('fatura_id', faturaData.id)
-        .eq('status', 'PENDENTE');
+  try {
+    const faturaData = fatura as Fatura;
+    await faturaRepository.saveFatura(faturaData);
+    
+    if (faturaData.categoria === 'Material' && faturaData.insumos && faturaData.insumos.length > 0) {
+      if (supabase) {
+        await supabase.from('estoque_movimentacoes')
+          .delete()
+          .eq('fatura_id', faturaData.id)
+          .eq('status', 'PENDENTE');
 
-      const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
-      const validInsumos = faturaData.insumos.filter(ins => !(ins as any)._meta);
+        const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
+        const validInsumos = faturaData.insumos.filter(ins => !(ins as any)._meta);
 
-      const movimentacoes = validInsumos.map(insumo => ({
-        tipo: 'Entrada',
-        identificador: faturaData.numero_documento || '',
-        codigo: insumo.codigo,
-        item: insumo.item,
-        cd: formatCd(faturaData.cd || ''),
-        quantidade: insumo.quantidade,
-        usuario: faturaData.responsavel || 'Sistema Faturas',
-        observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
-        status: 'PENDENTE',
-        fatura_id: faturaData.id,
-        tipo_envio: 'Principal',
-      }));
+        const movimentacoes = validInsumos.map(insumo => ({
+          tipo: 'Entrada',
+          identificador: faturaData.numero_documento || '',
+          codigo: insumo.codigo,
+          item: insumo.item,
+          cd: formatCd(faturaData.cd || ''),
+          quantidade: insumo.quantidade,
+          usuario: faturaData.responsavel || 'Sistema Faturas',
+          observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
+          status: 'PENDENTE',
+          fatura_id: faturaData.id,
+          tipo_envio: 'Principal',
+        }));
 
-      const { error } = await supabase.from('estoque_movimentacoes').insert(movimentacoes);
-      if (error) {
-        console.error("Erro ao gerar entradas de insumos:", error);
+        const { error } = await supabase.from('estoque_movimentacoes').insert(movimentacoes);
+        if (error) {
+          console.error("Erro ao gerar entradas de insumos:", error);
+        }
       }
     }
-  }
 
-  revalidatePath('/compras/faturas');
-  revalidatePath('/compras/dashboard');
+    revalidatePath('/compras/faturas');
+    revalidatePath('/compras/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || String(error) };
+  }
 }
 
 export async function deleteFaturaAction(id: string) {

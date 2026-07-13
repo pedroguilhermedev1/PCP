@@ -129,7 +129,11 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const handleSave = async (savedFatura: Fatura) => {
     try {
-      await saveFaturaAction(savedFatura);
+      const res = await saveFaturaAction(savedFatura);
+      if (res && !res.success) {
+        toast.error(`Erro ao salvar registro: ${res.error}`);
+        return;
+      }
       if (faturaToEdit) {
         setFaturas(prev => prev.map(f => f.id === savedFatura.id ? savedFatura : f));
       } else {
