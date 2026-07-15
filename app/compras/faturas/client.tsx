@@ -159,13 +159,14 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const getEtapaColor = (etapa: string) => {
     switch (etapa) {
-      case 'Integração': return 'bg-red-500 text-white';
-      case 'HEFLO': return 'bg-blue-500 text-white';
-      case 'ERP': return 'bg-zinc-500 text-white';
-      case 'V360': return 'bg-orange-500 text-white';
-      case 'Aguardando pagamento': return 'bg-green-300 text-green-900';
-      case 'Pago': return 'bg-green-700 text-white';
-      default: return 'bg-zinc-500 text-white';
+      case 'Em andamento': return 'bg-zinc-500 hover:bg-zinc-600 text-white border-transparent';
+      case 'Integração': return 'bg-red-500 hover:bg-red-600 text-white border-transparent';
+      case 'HEFLO': return 'bg-blue-500 hover:bg-blue-600 text-white border-transparent';
+      case 'ERP': return 'bg-zinc-500 hover:bg-zinc-600 text-white border-transparent';
+      case 'V360': return 'bg-orange-500 hover:bg-orange-600 text-white border-transparent';
+      case 'Aguardando pagamento': return 'bg-green-300 hover:bg-green-400 text-green-900 border-transparent';
+      case 'Pago': return 'bg-green-700 hover:bg-green-800 text-white border-transparent';
+      default: return 'bg-zinc-500 hover:bg-zinc-600 text-white border-transparent';
     }
   };
 

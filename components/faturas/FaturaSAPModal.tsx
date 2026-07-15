@@ -482,7 +482,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
             {formData.doc_subsequente_criado && (
               <section className="space-y-6 p-6 bg-slate-50 border border-slate-200 rounded-xl shadow-sm">
                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  Fase 2 - Fiscal (NEXA)
+                  Fluxo Nexa
                 </h3>
                 
                 {/* Etapa 1 */}
@@ -642,18 +642,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 Status e Etapa
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 
-                <div className="space-y-2 border-l-4 pl-3 border-zinc-300">
-                  <label className="text-sm font-bold text-zinc-700">Status do Pagamento (Manual)</label>
-                  <select className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-sm shadow-sm font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
-                    value={formData.status_pagamento || "Em andamento"} onChange={handleSelectChange('status_pagamento')}>
-                    <option value="Em andamento">Em andamento</option>
-                    <option value="Aguardando pagamento">Aguardando pagamento</option>
-                    <option value="Pago">Pago</option>
-                  </select>
-                </div>
-
                 <div className={cn("p-3 rounded-md border space-y-1 transition-colors", 
                   autoStatus === 'Vencido' ? 'bg-red-100 border-red-200' :
                   autoStatus === 'Pago' ? 'bg-green-100 border-green-200' :

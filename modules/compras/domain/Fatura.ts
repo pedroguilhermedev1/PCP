@@ -2,7 +2,7 @@
 export type StatusFatura = 'A vencer' | 'Vencido' | 'Pago';
 // Status do Pagamento: Estágio no fluxo manual
 export type StatusPagamento = 'Em andamento' | 'Aguardando pagamento' | 'Pago' | 'ERP' | 'V360' | 'HEFLO';
-export type Etapa = 'Cadastro da NF' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando emissão de NF' | 'Aguardando lançamento fiscal' | 'Aguardando programação de pagamento' | 'Pagamento programado' | 'Aguardando pagamento' | 'Pago';
+export type Etapa = 'Em andamento' | 'Cadastro da NF' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando emissão de NF' | 'Aguardando lançamento fiscal' | 'Aguardando programação de pagamento' | 'Pagamento programado' | 'Aguardando pagamento' | 'Pago';
 
 export interface FaturaInsumo {
   codigo: string;
@@ -105,7 +105,9 @@ export function calcularDiasRestantes(data_vencimento: string): number {
 export function calcularStatus(fatura: Partial<Fatura>): string {
   const dias = calcularDiasRestantes(fatura.data_vencimento || '');
 
-  if (fatura.status_pagamento === 'Pago') {
+  const isPaid = (fatura.is_sap && fatura.nexa_pagamento_realizado) || fatura.status_pagamento === 'Pago';
+
+  if (isPaid) {
     if (fatura.data_pagamento_real && fatura.data_vencimento) {
       const dataPgto = new Date(fatura.data_pagamento_real + 'T00:00:00');
       const dataVenc = new Date(fatura.data_vencimento + 'T00:00:00');
@@ -125,25 +127,23 @@ export function calcularStatus(fatura: Partial<Fatura>): string {
 }
 
 export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
-  if (fatura.status_pagamento === 'Pago') return 'Pago';
-  if (fatura.status_pagamento === 'Aguardando pagamento') return 'Aguardando pagamento';
-  
-  if (fatura.status_pagamento === 'ERP') return 'Aprovação';
-  if (fatura.status_pagamento === 'V360') return 'Inclusão no V360';
-  if (fatura.status_pagamento === 'HEFLO') return 'Requisição de Compras';
-  
   if (fatura.is_sap) {
     if (fatura.doc_subsequente_criado) {
       if (!fatura.nexa_emitiu_nf) return 'Aguardando emissão de NF';
       if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
       if (!fatura.nexa_pagamento_programado) return 'Aguardando programação de pagamento';
-      if (!fatura.nexa_pagamento_realizado) return 'Pagamento programado';
+      if (!fatura.nexa_pagamento_realizado) return 'Aguardando pagamento';
       return 'Pago';
     }
     if (fatura.pedido_sap || fatura.data_pedido_sap) return 'Pedido de Compras';
     if (fatura.rc_sap || fatura.data_rc_sap) return 'Requisição de Compras';
-    return 'Cadastro da NF';
-  } else {
+    return 'Em andamento';
+  }
+
+  if (fatura.status_pagamento === 'Pago') return 'Pago';
+  if (fatura.status_pagamento === 'Aguardando pagamento') return 'Aguardando pagamento';
+  
+  if (fatura.status_pagamento === 'ERP') return 'Aprovação';
     if (fatura.v360 && fatura.data_abertura_v360) return 'Inclusão no V360';
     if (fatura.erp && fatura.data_aprovacao) return 'Aprovação';
     if (fatura.heflo && fatura.data_abertura_heflo) return 'Requisição de Compras';
