@@ -2,7 +2,7 @@
 export type StatusFatura = 'A vencer' | 'Vencido' | 'Pago';
 // Status do Pagamento: Estágio no fluxo manual
 export type StatusPagamento = 'Em andamento' | 'Aguardando pagamento' | 'Pago' | 'ERP' | 'V360' | 'HEFLO';
-export type Etapa = 'Cadastro da NF' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando pagamento' | 'Pago';
+export type Etapa = 'Cadastro da NF' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando emissão de NF' | 'Aguardando lançamento fiscal' | 'Aguardando programação de pagamento' | 'Pagamento programado' | 'Aguardando pagamento' | 'Pago';
 
 export interface FaturaInsumo {
   codigo: string;
@@ -65,6 +65,17 @@ export interface Fatura {
   doc_subsequente_criado?: boolean;
   numero_doc_subsequente?: string;
   
+  // Nexa (Fase 2)
+  nexa_emitiu_nf?: boolean;
+  nexa_anexada?: boolean;
+  nexa_chamado?: string;
+  nexa_data_envio?: string;
+  nexa_lancamento_concluido?: boolean;
+  nexa_data_conclusao_lancamento?: string;
+  nexa_pagamento_programado?: boolean;
+  nexa_data_prevista_pagamento?: string;
+  nexa_pagamento_realizado?: boolean;
+
   data_pagamento_real?: string;
   observacoes?: string;
   
@@ -122,7 +133,13 @@ export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
   if (fatura.status_pagamento === 'HEFLO') return 'Requisição de Compras';
   
   if (fatura.is_sap) {
-    if (fatura.doc_subsequente_criado) return 'Aguardando pagamento';
+    if (fatura.doc_subsequente_criado) {
+      if (!fatura.nexa_emitiu_nf) return 'Aguardando emissão de NF';
+      if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
+      if (!fatura.nexa_pagamento_programado) return 'Aguardando programação de pagamento';
+      if (!fatura.nexa_pagamento_realizado) return 'Pagamento programado';
+      return 'Pago';
+    }
     if (fatura.pedido_sap || fatura.data_pedido_sap) return 'Pedido de Compras';
     if (fatura.rc_sap || fatura.data_rc_sap) return 'Requisição de Compras';
     return 'Cadastro da NF';

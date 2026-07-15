@@ -175,28 +175,9 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data de Emissão</label>
-                  <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data de Recebimento</label>
-                  <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data de Vencimento</label>
-                  <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Nota Fiscal</label>
-                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor Total</label>
+                  <label className="text-sm font-medium">Valor Total (Previsto / RC)</label>
                   <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
                 </div>
               </div>
@@ -481,7 +462,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
 
             <section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Observações</label>
+                <label className="text-sm font-medium">Observações Gerais</label>
                 <textarea 
                   className="flex min-h-[100px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={formData.observacoes || ""} 
@@ -492,15 +473,169 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor do Encargo</label>
+                  <label className="text-sm font-medium">Valor do Encargo (se houver)</label>
                   <Input type="number" step="0.01" value={formData.valor_encargo || ""} onChange={handleInputChange('valor_encargo')} placeholder="R$ 0,00" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Data de Pagamento</label>
-                  <Input type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
                 </div>
               </div>
             </section>
+
+            {formData.doc_subsequente_criado && (
+              <section className="space-y-6 p-6 bg-slate-50 border border-slate-200 rounded-xl shadow-sm">
+                <h3 className="text-lg font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  Fase 2 - Fiscal (NEXA)
+                </h3>
+                
+                {/* Etapa 1 */}
+                <div className="space-y-4 p-4 border border-slate-200 bg-white rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                      checked={!!formData.nexa_emitiu_nf}
+                      onChange={(e) => handleChange('nexa_emitiu_nf', e.target.checked)}
+                    />
+                    <label className="font-semibold text-slate-700">Fornecedor emitiu a Nota Fiscal?</label>
+                  </div>
+                  
+                  {!formData.nexa_emitiu_nf ? (
+                    <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200">
+                      Aguardando emissão da Nota Fiscal pelo fornecedor.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 animate-in fade-in">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Número da Nota Fiscal</label>
+                        <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF..." />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Data de Emissão</label>
+                        <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Data de Recebimento</label>
+                        <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Data de Vencimento</label>
+                        <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Valor da NF (Real)</label>
+                        <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} placeholder="R$ 0,00" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Etapa 2 */}
+                <div className={cn("space-y-4 p-4 border rounded-lg transition-colors", formData.nexa_emitiu_nf ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50/50 opacity-60 pointer-events-none")}>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                      checked={!!formData.nexa_anexada}
+                      onChange={(e) => handleChange('nexa_anexada', e.target.checked)}
+                    />
+                    <label className="font-semibold text-slate-700">NF anexada ao chamado NEXA?</label>
+                  </div>
+                  
+                  {formData.nexa_emitiu_nf && !formData.nexa_anexada && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-md border border-blue-200">
+                      Aguardando lançamento fiscal.
+                    </div>
+                  )}
+                  
+                  {formData.nexa_anexada && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in fade-in">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Número do Chamado NEXA</label>
+                        <Input value={formData.nexa_chamado || ""} onChange={handleInputChange('nexa_chamado')} placeholder="Ex: INC000000" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Data de Envio ao NEXA</label>
+                        <Input type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Etapa 3 */}
+                <div className={cn("space-y-4 p-4 border rounded-lg transition-colors", formData.nexa_anexada ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50/50 opacity-60 pointer-events-none")}>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                      checked={!!formData.nexa_lancamento_concluido}
+                      onChange={(e) => handleChange('nexa_lancamento_concluido', e.target.checked)}
+                    />
+                    <label className="font-semibold text-slate-700">Lançamento fiscal concluído?</label>
+                  </div>
+                  
+                  {formData.nexa_anexada && !formData.nexa_lancamento_concluido && (
+                    <div className="text-sm text-purple-600 bg-purple-50 p-3 rounded-md border border-purple-200">
+                      Aguardando programação de pagamento.
+                    </div>
+                  )}
+
+                  {formData.nexa_lancamento_concluido && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in fade-in">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Data da Conclusão</label>
+                        <Input type="date" value={formData.nexa_data_conclusao_lancamento || ""} onChange={handleInputChange('nexa_data_conclusao_lancamento')} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Etapa 4 */}
+                <div className={cn("space-y-4 p-4 border rounded-lg transition-colors", formData.nexa_lancamento_concluido ? "border-slate-200 bg-white" : "border-slate-100 bg-slate-50/50 opacity-60 pointer-events-none")}>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-slate-300 text-slate-600 focus:ring-slate-500"
+                      checked={!!formData.nexa_pagamento_programado}
+                      onChange={(e) => handleChange('nexa_pagamento_programado', e.target.checked)}
+                    />
+                    <label className="font-semibold text-slate-700">Pagamento programado?</label>
+                  </div>
+                  
+                  {formData.nexa_pagamento_programado && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in fade-in">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium">Data Prevista de Pagamento</label>
+                        <Input type="date" value={formData.nexa_data_prevista_pagamento || ""} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Etapa 5 */}
+                <div className={cn("space-y-4 p-4 border rounded-lg transition-colors", formData.nexa_pagamento_programado ? "border-green-200 bg-green-50" : "border-slate-100 bg-slate-50/50 opacity-60 pointer-events-none")}>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-green-400 text-green-600 focus:ring-green-500"
+                      checked={!!formData.nexa_pagamento_realizado}
+                      onChange={(e) => handleChange('nexa_pagamento_realizado', e.target.checked)}
+                    />
+                    <label className="font-semibold text-green-800">Pagamento realizado?</label>
+                  </div>
+                  
+                  {formData.nexa_pagamento_realizado && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-in fade-in">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-green-800">Data do Pagamento</label>
+                        <Input type="date" className="border-green-300" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-green-800">Valor Pago Final</label>
+                        <Input type="number" step="0.01" className="border-green-300" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
             <section className="space-y-4 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
               <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
