@@ -48,7 +48,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
 
   const uniqueCDs = Array.from(new Set([
-    "Fortaleza", "Jundiaí", "NSE", "COC",
+    "Fortaleza", "Jundiaí", "NSE", "COC", "PSD",
     ...faturas.map(f => f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd)
   ].filter(Boolean)));
 

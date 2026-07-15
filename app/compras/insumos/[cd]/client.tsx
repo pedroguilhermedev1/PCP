@@ -21,7 +21,9 @@ const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
   jundiai: 'Jundiaí',
   nse: 'NSE',
-  coc: 'COC'
+  coc: 'COC',
+  psd: 'PSD',
+  curitiba: 'Curitiba'
 };
 
 function NovaMovimentacaoModal({ 

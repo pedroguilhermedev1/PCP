@@ -268,6 +268,7 @@ export function EstoqueInsumosTable({
                     jundiai: 'Jundiaí',
                     nse: 'NSE',
                     coc: 'COC',
+                    psd: 'PSD',
                     curitiba: 'Curitiba',
                     'ribeirao-preto': 'Ribeirão Preto',
                     raizes: 'Raízes'

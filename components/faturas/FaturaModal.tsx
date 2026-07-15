@@ -225,7 +225,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
                     value={formData.cd || ""} onChange={handleSelectChange('cd')}>
                     <option value="" disabled>Selecione um CD</option>
-                    {["Fortaleza", "Jundiaí", "NSE", "COC"].map(cd => (
+                    {["Fortaleza", "Jundiaí", "NSE", "COC", "PSD"].map(cd => (
                       <option key={cd} value={cd}>{cd}</option>
                     ))}
                   </select>

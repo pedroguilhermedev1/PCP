@@ -39,9 +39,9 @@ async function run() {
       } else if (['EI', 'PLENO', 'MM', 'GF'].includes(empUpper)) {
         cdsToInsert = ['nse'];
       } else if (empUpper === 'PSD' || empUpper === 'POSITIVO') {
-        cdsToInsert = ['curitiba'];
+        cdsToInsert = ['psd'];
       } else if (empUpper === 'COC') {
-        cdsToInsert = ['ribeirao-preto'];
+        cdsToInsert = ['coc'];
       } else if (empUpper === 'GEEKIE' || empUpper === 'NAVE') {
         cdsToInsert = ['raizes'];
       } else {
