@@ -142,13 +142,12 @@ export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
 
   if (fatura.status_pagamento === 'Pago') return 'Pago';
   if (fatura.status_pagamento === 'Aguardando pagamento') return 'Aguardando pagamento';
-  
   if (fatura.status_pagamento === 'ERP') return 'Aprovação';
-    if (fatura.v360 && fatura.data_abertura_v360) return 'Inclusão no V360';
-    if (fatura.erp && fatura.data_aprovacao) return 'Aprovação';
-    if (fatura.heflo && fatura.data_abertura_heflo) return 'Requisição de Compras';
-    return 'Cadastro da NF';
-  }
+  
+  if (fatura.v360 && fatura.data_abertura_v360) return 'Inclusão no V360';
+  if (fatura.erp && fatura.data_aprovacao) return 'Aprovação';
+  if (fatura.heflo && fatura.data_abertura_heflo) return 'Requisição de Compras';
+  return 'Cadastro da NF';
 }
 
 export type SLAStatus = 'Dentro do prazo' | 'Próximo do vencimento' | 'Atrasado';
