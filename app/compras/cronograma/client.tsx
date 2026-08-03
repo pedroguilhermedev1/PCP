@@ -54,6 +54,7 @@ export function CronogramaClient() {
 
   const [currentUser, setCurrentUser] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userCD, setUserCD] = useState<string | null>(null);
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
