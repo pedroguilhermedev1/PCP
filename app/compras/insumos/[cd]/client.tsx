@@ -393,7 +393,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                 Insumos
               </div>
             </button>
-            {!urlStatus && (
+            {!urlStatus && isAdmin && (
               <>
                 <button
                   onClick={() => setActiveTab('entradas')}
