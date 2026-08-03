@@ -63,10 +63,17 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       setResponsavel(formatted);
       setResponsavelOriginal(user);
       setUserRole(getUserRole(user));
+
+      if (user.endsWith('.arco')) {
+        const userCd = user.split('.')[0].toLowerCase();
+        if (cd.toLowerCase() !== userCd) {
+          window.location.href = `/compras/formularios/${userCd}`;
+        }
+      }
     } else {
       setResponsavel("Usuário não identificado");
     }
-  }, []);
+  }, [cd]);
 
   useEffect(() => {
     setSolicitante(responsavel);

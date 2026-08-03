@@ -197,13 +197,23 @@ export function Sidebar() {
 
   const isReportsOnly = currentUser === 'ivna.teixeira';
 
-  const visibleItems = isAdmin
+  const visibleItems = (isAdmin
   ? sidebarItems.filter(item => item.title !== 'SOLICITAÇÕES')
   : isReportsOnly 
     ? sidebarItems.filter(item => item.title === 'RELATÓRIOS')
     : sidebarItems.filter(item =>
         item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
-      )
+      )).map(item => {
+        if (!isAdmin && currentUser?.endsWith('.arco') && item.type === 'group' && item.items) {
+           const userCd = currentUser.split('.')[0].toLowerCase();
+           const filteredItems = item.items.filter(subItem => {
+              const subTitleNormalized = subItem.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              return subTitleNormalized === userCd;
+           });
+           return { ...item, items: filteredItems };
+        }
+        return item;
+      });
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');

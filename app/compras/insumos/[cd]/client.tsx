@@ -286,14 +286,27 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
   
   const [currentUser, setCurrentUser] = useState("");
   const [currentUserOriginal, setCurrentUserOriginal] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) {
       setCurrentUser(formatUserName(user));
       setCurrentUserOriginal(user);
+      if (user.endsWith('.arco')) {
+        const userCd = user.split('.')[0].toLowerCase();
+        if (cd.toLowerCase() !== userCd) {
+          window.location.href = `/compras/insumos/${userCd}`;
+        }
+      }
     }
-  }, []);
+    const admin = [
+      'pedro.queiroz',
+      'debora.mota',
+      'francisco.edson'
+    ].includes(user || '')
+    setIsAdmin(admin)
+  }, [cd]);
 
   const canEditOrDelete = !currentUserOriginal || currentUserOriginal.startsWith('pedro.queiroz') || currentUserOriginal.startsWith('francisco.edson');
 
