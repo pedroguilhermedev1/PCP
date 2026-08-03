@@ -202,7 +202,7 @@ export function Sidebar() {
   : isReportsOnly 
     ? sidebarItems.filter(item => item.title === 'RELATÓRIOS')
     : sidebarItems.filter(item =>
-        item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS'
+        item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS' || item.title === 'INSUMOS'
       )).map(item => {
         if (!isAdmin && currentUser?.endsWith('.arco') && item.type === 'group' && item.items) {
            const userCd = currentUser.split('.')[0].toLowerCase();
