@@ -1,4 +1,5 @@
 import { LoginForm } from './LoginForm';
+import { ShoppingCart } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -13,9 +14,7 @@ export default function LoginPage() {
         <div>
           <div className="flex justify-center mb-2">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
+              <ShoppingCart className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
           </div>
           <h2 className="mt-4 text-center text-3xl font-extrabold bg-gradient-to-r from-purple-800 to-indigo-600 bg-clip-text text-transparent pb-1 tracking-tight">
