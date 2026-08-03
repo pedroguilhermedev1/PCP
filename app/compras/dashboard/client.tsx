@@ -57,7 +57,7 @@ export function DashboardClient({
   const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'faturas1' | 'faturas2' | 'insumos' | 'nexa'>('faturas1');
+  const [activeTab, setActiveTab] = useState<'faturas1' | 'faturas2' | 'insumos'>('faturas1');
 
   // Filters Faturas
   const [fatAno, setFatAno] = useState<string>(currentYear);
@@ -77,6 +77,14 @@ export function DashboardClient({
   useEffect(() => {
     const user = localStorage.getItem('pcp_user') || '';
     setCurrentUser(user);
+    const normalized = user.toLowerCase();
+    if (normalized.endsWith('.arco')) {
+      const cd = normalized.split('.')[0];
+      if (['jundiai', 'nse', 'psd', 'coc', 'fortaleza'].includes(cd)) {
+        setUserCD(cd);
+        setInsCD(cd);
+      }
+    }
   }, []);
 
   // Options
@@ -281,12 +289,6 @@ export function DashboardClient({
             >
               Insumos e Movimentações
             </button>
-            <button
-              onClick={() => setActiveTab('nexa')}
-              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'nexa' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
-            >
-              NEXA
-            </button>
           </div>
         </div>
       )}
@@ -432,7 +434,8 @@ export function DashboardClient({
                     <select 
                       value={userCD} 
                       onChange={(e) => setUserCD(e.target.value)}
-                      className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
+                      disabled={!isAdmin && currentUser.endsWith('.arco')}
+                      className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                       <option value="todos">Todos</option>
                       {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
@@ -485,7 +488,7 @@ export function DashboardClient({
                   <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
                   <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
                     <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
-                    <select value={insCD} onChange={(e) => setInsCD(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]">
+                    <select value={insCD} onChange={(e) => setInsCD(e.target.value)} disabled={!isAdmin && currentUser.endsWith('.arco')} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px] disabled:opacity-70 disabled:cursor-not-allowed">
                       <option value="todos">Todos</option>
                       {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
                     </select>
@@ -509,16 +512,6 @@ export function DashboardClient({
                 <InsumoCard title="Itens em Alerta" value={insumosStats.alertas} subtitle="Entre Lead Time e +3 dias" icon={AlertTriangle} colorClass="text-amber-500" borderClass="border-amber-200" bgClass="bg-amber-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} />
                 <InsumoCard title="Itens Críticos" value={insumosStats.criticos} subtitle="Cobertura ≤ Lead Time" icon={AlertTriangle} colorClass="text-red-600" borderClass="border-red-200" bgClass="bg-red-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} />
               </div>
-            </div>
-          )}
-          {/* Sessão NEXA */}
-          {activeTab === 'nexa' && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Package className="w-16 h-16 text-zinc-300 mb-4" />
-              <h2 className="text-xl font-bold text-zinc-800 mb-2">Módulo NEXA em Breve</h2>
-              <p className="text-zinc-500 max-w-md">
-                Esta área está reservada para os futuros indicadores e fluxos do processo NEXA.
-              </p>
             </div>
           )}
         </div>

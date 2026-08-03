@@ -19,7 +19,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="mt-4 text-center text-3xl font-extrabold bg-gradient-to-r from-purple-800 to-indigo-600 bg-clip-text text-transparent pb-1 tracking-tight">
-            PCP Compras
+            PCP Hub
           </h2>
           <p className="mt-2 text-center text-sm font-medium text-zinc-500">
             Entre com suas credenciais para acessar o sistema

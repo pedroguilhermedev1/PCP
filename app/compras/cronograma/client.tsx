@@ -72,12 +72,30 @@ export function CronogramaClient() {
   });
 
   useEffect(() => {
-    const user = localStorage.getItem("pcp_user");
+    const user = localStorage.getItem("pcp_user") || "";
     if (user) {
       setCurrentUser(user);
-      setIsAdmin(ADMIN_USERS.includes(user.trim().toLowerCase()));
+      const isUserAdmin = ADMIN_USERS.includes(user.trim().toLowerCase());
+      setIsAdmin(isUserAdmin);
+      
+      if (!isUserAdmin && user.includes('.')) {
+        const cdPart = user.split('.')[0].toLowerCase();
+        const foundCD = CD_OPTIONS.find(opt => opt.toLowerCase() === cdPart);
+        if (foundCD) {
+          setUserCD(foundCD);
+          setFormData(prev => ({ ...prev, cd: foundCD }));
+        }
+      }
     }
   }, []);
+
+  // Filter events based on user CD if not admin
+  const filteredEventos = useMemo(() => {
+    if (!isAdmin && userCD) {
+      return eventos.filter((e) => e.cd === userCD);
+    }
+    return eventos;
+  }, [eventos, isAdmin, userCD]);
 
   // Calendar computation
   const daysInMonth = useMemo(
@@ -92,7 +110,7 @@ export function CronogramaClient() {
   const startDayOfWeek = getDay(startOfMonth(currentDate));
 
   const getEventosOnDay = (date: Date) =>
-    eventos.filter((e) => e.date === format(date, "yyyy-MM-dd"));
+    filteredEventos.filter((e) => e.date === format(date, "yyyy-MM-dd"));
 
   const selectedDayEventos = selectedDay ? getEventosOnDay(selectedDay) : [];
 
@@ -111,7 +129,7 @@ export function CronogramaClient() {
       date: format(date || new Date(), "yyyy-MM-dd"),
       time: "08:00",
       description: "",
-      cd: "Fortaleza",
+      cd: userCD || "Fortaleza",
     });
     setModalOpen(true);
   };
@@ -168,7 +186,7 @@ export function CronogramaClient() {
   };
 
   // Month summary
-  const monthEventCount = eventos.filter(
+  const monthEventCount = filteredEventos.filter(
     (e) => e.date.startsWith(format(currentDate, "yyyy-MM"))
   ).length;
 
@@ -576,14 +594,14 @@ export function CronogramaClient() {
                         <button
                           key={cd}
                           type="button"
-                          disabled={!isAdmin}
+                          disabled={!isAdmin && userCD !== null}
                           onClick={() => setFormData({ ...formData, cd })}
                           className={cn(
                             "py-2.5 px-3 rounded-xl text-xs font-bold border-2 transition-all flex items-center justify-center gap-1.5",
                             isSelected
                               ? cn(c.bg, c.text, c.border, "shadow-sm ring-1 ring-offset-1", c.border.replace("border-", "ring-"))
                               : "bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50",
-                            !isAdmin && "cursor-default hover:border-zinc-200 hover:bg-white"
+                            !isAdmin && userCD !== null && "cursor-not-allowed opacity-50"
                           )}
                         >
                           <span className={cn("w-2 h-2 rounded-full", isSelected ? c.dot : "bg-zinc-300")} />

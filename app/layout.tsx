@@ -4,7 +4,7 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: 'PCP Compras',
+  title: 'PCP Hub',
   description: 'Sistema de gestão de compras.',
 };
 

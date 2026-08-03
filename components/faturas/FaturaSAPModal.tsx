@@ -8,6 +8,7 @@ import { Trash2, Plus } from "lucide-react";
 import { cn, formatCNPJ } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
+import { formatUserName } from "@/lib/roles";
 
 interface FaturaModalProps {
   isOpen: boolean;
@@ -41,6 +42,10 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       supabase?.from('contas_protheus').select('*').then(({data}) => {
         if (data) setContasProtheus(data);
       });
+      const user = localStorage.getItem('pcp_user') || '';
+      if (user && !formData.responsavel) {
+        setFormData(prev => ({ ...prev, responsavel: user }));
+      }
     }
   }, [isOpen]);
 
@@ -214,7 +219,11 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Responsável</label>
+                  <Input value={formatUserName(formData.responsavel)} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Forma de Pagamento</label>
                   <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"

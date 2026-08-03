@@ -237,7 +237,7 @@ export function Sidebar() {
       <div className="md:hidden flex flex-row items-center justify-between p-4 border-b border-zinc-200 bg-zinc-50 flex-shrink-0">
         <Link href="/" className="flex items-center gap-2 font-bold text-purple-900">
           <ShoppingCart className="w-6 h-6 text-purple-800 flex-shrink-0" strokeWidth={2.5} />
-          <span>PCP Compras</span>
+          <span>PCP Hub</span>
         </Link>
         <button onClick={() => setIsOpen(true)} className="p-2 -mr-2 text-zinc-600">
           <Menu className="w-6 h-6" />
@@ -253,7 +253,7 @@ export function Sidebar() {
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-2 font-bold text-purple-900 overflow-hidden transition-all justify-start">
               <ShoppingCart className="w-6 h-6 text-purple-800 flex-shrink-0" strokeWidth={2.5} />
-              <span className="whitespace-nowrap text-sm">PCP Compras</span>
+              <span className="whitespace-nowrap text-sm">PCP Hub</span>
             </Link>
           )}
           
