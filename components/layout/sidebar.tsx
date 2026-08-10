@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle, Package, Handshake, MessageSquare, BarChart2, ShoppingCart } from "lucide-react"
+import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle, Package, Handshake, MessageSquare, BarChart2, ShoppingCart, Target } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLembretes } from "@/components/lembretes/LembretesContext"
@@ -13,13 +13,14 @@ import { motion, AnimatePresence } from "motion/react"
 const sidebarItems = [
   {
     type: 'link',
-    title: "DASHBOARD",
+    title: "Dashboard",
     href: "/compras/dashboard",
     icon: <BarChart2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
+  /* OCULTADO A PEDIDO - FATURAS 1.0
   {
     type: 'group',
-    title: "FATURAS 1.0",
+    title: "Faturas 1.0",
     icon: <DollarSign className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -34,9 +35,10 @@ const sidebarItems = [
       }
     ]
   },
+  */
   {
     type: 'group',
-    title: "FATURAS 2.0",
+    title: "Faturas 2.0",
     icon: <DollarSign className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -53,7 +55,7 @@ const sidebarItems = [
   },
   {
     type: 'group',
-    title: "INSUMOS",
+    title: "Insumos",
     icon: <Package className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -85,7 +87,7 @@ const sidebarItems = [
   },
   {
     type: 'group',
-    title: "FORNECEDORES",
+    title: "Fornecedores",
     icon: <Handshake className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -102,7 +104,7 @@ const sidebarItems = [
   },
   {
     type: 'group',
-    title: "SOLICITAÇÕES",
+    title: "Solicitações",
     icon: <MessageSquare className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
     items: [
       {
@@ -134,19 +136,25 @@ const sidebarItems = [
   },
   {
     type: 'link',
-    title: "CRONOGRAMA",
+    title: "Cronograma",
     href: "/compras/cronograma",
     icon: <Calendar className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
   {
     type: 'link',
-    title: "RELATÓRIOS",
+    title: "Relatórios",
     href: "/compras/relatorios",
     icon: <FileText className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
   {
     type: 'link',
-    title: "LEMBRETES",
+    title: "Apresentação Semanal",
+    href: "/compras/apresentacao-semanal",
+    icon: <Target className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
+  },
+  {
+    type: 'link',
+    title: "Lembretes",
     href: "/compras/lembretes",
     icon: <Bell className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
@@ -174,20 +182,20 @@ export function Sidebar() {
   ].includes(currentUser || '')
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-  "FATURAS 1.0": false,
-  "FATURAS 2.0": false,
-  INSUMOS: false,
-  SOLICITAÇÕES: false,
-  FORNECEDORES: false,
+  "Faturas 1.0": false,
+  "Faturas 2.0": false,
+  "Insumos": false,
+  "Solicitações": false,
+  "Fornecedores": false,
 })
 
   useEffect(() => {
   setExpandedGroups({
-    "FATURAS 1.0": pathname?.startsWith('/compras/faturas') && !pathname?.startsWith('/compras/faturas-sap'),
-    "FATURAS 2.0": pathname?.startsWith('/compras/faturas-sap') ?? false,
-    INSUMOS: pathname?.startsWith('/compras/insumos') ?? false,
-    SOLICITAÇÕES: pathname?.startsWith('/compras/formularios') ?? false,
-    FORNECEDORES: pathname?.startsWith('/compras/fornecedores') ?? false,
+    "Faturas 1.0": pathname?.startsWith('/compras/faturas') && !pathname?.startsWith('/compras/faturas-sap'),
+    "Faturas 2.0": pathname?.startsWith('/compras/faturas-sap') ?? false,
+    "Insumos": pathname?.startsWith('/compras/insumos') ?? false,
+    "Solicitações": pathname?.startsWith('/compras/formularios') ?? false,
+    "Fornecedores": pathname?.startsWith('/compras/fornecedores') ?? false,
   });
   
   if (pathname === '/compras/cronograma') {
@@ -198,11 +206,11 @@ export function Sidebar() {
   const isReportsOnly = currentUser === 'ivna.teixeira';
 
   const visibleItems = (isAdmin
-  ? sidebarItems.filter(item => item.title !== 'SOLICITAÇÕES')
+  ? sidebarItems.filter(item => item.title !== 'Solicitações')
   : isReportsOnly 
-    ? sidebarItems.filter(item => item.title === 'RELATÓRIOS')
+    ? sidebarItems.filter(item => item.title === 'Relatórios')
     : sidebarItems.filter(item =>
-        item.title === 'DASHBOARD' || item.title === 'SOLICITAÇÕES' || item.title === 'CRONOGRAMA' || item.title === 'RELATÓRIOS' || item.title === 'INSUMOS'
+        item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Cronograma' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
       )).map(item => {
         if (!isAdmin && currentUser?.endsWith('.arco') && item.type === 'group' && item.items) {
            const userCd = currentUser.split('.')[0].toLowerCase();
@@ -255,11 +263,11 @@ export function Sidebar() {
       </div>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 border-r border-zinc-200 bg-zinc-50 flex-shrink-0 flex flex-col transition-all duration-300 md:relative md:translate-x-0 hidden md:flex",
+        "fixed inset-y-0 left-0 z-50 border-r border-zinc-200 bg-white flex-shrink-0 flex flex-col transition-all duration-300 md:relative md:translate-x-0 hidden md:flex",
         isOpen ? "translate-x-0 !flex w-64" : "-translate-x-full",
         !isOpen && isCollapsed ? "md:w-20" : (!isOpen ? "md:w-64" : "")
       )}>
-        <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-200 overflow-hidden">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-100 overflow-hidden">
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-2 font-bold text-purple-900 overflow-hidden transition-all justify-start">
               <ShoppingCart className="w-6 h-6 text-purple-800 flex-shrink-0" strokeWidth={2.5} />
@@ -294,23 +302,23 @@ export function Sidebar() {
                     onClick={() => setIsOpen(false)}
                     title={isCollapsed ? group.title : undefined}
                     className={cn(
-                      "w-full flex items-center px-2 py-2 rounded-md text-sm font-medium tracking-wide uppercase transition-colors overflow-hidden",
+                      "w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium tracking-wide transition-all overflow-hidden",
                       isCollapsed ? "justify-center" : "justify-between",
                       isActive
-                        ? "text-purple-900 bg-purple-200"
-                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/50"
+                        ? "text-purple-700 bg-purple-50/80 font-semibold shadow-sm border border-purple-100/50"
+                        : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
                     )}
                   >
                     <div className="flex items-center gap-3">
                       {group.icon}
                       {!isCollapsed && <span className="whitespace-nowrap">{group.title}</span>}
                     </div>
-                    {group.title === 'LEMBRETES' && badgeCount > 0 && (
+                    {group.title === 'Lembretes' && badgeCount > 0 && (
                       <div className={cn("bg-red-500 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0 text-[10px]", isCollapsed ? "absolute top-1 right-2 w-4 h-4" : "px-2 py-0.5")}>
                         {badgeCount}
                       </div>
                     )}
-                    {group.title === 'CRONOGRAMA' && unseenCount > 0 && (
+                    {group.title === 'Cronograma' && unseenCount > 0 && (
                       <div className={cn("bg-red-500 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0 text-[10px]", isCollapsed ? "absolute top-1 right-2 w-4 h-4" : "px-2 py-0.5")}>
                         {unseenCount}
                       </div>
@@ -326,7 +334,7 @@ export function Sidebar() {
                 <button 
                   onClick={() => toggleGroup(group.title)}
                   title={isCollapsed ? group.title : undefined}
-                  className={cn("w-full flex items-center px-2 py-2 rounded-md text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/50 transition-colors tracking-wide uppercase overflow-hidden", isCollapsed ? "justify-center" : "justify-between")}
+                  className={cn("w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-all tracking-wide overflow-hidden", isCollapsed ? "justify-center" : "justify-between")}
                 >
                   <div className="flex items-center gap-3">
                     {group.icon}
@@ -355,11 +363,11 @@ export function Sidebar() {
                               onClick={() => setIsOpen(false)}
                               title={item.title}
                               className={cn(
-                                "flex items-center px-2 py-1.5 rounded-md text-sm font-medium transition-colors overflow-hidden",
-                                isCollapsed ? "justify-center pl-0 ml-[-20px]" : "justify-start gap-2",
+                                "flex items-center px-3 py-2 rounded-lg text-[13px] font-medium transition-all overflow-hidden",
+                                isCollapsed ? "justify-center pl-0 ml-[-20px]" : "justify-start gap-2.5",
                                 isActive
-                                  ? "bg-purple-200 text-purple-900 font-semibold"
-                                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                                  ? "bg-purple-50/80 text-purple-700 font-semibold shadow-sm border border-purple-100/50"
+                                  : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
                               )}
                             >
                               <div className="flex items-center gap-2">
@@ -378,14 +386,14 @@ export function Sidebar() {
           })}
         </div>
 
-        <div className="p-3 border-t border-zinc-200 flex flex-col gap-2">
+        <div className="p-4 border-t border-zinc-100 flex flex-col gap-2">
           <button 
             onClick={() => {
               localStorage.removeItem('pcp_user');
               router.push('/login');
             }}
             title={isCollapsed ? "Sair" : undefined}
-            className={cn("w-full flex items-center px-2 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-md text-sm font-medium transition-colors cursor-pointer", isCollapsed ? "justify-center" : "justify-center gap-2")}
+            className={cn("w-full flex items-center px-3 py-2.5 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-lg text-[13px] font-medium transition-all cursor-pointer border border-zinc-200/50", isCollapsed ? "justify-center" : "justify-center gap-2")}
           >
             {isCollapsed ? <LogOut className="w-5 h-5 text-zinc-600 flex-shrink-0" /> : <div className="flex items-center gap-2 w-full justify-center"><LogOut className="w-4 h-4 flex-shrink-0" /> <span>Sair</span></div>}
           </button>

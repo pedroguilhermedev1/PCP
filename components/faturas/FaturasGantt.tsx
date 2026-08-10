@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Fatura, calcularEtapa } from '@/modules/compras/domain/Fatura';
 import { cn } from '@/lib/utils';
 import { Info, ChevronDown, ChevronRight, Calendar, Activity, CheckCircle, Clock } from 'lucide-react';
+import { SelectFilter } from '@/components/ui/select-filter';
 
 interface FaturasGanttProps {
   faturas: Fatura[];
@@ -200,41 +201,33 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
         <h2 className="text-lg font-bold text-zinc-800 shrink-0">Gantt Operacional</h2>
         
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase">CD</span>
-            <select 
-              value={filtroCD} 
-              onChange={(e) => setFiltroCD(e.target.value)}
-              className="text-xs font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[60px]"
-            >
-              <option value="todos">Todos</option>
-              {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
-            </select>
-          </div>
-          
-          <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase">Ano</span>
-            <select 
-              value={filtroAno} 
-              onChange={(e) => setFiltroAno(e.target.value)}
-              className="text-xs font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[60px]"
-            >
-              <option value="todos">Todos</option>
-              {availableAnos.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[10px] font-bold text-zinc-500 uppercase">Mês</span>
-            <select 
-              value={filtroMes} 
-              onChange={(e) => setFiltroMes(e.target.value)}
-              className="text-xs font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[70px]"
-            >
-              <option value="todos">Todos</option>
-              {availableMeses.map(m => <option key={m} value={m}>{mesLabels[m]}</option>)}
-            </select>
-          </div>
+          <SelectFilter 
+            label="CD"
+            value={filtroCD} 
+            onChange={(e) => setFiltroCD(e.target.value)}
+            options={[
+              { value: "todos", label: "Todos" },
+              ...uniqueCDs.map(cd => ({ value: cd, label: cd.toUpperCase() }))
+            ]}
+          />
+          <SelectFilter 
+            label="Ano"
+            value={filtroAno} 
+            onChange={(e) => setFiltroAno(e.target.value)}
+            options={[
+              { value: "todos", label: "Todos" },
+              ...availableAnos.map(a => ({ value: a, label: a }))
+            ]}
+          />
+          <SelectFilter 
+            label="Mês"
+            value={filtroMes} 
+            onChange={(e) => setFiltroMes(e.target.value)}
+            options={[
+              { value: "todos", label: "Todos" },
+              ...availableMeses.map(m => ({ value: m, label: mesLabels[m] }))
+            ]}
+          />
         </div>
       </div>
 
@@ -249,11 +242,11 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
           <div className="flex-1 flex flex-col relative overflow-x-auto overflow-y-hidden w-full">
           
           {/* TIMELINE HEADER */}
-          <div className="flex sticky top-0 bg-white z-20 border-b border-zinc-200 w-full min-w-[600px]">
-            <div className="w-[160px] shrink-0 border-r border-zinc-200 p-3 font-bold text-zinc-500 text-xs flex flex-col justify-center bg-white sticky left-0 z-30">
+          <div className="flex sticky top-0 bg-white z-20 border-b border-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] w-full min-w-[600px]">
+            <div className="w-[160px] shrink-0 border-r border-zinc-200 p-3 font-semibold text-zinc-400 tracking-wider text-[11px] flex flex-col justify-center bg-white sticky left-0 z-30">
               FATURA
             </div>
-            <div className="flex-1 relative min-h-[50px] bg-zinc-50/50">
+            <div className="flex-1 relative min-h-[50px] bg-zinc-50/30">
               
               <div className="absolute inset-0 flex items-center justify-center px-4">
                  <span className="text-xs font-bold text-zinc-400">Dias Operacionais (Recebimento → Meta 10 Dias)</span>

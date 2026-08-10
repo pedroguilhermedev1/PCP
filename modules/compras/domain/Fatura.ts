@@ -76,6 +76,12 @@ export interface Fatura {
   nexa_data_prevista_pagamento?: string;
   nexa_pagamento_realizado?: boolean;
 
+  // Apresentação Semanal (Desvios e Ações)
+  motivo_desvio?: string;
+  acao_corretiva?: string;
+  acao_responsavel?: string;
+  acao_status?: string;
+
   data_pagamento_real?: string;
   observacoes?: string;
   

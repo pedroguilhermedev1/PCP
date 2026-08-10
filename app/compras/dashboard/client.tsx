@@ -7,15 +7,19 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 import { FaturasGantt } from "@/components/faturas/FaturasGantt";
+import { SelectFilter } from "@/components/ui/select-filter";
 
 // Components
 function FaturaCard({ title, value, count, colorClass, borderClass, bgClass }: { title: string, value: string, count: number, colorClass: string, borderClass: string, bgClass: string }) {
   return (
-    <div className={cn("bg-white rounded-xl shadow-sm border p-6 flex flex-col justify-between h-full", borderClass, bgClass)}>
-      <p className={cn("text-sm font-medium mb-2", colorClass)}>{title}</p>
+    <div className={cn("bg-white rounded-xl shadow-sm border p-6 flex flex-col justify-between h-full hover:shadow-md transition-all", borderClass)}>
+      <div className="flex items-center justify-between mb-4">
+        <p className={cn("text-[13px] font-semibold uppercase tracking-wider", colorClass)}>{title}</p>
+        <div className={cn("w-2 h-2 rounded-full", colorClass.replace('text-', 'bg-'))}></div>
+      </div>
       <div>
-        <div className={cn("text-3xl font-bold", colorClass.replace('text-', 'text-').replace('-600', '-700').replace('-500', '-700'))}>{value}</div>
-        <p className={cn("text-sm mt-2 font-medium opacity-80", colorClass)}>{count} faturas</p>
+        <div className="text-3xl font-bold text-zinc-900">{value}</div>
+        <p className="text-sm mt-2 font-medium text-zinc-500">{count} faturas</p>
       </div>
     </div>
   );
@@ -25,14 +29,16 @@ function InsumoCard({ title, value, subtitle, icon: Icon, colorClass, borderClas
   return (
     <div 
       onClick={onClick}
-      className={cn("bg-white rounded-xl shadow-sm border p-6 flex items-start justify-between h-full transition-transform hover:scale-[1.02]", borderClass, bgClass, onClick ? "cursor-pointer hover:shadow-md" : "")}
+      className={cn("bg-white rounded-xl shadow-sm border p-6 flex flex-col justify-between h-full transition-all hover:scale-[1.01]", borderClass, onClick ? "cursor-pointer hover:shadow-md" : "")}
     >
-      <div>
-        <p className={cn("text-sm font-medium mb-2", colorClass)}>{title}</p>
-        <div className={cn("text-4xl font-bold", colorClass.replace('text-', 'text-').replace('-600', '-700').replace('-500', '-700'))}>{value}</div>
-        <p className={cn("text-sm mt-2 opacity-80", colorClass)}>{subtitle}</p>
+      <div className="flex items-center justify-between mb-4">
+        <p className={cn("text-[13px] font-semibold uppercase tracking-wider", colorClass)}>{title}</p>
+        <Icon className={cn("w-5 h-5", colorClass)} />
       </div>
-      <Icon className={cn("w-8 h-8 opacity-20", colorClass)} />
+      <div>
+        <div className="text-3xl font-bold text-zinc-900">{value}</div>
+        <p className="text-sm mt-2 font-medium text-zinc-500">{subtitle}</p>
+      </div>
     </div>
   );
 }
@@ -256,36 +262,36 @@ export function DashboardClient({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-zinc-50/30">
-      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
-            <BarChart2 className="w-7 h-7" strokeWidth={2.5} />
+      <header className="bg-white border-b border-zinc-200 px-8 py-5 flex items-center justify-between flex-shrink-0 z-10 relative shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-4">
+          <div className="bg-purple-50 p-2.5 rounded-lg text-purple-700 border border-purple-100">
+            <BarChart2 className="w-6 h-6" strokeWidth={2.5} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-zinc-900 leading-tight">Dashboard</h1>
-            <p className="text-sm text-zinc-500">Visão geral e indicadores do sistema.</p>
+            <p className="text-[13px] text-zinc-500 font-medium">Visão geral e indicadores do sistema</p>
           </div>
         </div>
       </header>
       
       {isAdmin && (
-        <div className="px-6 md:px-8 pt-6 pb-0">
-          <div className="flex gap-4 border-b border-zinc-200">
+        <div className="px-8 pt-6 pb-0">
+          <div className="flex gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
             <button
               onClick={() => setActiveTab('faturas1')}
-              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'faturas1' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas1' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
             >
               Faturas 1.0
             </button>
             <button
               onClick={() => setActiveTab('faturas2')}
-              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'faturas2' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
             >
               Faturas 2.0
             </button>
             <button
               onClick={() => setActiveTab('insumos')}
-              className={`px-4 py-2 font-bold text-sm transition-colors ${activeTab === 'insumos' ? 'border-b-2 border-purple-600 text-purple-700' : 'text-zinc-500 hover:text-zinc-800'}`}
+              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'insumos' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
             >
               Insumos e Movimentações
             </button>
@@ -309,72 +315,75 @@ export function DashboardClient({
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Categoria</span>
-                        <select 
-                          value={fatCategoria} 
-                          onChange={(e) => setFatCategoria(e.target.value)}
-                          className="w-[120px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                          <option value="Todas">Todas</option>
-                          <option value="Material">Material</option>
-                          <option value="Serviço">Serviço</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
-                        <select 
-                          value={fatAno} 
-                          onChange={(e) => setFatAno(e.target.value)}
-                          className="w-[100px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                          <option value="todos">Todos</option>
-                          {anos.map(a => <option key={a} value={a}>{a}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
-                        <select 
-                          value={fatMes} 
-                          onChange={(e) => setFatMes(e.target.value)}
-                          className="w-[140px] h-9 bg-white border border-zinc-200 rounded-md text-sm px-2 outline-none focus:ring-2 focus:ring-purple-500"
-                        >
-                          <option value="todos">Todos</option>
-                          {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </select>
-                      </div>
+                      <SelectFilter 
+                        label="Categoria"
+                        value={fatCategoria} 
+                        onChange={(e) => setFatCategoria(e.target.value)}
+                        options={[
+                          { value: "Todas", label: "Todas" },
+                          { value: "Material", label: "Material" },
+                          { value: "Serviço", label: "Serviço" }
+                        ]}
+                      />
+                      <SelectFilter 
+                        label="Ano"
+                        value={fatAno} 
+                        onChange={(e) => setFatAno(e.target.value)}
+                        options={[
+                          { value: "todos", label: "Todos" },
+                          ...anos.map(a => ({ value: a, label: a }))
+                        ]}
+                      />
+                      <SelectFilter 
+                        label="Mês"
+                        value={fatMes} 
+                        onChange={(e) => setFatMes(e.target.value)}
+                        options={[
+                          { value: "todos", label: "Todos" },
+                          ...meses.map(m => ({ value: m.value, label: m.label }))
+                        ]}
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <div 
                       onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
-                      className="bg-white rounded-xl shadow-sm border border-emerald-200 p-6 flex flex-col justify-between h-full bg-emerald-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                      className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
                     >
-                      <p className="text-sm font-medium mb-2 text-emerald-600">Dentro do prazo</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[13px] font-semibold uppercase tracking-wider text-emerald-600">Dentro do prazo</p>
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                      </div>
                       <div>
-                        <div className="text-3xl font-bold text-emerald-700">{faturasCards.slaNoPrazo}</div>
-                        <p className="text-sm mt-2 font-medium opacity-80 text-emerald-600">faturas no prazo</p>
+                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.slaNoPrazo}</div>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas no prazo</p>
                       </div>
                     </div>
                     <div 
                       onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
-                      className="bg-white rounded-xl shadow-sm border border-amber-200 p-6 flex flex-col justify-between h-full bg-amber-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                      className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
                     >
-                      <p className="text-sm font-medium mb-2 text-amber-600">Próximas do limite</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[13px] font-semibold uppercase tracking-wider text-amber-600">Próximas do limite</p>
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                      </div>
                       <div>
-                        <div className="text-3xl font-bold text-amber-700">{faturasCards.slaProximo}</div>
-                        <p className="text-sm mt-2 font-medium opacity-80 text-amber-600">faturas em alerta</p>
+                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.slaProximo}</div>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas em alerta</p>
                       </div>
                     </div>
                     <div 
                       onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
-                      className="bg-white rounded-xl shadow-sm border border-red-200 p-6 flex flex-col justify-between h-full bg-red-50/20 cursor-pointer hover:shadow-md transition-transform hover:scale-[1.02]"
+                      className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
                     >
-                      <p className="text-sm font-medium mb-2 text-red-600">Atrasadas no Fluxo</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[13px] font-semibold uppercase tracking-wider text-red-600">Atrasadas no Fluxo</p>
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      </div>
                       <div>
-                        <div className="text-3xl font-bold text-red-700">{faturasCards.slaAtrasado}</div>
-                        <p className="text-sm mt-2 font-medium opacity-80 text-red-600">faturas atrasadas</p>
+                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.slaAtrasado}</div>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas atrasadas</p>
                       </div>
                     </div>
                   </div>
@@ -429,17 +438,17 @@ export function DashboardClient({
                     <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
-                    <select 
+                  <div className="flex items-center gap-2">
+                    <SelectFilter 
+                      label="CD"
                       value={userCD} 
                       onChange={(e) => setUserCD(e.target.value)}
                       disabled={!isAdmin && currentUser.endsWith('.arco')}
-                      className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px] disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                      <option value="todos">Todos</option>
-                      {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
-                    </select>
+                      options={[
+                        { value: "todos", label: "Todos" },
+                        ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
+                      ]}
+                    />
                   </div>
                 </div>
                 
@@ -464,43 +473,55 @@ export function DashboardClient({
                 </div>
                 
                 <div className="flex flex-wrap items-center justify-start xl:justify-end gap-3 w-full xl:w-auto">
-                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
-                    <select value={insAno} onChange={(e) => setInsAno(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[55px]">
-                      <option value="todos">Todos</option>
-                      {anos.map(a => <option key={a} value={a}>{a}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
-                    <select value={insMes} onChange={(e) => setInsMes(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[85px]">
-                      <option value="todos">Todos</option>
-                      {meses.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Dia</span>
-                    <select value={insDia} onChange={(e) => setInsDia(e.target.value)} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[50px]">
-                      <option value="todos">Todos</option>
-                      {dias.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
+                  <SelectFilter 
+                    label="Ano"
+                    value={insAno} 
+                    onChange={(e) => setInsAno(e.target.value)}
+                    options={[
+                      { value: "todos", label: "Todos" },
+                      ...anos.map(a => ({ value: a, label: a }))
+                    ]}
+                  />
+                  <SelectFilter 
+                    label="Mês"
+                    value={insMes} 
+                    onChange={(e) => setInsMes(e.target.value)}
+                    options={[
+                      { value: "todos", label: "Todos" },
+                      ...meses.map(m => ({ value: m.value, label: m.label }))
+                    ]}
+                  />
+                  <SelectFilter 
+                    label="Dia"
+                    value={insDia} 
+                    onChange={(e) => setInsDia(e.target.value)}
+                    options={[
+                      { value: "todos", label: "Todos" },
+                      ...dias.map(d => ({ value: d, label: d }))
+                    ]}
+                  />
                   <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
-                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                    <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
-                    <select value={insCD} onChange={(e) => setInsCD(e.target.value)} disabled={!isAdmin && currentUser.endsWith('.arco')} className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px] disabled:opacity-70 disabled:cursor-not-allowed">
-                      <option value="todos">Todos</option>
-                      {uniqueCDs.map(cd => <option key={cd} value={cd}>{cd.toUpperCase()}</option>)}
-                    </select>
-                  </div>
+                  <SelectFilter 
+                    label="CD"
+                    value={insCD} 
+                    onChange={(e) => setInsCD(e.target.value)}
+                    disabled={!isAdmin && currentUser.endsWith('.arco')}
+                    options={[
+                      { value: "todos", label: "Todos" },
+                      ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
+                    ]}
+                  />
                   <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
-                  <div className="flex items-center gap-2 bg-purple-50/80 px-3 py-1.5 rounded-lg border border-purple-200 shadow-sm transition-colors hover:bg-purple-100/80">
-                    <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Envio</span>
-                    <select value={insTipoEnvio} onChange={(e) => setInsTipoEnvio(e.target.value)} className="text-sm font-bold bg-transparent outline-none text-purple-800 cursor-pointer">
-                      <option value="Principal">Principal</option>
-                      <option value="Complementar">Complementar</option>
-                    </select>
-                  </div>
+                  <SelectFilter 
+                    label="Envio"
+                    value={insTipoEnvio} 
+                    onChange={(e) => setInsTipoEnvio(e.target.value)}
+                    highlight={true}
+                    options={[
+                      { value: "Principal", label: "Principal" },
+                      { value: "Complementar", label: "Complementar" }
+                    ]}
+                  />
                 </div>
               </div>
 

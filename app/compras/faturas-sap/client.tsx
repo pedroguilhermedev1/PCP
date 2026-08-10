@@ -11,7 +11,7 @@ import { FaturaSAPModal } from "@/components/faturas/FaturaSAPModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
-import { formatCNPJ } from "@/lib/utils";
+import { formatCNPJ, cn } from "@/lib/utils";
 
 export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' }) {
   const [faturas, setFaturas] = useState<Fatura[]>(initialFaturas);
@@ -149,24 +149,37 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Vencido': return 'bg-red-100 text-red-700 font-bold';
-      case 'Pago': return 'bg-green-100 text-green-700 font-bold';
-      case 'Pago (Vencida)': return 'bg-amber-100 text-amber-700 font-bold';
-      case 'A vencer': return 'bg-purple-200 text-purple-900 font-bold';
-      default: return 'bg-zinc-100 text-zinc-800 font-bold';
+      case 'Vencido': return 'bg-red-50 text-red-700 border-red-200';
+      case 'Pago': return 'bg-green-50 text-green-700 border-green-200';
+      case 'Pago (Vencida)': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'A vencer': return 'bg-purple-50 text-purple-700 border-purple-200';
+      default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
     }
   };
 
   const getEtapaColor = (etapa: string) => {
     switch (etapa) {
-      case 'Em andamento': return 'bg-zinc-500 hover:bg-zinc-600 text-white border-transparent';
-      case 'Integração': return 'bg-red-500 hover:bg-red-600 text-white border-transparent';
-      case 'HEFLO': return 'bg-blue-500 hover:bg-blue-600 text-white border-transparent';
-      case 'ERP': return 'bg-zinc-500 hover:bg-zinc-600 text-white border-transparent';
-      case 'V360': return 'bg-orange-500 hover:bg-orange-600 text-white border-transparent';
-      case 'Aguardando pagamento': return 'bg-green-300 hover:bg-green-400 text-green-900 border-transparent';
-      case 'Pago': return 'bg-green-700 hover:bg-green-800 text-white border-transparent';
-      default: return 'bg-zinc-500 hover:bg-zinc-600 text-white border-transparent';
+      case 'Em andamento': return 'bg-zinc-50 text-zinc-700 border-zinc-200';
+      case 'Integração': return 'bg-red-50 text-red-700 border-red-200';
+      case 'HEFLO': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'ERP': return 'bg-zinc-50 text-zinc-700 border-zinc-200';
+      case 'V360': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Aguardando programação de pagamento': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Aguardando pagamento': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'Aguardando lançamento fiscal': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'Aguardando emissão de NF': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Pago': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
+    }
+  };
+
+  const getEtapaLabel = (etapa: string) => {
+    switch (etapa) {
+      case 'Aguardando programação de pagamento': return 'Prog. de Pagamento';
+      case 'Aguardando lançamento fiscal': return 'Lançamento Fiscal';
+      case 'Aguardando emissão de NF': return 'Emissão de NF';
+      case 'Aguardando pagamento': return 'Pagamento';
+      default: return etapa;
     }
   };
 
@@ -209,7 +222,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input 
               type="text" 
-              placeholder="Pesquisar por Fornecedor, Fatura, Heflo, ERP ou V360..." 
+              placeholder="Pesquisar por Fornecedor, Código, Fatura ou ERP..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all shadow-sm"
@@ -293,28 +306,28 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
-        <h2 className="text-lg font-semibold text-purple-900">LISTA DE FATURAS 2.0</h2>
+        <h2 className="text-lg font-semibold text-purple-900">Lista de Faturas 2.0</h2>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          NOVA FATURA
+          Nova Fatura
         </Button>
       </div>
 
-      <div className="bg-white rounded-md border shadow-sm w-full overflow-hidden">
+      <div className="bg-white rounded-xl border border-zinc-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] w-full overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 text-center">#</TableHead>
-              <TableHead>Código</TableHead>
-              <TableHead>CD</TableHead>
-              <TableHead>Fornecedor</TableHead>
-              <TableHead>Local</TableHead>
-              <TableHead>Nota Fiscal</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead>Vencimento</TableHead>
-              <TableHead>Status Fatura</TableHead>
-              <TableHead>Etapa</TableHead>
-              {canEditOrDelete && <TableHead className="text-right">Ações</TableHead>}
+          <TableHeader className="bg-zinc-50/50">
+            <TableRow className="border-zinc-100 hover:bg-transparent">
+              <TableHead className="w-12 text-center text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">#</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Código</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Fornecedor</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Local</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nota Fiscal</TableHead>
+              <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Valor</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Vencimento</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status Fatura</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Etapa</TableHead>
+              {canEditOrDelete && <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -325,14 +338,16 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               return (
                 <React.Fragment key={f.id}>
                   <TableRow 
-                    className={`cursor-pointer hover:bg-zinc-50 ${expandedFaturaId === f.id ? 'bg-zinc-50' : ''}`}
+                    className={`cursor-pointer border-b border-zinc-100 transition-colors ${expandedFaturaId === f.id ? 'bg-purple-50/80 shadow-inner' : 'hover:bg-purple-50/50'}`}
                     onClick={() => toggleExpand(f.id)}
                   >
                     <TableCell className="text-center font-medium text-zinc-400 text-xs">
                       {index + 1}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-zinc-100 font-mono text-zinc-600">{f.codigo_fatura || f.tipo_documento || 'S/ CÓD'}</Badge>
+                      <span className="font-mono text-zinc-600 font-medium text-xs bg-zinc-50 px-2 py-1 rounded border border-zinc-100">
+                        {f.codigo_fatura || f.tipo_documento || 'S/ CÓD'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '-'}</span>
@@ -343,8 +358,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                         <span>{f.fornecedor}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs text-zinc-600 bg-zinc-50">{f.filial || 'Indefinido'}</Badge>
+                    <TableCell className="text-zinc-600">
+                      {f.filial || '-'}
                     </TableCell>
                     <TableCell>{f.numero_documento}</TableCell>
                     <TableCell className="text-right font-medium">
@@ -356,14 +371,14 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={getStatusColor(status)}>
-                        {status.toUpperCase()}
-                      </Badge>
+                      <span className={cn("px-2.5 py-1 rounded-md text-xs font-medium border whitespace-nowrap", getStatusColor(status))}>
+                        {status}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getEtapaColor(etapa)}>
-                        {etapa.toUpperCase()}
-                      </Badge>
+                      <span className={cn("px-2.5 py-1 rounded-md text-xs font-medium border whitespace-nowrap", getEtapaColor(etapa))}>
+                        {getEtapaLabel(etapa)}
+                      </span>
                     </TableCell>
                     {canEditOrDelete && (
                       <TableCell className="text-right">

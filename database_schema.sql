@@ -36,9 +36,14 @@ CREATE TABLE public.faturas (
     nexa_data_envio TEXT,
     nexa_lancamento_concluido BOOLEAN DEFAULT false,
     nexa_data_conclusao_lancamento TEXT,
+    is_sap BOOLEAN DEFAULT false,
     nexa_pagamento_programado BOOLEAN DEFAULT false,
     nexa_data_prevista_pagamento TEXT,
-    nexa_pagamento_realizado BOOLEAN DEFAULT false
+    nexa_pagamento_realizado BOOLEAN DEFAULT false,
+    motivo_desvio TEXT,
+    acao_corretiva TEXT,
+    acao_responsavel TEXT,
+    acao_status TEXT
 );
 
 -- Ativar RLS (Opcional, comente se não for usar)
