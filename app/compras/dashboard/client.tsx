@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 
 import { FaturasGantt } from "@/components/faturas/FaturasGantt";
 import { SelectFilter } from "@/components/ui/select-filter";
+import ApresentacaoSemanalClient from "@/app/compras/apresentacao-semanal/client";
+import { getUserRole, getUserCD } from "@/lib/roles";
 
 // Components
 function FaturaCard({ title, value, count, colorClass, borderClass, bgClass }: { title: string, value: string, count: number, colorClass: string, borderClass: string, bgClass: string }) {
@@ -63,7 +65,7 @@ export function DashboardClient({
   const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'faturas1' | 'faturas2' | 'insumos'>('faturas1');
+  const [activeTab, setActiveTab] = useState<'faturas2' | 'insumos' | 'movimentacoes' | 'performance'>('faturas2');
 
   // Filters Faturas
   const [fatAno, setFatAno] = useState<string>(currentYear);
@@ -79,17 +81,17 @@ export function DashboardClient({
 
   // User Dashboard Filters
   const [userCD, setUserCD] = useState<string>("todos");
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user') || '';
     setCurrentUser(user);
-    const normalized = user.toLowerCase();
-    if (normalized.endsWith('.arco')) {
-      const cd = normalized.split('.')[0];
-      if (['jundiai', 'nse', 'psd', 'coc', 'fortaleza'].includes(cd)) {
-        setUserCD(cd);
-        setInsCD(cd);
-      }
+    const role = getUserRole(user);
+    setUserRole(role);
+    const cd = getUserCD(user);
+    if (role === 'OPERACIONAL' && cd) {
+      setUserCD(cd);
+      setInsCD(cd);
     }
   }, []);
 
@@ -113,7 +115,6 @@ export function DashboardClient({
   // Filtered Faturas
   const filteredFaturas = useMemo(() => {
     return faturas.filter(f => {
-      if (activeTab === 'faturas1' && f.is_sap) return false;
       if (activeTab === 'faturas2' && !f.is_sap) return false;
       if (activeTab === 'insumos') return false;
 
@@ -272,17 +273,19 @@ export function DashboardClient({
             <p className="text-[13px] text-zinc-500 font-medium">Visão geral e indicadores do sistema</p>
           </div>
         </div>
+        
+        {currentUser && (
+          <div className="hidden md:flex items-center bg-zinc-50 px-4 py-2 rounded-lg border border-zinc-200/60 shadow-sm">
+            <span className="text-sm font-semibold text-zinc-700">
+              Bem Vindo(a), <span className="text-purple-700">{currentUser.split('.').map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(' ')}</span>!
+            </span>
+          </div>
+        )}
       </header>
       
       {isAdmin && (
         <div className="px-8 pt-6 pb-0">
-          <div className="flex gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
-            <button
-              onClick={() => setActiveTab('faturas1')}
-              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas1' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
-            >
-              Faturas 1.0
-            </button>
+          <div className="flex flex-wrap gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
             <button
               onClick={() => setActiveTab('faturas2')}
               className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
@@ -293,7 +296,19 @@ export function DashboardClient({
               onClick={() => setActiveTab('insumos')}
               className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'insumos' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
             >
-              Insumos e Movimentações
+              Insumos
+            </button>
+            <button
+              onClick={() => setActiveTab('movimentacoes')}
+              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'movimentacoes' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+            >
+              Movimentações
+            </button>
+            <button
+              onClick={() => setActiveTab('performance')}
+              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'performance' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+            >
+              Performance Semanal
             </button>
           </div>
         </div>
@@ -303,7 +318,7 @@ export function DashboardClient({
         <div className="max-w-7xl mx-auto space-y-12">
           
           {/* Sessão Faturas */}
-          {(activeTab === 'faturas1' || activeTab === 'faturas2') && (
+          {(activeTab === 'faturas2') && (
             <>
 
               {isAdmin && (
@@ -311,7 +326,7 @@ export function DashboardClient({
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-2">
                       <FileText className="w-5 h-5 text-zinc-400" />
-                      <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas <span className="text-sm font-normal text-zinc-500">(envio ideal para o time de pagamentos)</span></h2>
+                      <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas 2.0 <span className="text-sm font-normal text-zinc-500">(Nexa / SAP)</span></h2>
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-3">
@@ -389,7 +404,7 @@ export function DashboardClient({
                   </div>
 
                   <div className="mt-8 mb-8">
-                    <FaturasGantt faturas={filteredFaturas} flowType={activeTab === 'faturas1' ? '1.0' : '2.0'} />
+                    <FaturasGantt faturas={filteredFaturas} flowType="2.0" />
                   </div>
 
                   <div className="flex items-center gap-2 mb-6 mt-8">
@@ -397,38 +412,22 @@ export function DashboardClient({
                     <h2 className="text-lg font-bold text-zinc-800">Status das Faturas</h2>
                   </div>
 
-                  {activeTab === 'faturas1' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
-                        <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
-                      </div>
-                      <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
-                      <FaturaCard title="Requisição de Compras" value={formatBRL(faturasCards.requisicao.val)} count={faturasCards.requisicao.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
-                      <FaturaCard title="Aprovação" value={formatBRL(faturasCards.aprovacaoOuPedido.val)} count={faturasCards.aprovacaoOuPedido.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
-                      <FaturaCard title="Inclusão no V360" value={formatBRL(faturasCards.v360.val)} count={faturasCards.v360.count} colorClass="text-orange-500" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
-                      <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
-                      <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
                     </div>
-                  )}
-
-                  {activeTab === 'faturas2' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
-                        <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
-                      </div>
-                      <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
-                      <FaturaCard title="Requisição de Compras" value={formatBRL(faturasCards.requisicao.val)} count={faturasCards.requisicao.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
-                      <FaturaCard title="Pedido de Compras" value={formatBRL(faturasCards.aprovacaoOuPedido.val)} count={faturasCards.aprovacaoOuPedido.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
-                      <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
-                      <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
-                    </div>
-                  )}
+                    <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
+                    <FaturaCard title="Requisição de Compras" value={formatBRL(faturasCards.requisicao.val)} count={faturasCards.requisicao.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
+                    <FaturaCard title="Pedido de Compras" value={formatBRL(faturasCards.aprovacaoOuPedido.val)} count={faturasCards.aprovacaoOuPedido.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
+                    <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
+                    <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
+                  </div>
                 </div>
               )}
             </>
           )}
 
-          {/* Sessão Insumos */}
+          {/* Sessão Insumos (Apenas Entradas e Aprovações) */}
           {(!isAdmin || activeTab === 'insumos') && (
             <div>
               <div className="mb-12">
@@ -443,7 +442,7 @@ export function DashboardClient({
                       label="CD"
                       value={userCD} 
                       onChange={(e) => setUserCD(e.target.value)}
-                      disabled={!isAdmin && currentUser.endsWith('.arco')}
+                      disabled={userRole === 'OPERACIONAL'}
                       options={[
                         { value: "todos", label: "Todos" },
                         ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
@@ -465,7 +464,12 @@ export function DashboardClient({
                   />
                 </div>
               </div>
+            </div>
+          )}
 
+          {/* Sessão Movimentações / Estoque Geral */}
+          {(!isAdmin || activeTab === 'movimentacoes') && (
+            <div>
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
                 <div className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-zinc-400" />
@@ -505,7 +509,7 @@ export function DashboardClient({
                     label="CD"
                     value={insCD} 
                     onChange={(e) => setInsCD(e.target.value)}
-                    disabled={!isAdmin && currentUser.endsWith('.arco')}
+                    disabled={userRole === 'OPERACIONAL'}
                     options={[
                       { value: "todos", label: "Todos" },
                       ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
@@ -526,13 +530,20 @@ export function DashboardClient({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <InsumoCard title="Total de Itens Cadastrados" value={insumosStats.totalItens} subtitle="Itens únicos no CD" icon={Layers} colorClass="text-blue-600" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
-                <InsumoCard title="Entradas (Período Selecionado)" value={insumosStats.entradas} subtitle="Qtd adicionada ao estoque" icon={TrendingUp} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
-                <InsumoCard title="Saídas (Período Selecionado)" value={insumosStats.saidas} subtitle="Qtd retirada do estoque" icon={TrendingDown} colorClass="text-orange-600" borderClass="border-orange-200" bgClass="bg-orange-50/20" />
-                <InsumoCard title="Itens em Situação Normal" value={insumosStats.confortaveis} subtitle="Acima do Lead Time + 3 dias" icon={CheckCircle} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`); }} />
-                <InsumoCard title="Itens em Alerta" value={insumosStats.alertas} subtitle="Entre Lead Time e +3 dias" icon={AlertTriangle} colorClass="text-amber-500" borderClass="border-amber-200" bgClass="bg-amber-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} />
-                <InsumoCard title="Itens Críticos" value={insumosStats.criticos} subtitle="Cobertura ≤ Lead Time" icon={AlertTriangle} colorClass="text-red-600" borderClass="border-red-200" bgClass="bg-red-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} />
+                <InsumoCard title="Total de Itens Cadastrados" value={insumosStats.totalItens} subtitle="Itens únicos no CD" icon={Layers} colorClass="text-blue-600" borderClass="border-blue-200 cursor-default" bgClass="bg-blue-50/20" />
+                <InsumoCard title="Entradas (Período Selecionado)" value={insumosStats.entradas} subtitle="Qtd adicionada ao estoque" icon={TrendingUp} colorClass="text-emerald-600" borderClass="border-emerald-200 cursor-default" bgClass="bg-emerald-50/20" />
+                <InsumoCard title="Saídas (Período Selecionado)" value={insumosStats.saidas} subtitle="Qtd retirada do estoque" icon={TrendingDown} colorClass="text-orange-600" borderClass="border-orange-200 cursor-default" bgClass="bg-orange-50/20" />
+                <InsumoCard title="Itens em Situação Normal" value={insumosStats.confortaveis} subtitle="Acima do Lead Time + 3 dias" icon={CheckCircle} colorClass="text-emerald-600" borderClass="border-emerald-200 cursor-pointer hover:shadow-md transition-all" bgClass="bg-emerald-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`); }} />
+                <InsumoCard title="Itens em Alerta" value={insumosStats.alertas} subtitle="Entre Lead Time e +3 dias" icon={AlertTriangle} colorClass="text-amber-500" borderClass="border-amber-200 cursor-pointer hover:shadow-md transition-all" bgClass="bg-amber-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} />
+                <InsumoCard title="Itens Críticos" value={insumosStats.criticos} subtitle="Cobertura ≤ Lead Time" icon={AlertTriangle} colorClass="text-red-600" borderClass="border-red-200 cursor-pointer hover:shadow-md transition-all" bgClass="bg-red-50/20" onClick={() => { const cdPath = insCD !== 'todos' ? insCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} />
               </div>
+            </div>
+          )}
+
+          {/* Sessão Performance Semanal */}
+          {(activeTab === 'performance') && (
+            <div className="-mx-8 -mt-6">
+              <ApresentacaoSemanalClient faturas={faturas} />
             </div>
           )}
         </div>

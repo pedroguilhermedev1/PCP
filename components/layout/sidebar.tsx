@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle, Package, Handshake, MessageSquare, BarChart2, ShoppingCart, Target } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { getUserRole, getUserCD } from "@/lib/roles"
 import { useLembretes } from "@/components/lembretes/LembretesContext"
 import { useCronogramaNotification } from "@/components/cronograma/CronogramaNotificationContext"
 import { motion, AnimatePresence } from "motion/react"
@@ -148,12 +149,6 @@ const sidebarItems = [
   },
   {
     type: 'link',
-    title: "Apresentação Semanal",
-    href: "/compras/apresentacao-semanal",
-    icon: <Target className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
-  },
-  {
-    type: 'link',
     title: "Lembretes",
     href: "/compras/lembretes",
     icon: <Bell className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
@@ -212,13 +207,16 @@ export function Sidebar() {
     : sidebarItems.filter(item =>
         item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Cronograma' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
       )).map(item => {
-        if (!isAdmin && currentUser?.endsWith('.arco') && item.type === 'group' && item.items) {
-           const userCd = currentUser.split('.')[0].toLowerCase();
-           const filteredItems = item.items.filter(subItem => {
+        if (!isAdmin && (item.title === 'Insumos' || item.title === 'Solicitações')) {
+          const userCd = getUserCD(currentUser || undefined)?.toLowerCase();
+          if (userCd) {
+            const filteredItems = item.items?.filter(subItem => {
               const subTitleNormalized = subItem.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-              return subTitleNormalized === userCd;
-           });
-           return { ...item, items: filteredItems };
+              const mappedCdNormalized = userCd.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              return subTitleNormalized.includes(mappedCdNormalized);
+            });
+            return { ...item, items: filteredItems };
+          }
         }
         return item;
       });
@@ -271,7 +269,10 @@ export function Sidebar() {
           {!isCollapsed && (
             <Link href="/" className="flex items-center gap-2 font-bold text-purple-900 overflow-hidden transition-all justify-start">
               <ShoppingCart className="w-6 h-6 text-purple-800 flex-shrink-0" strokeWidth={2.5} />
-              <span className="whitespace-nowrap text-sm">PCP Hub</span>
+              <div className="flex flex-col">
+                <span className="whitespace-nowrap text-sm leading-tight">PCP Hub</span>
+                <span className="text-[10px] italic text-zinc-500 font-medium whitespace-nowrap leading-none mt-0.5">Powered by Pedro Queiroz</span>
+              </div>
             </Link>
           )}
           
@@ -296,47 +297,63 @@ export function Sidebar() {
             if (group.type === 'link') {
               const isActive = pathname === group.href;
               return (
-                <div key={i} className="mb-4">
+                <div key={i} className="mb-1">
                   <Link
                     href={group.href!}
                     onClick={() => setIsOpen(false)}
-                    title={isCollapsed ? group.title : undefined}
+                    title={group.title}
                     className={cn(
-                      "w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium tracking-wide transition-all overflow-hidden",
-                      isCollapsed ? "justify-center" : "justify-between",
+                      "flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all overflow-hidden",
+                      isCollapsed ? "justify-center" : "justify-start gap-3",
                       isActive
-                        ? "text-purple-700 bg-purple-50/80 font-semibold shadow-sm border border-purple-100/50"
-                        : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
+                        ? "bg-purple-50 text-purple-700 font-semibold shadow-sm border border-purple-100/50"
+                        : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      {group.icon}
+                      {group.title === "Lembretes" ? (
+                        <div className="relative">
+                          {group.icon}
+                          {badgeCount > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white" />
+                          )}
+                        </div>
+                      ) : group.title === "Cronograma" ? (
+                        <div className="relative">
+                          {group.icon}
+                          {unseenCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white border border-white">
+                              {unseenCount}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        group.icon
+                      )}
                       {!isCollapsed && <span className="whitespace-nowrap">{group.title}</span>}
                     </div>
-                    {group.title === 'Lembretes' && badgeCount > 0 && (
-                      <div className={cn("bg-red-500 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0 text-[10px]", isCollapsed ? "absolute top-1 right-2 w-4 h-4" : "px-2 py-0.5")}>
-                        {badgeCount}
-                      </div>
-                    )}
-                    {group.title === 'Cronograma' && unseenCount > 0 && (
-                      <div className={cn("bg-red-500 text-white font-bold rounded-full flex items-center justify-center flex-shrink-0 text-[10px]", isCollapsed ? "absolute top-1 right-2 w-4 h-4" : "px-2 py-0.5")}>
-                        {unseenCount}
-                      </div>
-                    )}
                   </Link>
                 </div>
               );
             }
 
-            const isExpanded = !!expandedGroups[group.title] && !isCollapsed;
+            const isExpanded = expandedGroups[group.title];
+            const hasActiveChild = group.items?.some(item => pathname === item.href);
+
             return (
-              <div key={i} className="mb-4">
-                <button 
+              <div key={i} className="mb-1">
+                <button
                   onClick={() => toggleGroup(group.title)}
-                  title={isCollapsed ? group.title : undefined}
-                  className={cn("w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-all tracking-wide overflow-hidden", isCollapsed ? "justify-center" : "justify-between")}
+                  title={group.title}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all overflow-hidden",
+                    isCollapsed ? "justify-center" : "justify-start gap-3",
+                    hasActiveChild && !isExpanded
+                      ? "bg-purple-50/50 text-purple-700 font-semibold"
+                      : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                  )}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     {group.icon}
                     {!isCollapsed && <span className="whitespace-nowrap">{group.title}</span>}
                   </div>
@@ -387,6 +404,13 @@ export function Sidebar() {
         </div>
 
         <div className="p-4 border-t border-zinc-100 flex flex-col gap-2">
+          {!isCollapsed && currentUser && (
+            <div className="text-center mb-1">
+              <span className="text-[13px] font-semibold text-zinc-700 truncate block">
+                {currentUser.split('.').map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(' ')}
+              </span>
+            </div>
+          )}
           <button 
             onClick={() => {
               localStorage.removeItem('pcp_user');

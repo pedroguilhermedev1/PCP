@@ -25,12 +25,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   // Get insumo
-  const { data: insumo, error: insumoError } = await supabase
+  let insumoQuery = supabase
     .from('estoque_insumos')
     .select('*')
     .eq('codigo', mov.codigo)
-    .eq('cd', mov.cd)
-    .single();
+    .ilike('cd', mov.cd);
+
+  if (mov.empresa) {
+    insumoQuery = insumoQuery.ilike('empresa', mov.empresa);
+  }
+
+  const { data: insumoList, error: insumoError } = await insumoQuery.limit(1);
+  const insumo = insumoList ? insumoList[0] : null;
 
   if (insumoError || !insumo) {
     return NextResponse.json({ error: 'Insumo não encontrado no estoque.' }, { status: 404 });

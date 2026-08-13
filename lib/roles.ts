@@ -9,11 +9,12 @@ export const REPORTS_USERS = [
 ];
 
 export const OPERACIONAL_USERS = [
-  'jundiai.arco',
-  'nse.arco',
+  'josiane.ferreira',
+  'rafael.soares',
   'psd.arco',
   'coc.arco',
-  'fortaleza.arco',
+  'fabio.pessoa',
+  'gabriel.oliveira'
 ];
 
 export function getUserRole(username?: string) {
@@ -33,6 +34,10 @@ export function getUserRole(username?: string) {
     return 'REPORTS';
   }
 
+  if (normalized.endsWith('.arco')) {
+    return 'OPERACIONAL';
+  }
+
   return null;
 }
 
@@ -40,16 +45,46 @@ export function formatUserName(username?: string): string {
   if (!username) return '';
   const normalized = username.trim().toLowerCase();
   
-  if (normalized.includes('pedro')) return 'Pedro';
-  if (normalized.includes('edson')) return 'Edson';
-  if (normalized.includes('debora')) return 'Débora';
-  if (normalized.includes('ivna')) return 'Ivna';
+  if (normalized === 'pedro.queiroz') return 'Pedro Queiroz';
+  if (normalized === 'debora.mota') return 'Débora Mota';
+  if (normalized === 'francisco.edson') return 'Francisco Edson';
+  if (normalized === 'ivna.teixeira') return 'Ivna Teixeira';
   
-  if (normalized === 'jundiai.arco') return 'Jundiaí';
-  if (normalized === 'nse.arco') return 'NSE';
+  if (normalized === 'josiane.ferreira') return 'Josiane Ferreira';
+  if (normalized === 'rafael.soares') return 'Rafael Soares';
+  if (normalized === 'fabio.pessoa') return 'Fábio Pessoa';
+  if (normalized === 'gabriel.oliveira') return 'Gabriel Oliveira';
+
   if (normalized === 'psd.arco') return 'PSD';
   if (normalized === 'coc.arco') return 'COC';
-  if (normalized === 'fortaleza.arco') return 'Fortaleza';
   
   return username;
+}
+
+export function getUserCD(username?: string): string | null {
+  if (!username) return null;
+  const normalized = username.trim().toLowerCase();
+  
+  if (['josiane.ferreira', 'jundiai.arco'].includes(normalized)) return 'jundiai';
+  if (['rafael.soares', 'nse.arco'].includes(normalized)) return 'nse';
+  if (['fabio.pessoa', 'gabriel.oliveira', 'fortaleza.arco'].includes(normalized)) return 'fortaleza';
+  if (normalized === 'psd.arco') return 'psd';
+  if (normalized === 'coc.arco') return 'coc';
+
+  if (normalized.endsWith('.arco')) {
+    const prefix = normalized.replace('.arco', '');
+    const map: Record<string, string> = {
+      jdi: 'jundiai',
+      for: 'fortaleza',
+      nse: 'nse',
+      psd: 'psd',
+      coc: 'coc',
+      cwb: 'curitiba',
+      raizes: 'raizes',
+      rpo: 'ribeirao-preto'
+    };
+    return map[prefix] || prefix;
+  }
+
+  return null;
 }

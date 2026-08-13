@@ -41,12 +41,33 @@ export async function GET(request: Request) {
   return NextResponse.json({ data });
 }
 
+export async function PUT(request: Request) {
+  const supabase = getSupabase();
+  if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
+
+  const body = await request.json();
+  let { id, cd, codigo, item_adm, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, empresa, conta_contabil, descricao_contabil } = body;
+
+  estoque_minimo = parseInt(estoque_minimo) || 0;
+  estoque_real = parseInt(estoque_real) || 0;
+
+  const result = await supabase.from('estoque_insumos').update({
+    cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil
+  }).eq('id', id);
+
+  if (result.error) {
+    return NextResponse.json({ error: result.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, data: result.data }, { status: 200 });
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let { cd, empresa, codigo, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio } = body;
+  let { cd, empresa, codigo, item_adm, item, unidade, lead_time, estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio } = body;
 
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
@@ -68,8 +89,8 @@ export async function POST(request: Request) {
   }
 
   const result = await supabase.from('estoque_insumos').insert([
-    { cd, empresa, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio: 'Principal' },
-    { cd, empresa, codigo, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio: 'Complementar' }
+    { cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio: 'Principal' },
+    { cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil, tipo_envio: 'Complementar' }
   ]);
 
   if (result.error) {

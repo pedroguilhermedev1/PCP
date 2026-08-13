@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   if (dataMovs) movimentacoes = dataMovs;
 
   return (
-    <RoleGuard allowedRoles={['ADMIN']}>
+    <RoleGuard allowedRoles={['ADMIN', 'OPERACIONAL']}>
       <DashboardClient 
         faturas={faturas} 
         insumos={insumos} 

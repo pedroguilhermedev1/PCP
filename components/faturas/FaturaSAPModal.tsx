@@ -27,6 +27,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
     possui_encargo: false,
     status_pagamento: 'Em andamento',
     forma_pagamento: fatura?.forma_pagamento || 'Boleto',
+    fluxo_iniciado_por: fatura?.fluxo_iniciado_por || 'SAP',
     ...fatura,
     cd: fatura?.cd || fatura?.insumos?.find(i => (i as any)._meta)?.cd || fatura?.insumos?.[0]?.cd || '',
     codigo_fornecedor: fatura?.codigo_fornecedor || fatura?.insumos?.find(i => (i as any)._meta)?.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
@@ -113,6 +114,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       conta_contabil: formData.conta_contabil,
       descricao_contabil: formData.descricao_contabil,
       marca: formData.marca || 'PCP',
+      editado_por: localStorage.getItem('pcp_user') || '',
       is_sap: true,
       id: formData.id || `F-${Math.floor(Math.random() * 100000)}__CAT__${safeCategoria}`,
       insumos: [
@@ -219,10 +221,25 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fluxo Iniciado Por</label>
+                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    value={formData.fluxo_iniciado_por || "SAP"} onChange={handleSelectChange('fluxo_iniciado_por')}>
+                    <option value="SAP">SAP</option>
+                    <option value="Nexa">Nexa (ServiceNow)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Responsável</label>
                   <Input value={formatUserName(formData.responsavel)} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Editado Por</label>
+                  <Input value={formatUserName(formData.editado_por)} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Forma de Pagamento</label>
@@ -469,24 +486,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               </div>
             </div>
 
-            <section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Observações Gerais</label>
-                <textarea 
-                  className="flex min-h-[100px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={formData.observacoes || ""} 
-                  onChange={(e) => handleChange('observacoes', e.target.value)} 
-                  placeholder="Informações adicionais..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor do Encargo (se houver)</label>
-                  <Input type="number" step="0.01" value={formData.valor_encargo || ""} onChange={handleInputChange('valor_encargo')} placeholder="R$ 0,00" />
-                </div>
-              </div>
-            </section>
+            {/* Moved general observations and encargo to the end */}
 
             {formData.doc_subsequente_criado && (
               <section className="space-y-6 p-6 bg-slate-50 border border-slate-200 rounded-xl shadow-sm">
@@ -645,6 +645,38 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
               </section>
             )}
+
+            <section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Observações Gerais</label>
+                <textarea 
+                  className="flex min-h-[100px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50" 
+                  value={formData.observacoes || ""} 
+                  onChange={(e) => handleChange('observacoes', e.target.value)} 
+                  placeholder="Informações adicionais..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 mt-4">
+                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-zinc-300 text-purple-600 focus:ring-purple-500"
+                      checked={!!formData.possui_encargo}
+                      onChange={(e) => handleChange('possui_encargo', e.target.checked)}
+                    />
+                    Possui Encargo / Multa?
+                  </label>
+                </div>
+                {formData.possui_encargo && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Valor do Encargo</label>
+                    <Input type="number" step="0.01" value={formData.valor_encargo || ""} onChange={handleInputChange('valor_encargo')} placeholder="R$ 0,00" />
+                  </div>
+                )}
+              </div>
+            </section>
 
             <section className="space-y-4 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
               <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider flex items-center gap-2">

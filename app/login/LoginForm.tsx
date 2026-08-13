@@ -26,7 +26,23 @@ export function LoginForm() {
       localStorage.setItem('pcp_user', parsedUsername);
       toast.success('Login efetuado com sucesso!');
       router.push('/compras/relatorios');
-    } else if ((validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') && password === '123@456') {
+      return;
+    } 
+
+    const isOperationalNewPassword = [
+      'fabio.pessoa',
+      'gabriel.oliveira',
+      'josiane.ferreira',
+      'rafael.soares'
+    ].includes(parsedUsername) && password === `${parsedUsername}@2026`;
+
+    const isDefaultAdminOrOldOpPassword = (
+      (validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') &&
+      !['fabio.pessoa', 'gabriel.oliveira', 'josiane.ferreira', 'rafael.soares'].includes(parsedUsername) &&
+      password === '123@456'
+    );
+
+    if (isOperationalNewPassword || isDefaultAdminOrOldOpPassword) {
       localStorage.setItem('pcp_user', parsedUsername);
       toast.success('Login efetuado com sucesso!');
       router.push('/compras/dashboard');

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 function FornecedorModal({ 
   isOpen, 
@@ -268,7 +269,9 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
               />
             </div>
             
-            <Button onClick={() => {
+            <Button 
+              className="bg-purple-700 hover:bg-purple-800 text-white"
+              onClick={() => {
               setEditItem(null);
               setModalOpen(true);
             }}>
@@ -278,39 +281,39 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Empresa</th>
-                  <th className="px-6 py-4 font-semibold">Contato</th>
-                  <th className="px-6 py-4 font-semibold">Tipo de Serviço</th>
+            <Table>
+              <TableHeader className="bg-zinc-50/50">
+                <TableRow className="border-zinc-100 hover:bg-transparent">
+                  <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Empresa</TableHead>
+                  <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Contato</TableHead>
+                  <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo de Serviço</TableHead>
                   {canEditOrDelete && (
-                    <th className="px-6 py-4 font-semibold text-right">Ações</th>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Ações</TableHead>
                   )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredFornecedores.length > 0 ? (
                   filteredFornecedores.map((forn) => (
-                    <tr key={forn.id} className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="px-6 py-4">
+                    <TableRow key={forn.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
+                      <TableCell>
                         <div className="font-medium text-zinc-900">{forn.nome_fantasia || forn.razao_social}</div>
                         <div className="text-xs text-zinc-500 mt-0.5">{forn.cnpj}</div>
                         {forn.nome_fantasia && (
                           <div className="text-xs text-zinc-400 mt-0.5">{forn.razao_social}</div>
                         )}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600">
+                      </TableCell>
+                      <TableCell className="text-zinc-600">
                         {forn.contato && <div className="font-medium">{forn.contato}</div>}
                         {forn.telefone && <div className="text-xs">{forn.telefone}</div>}
                         {forn.email && <div className="text-xs">{forn.email}</div>}
                         {!forn.contato && !forn.telefone && !forn.email && <span className="text-zinc-400">-</span>}
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600">
+                      </TableCell>
+                      <TableCell className="text-zinc-600">
                         {forn.categoria || '-'}
-                      </td>
+                      </TableCell>
                       {canEditOrDelete && (
-                        <td className="px-6 py-4 text-right">
+                        <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button 
                               className="p-1.5 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -330,23 +333,23 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        </td>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan={canEditOrDelete ? 4 : 3} className="px-6 py-12 text-center text-zinc-500">
+                  <TableRow>
+                    <TableCell colSpan={canEditOrDelete ? 4 : 3} className="px-6 py-12 text-center text-zinc-500">
                       <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-2">
                         <Building2 className="w-10 h-10 text-zinc-300 mb-2" />
                         <p className="font-medium text-zinc-900">Nenhum fornecedor encontrado</p>
                         <p className="text-sm">Cadastre novos fornecedores de {tipo.toLowerCase()} para visualizar os registros aqui.</p>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getUserRole, getUserCD } from "@/lib/roles";
 import { EstoqueInsumosTable } from "@/components/estoque/EstoqueInsumosTable";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
@@ -16,6 +17,7 @@ import { deleteMovimentacaoAction } from "@/app/compras/faturas/actions";
 import { formatUserName } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
@@ -284,20 +286,26 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
   
   const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, undefined, activeTipoEnvio);
   
-  const [currentUser, setCurrentUser] = useState("");
-  const [currentUserOriginal, setCurrentUserOriginal] = useState("");
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUserOriginal, setCurrentUserOriginal] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userCD, setUserCD] = useState<string | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) {
       setCurrentUser(formatUserName(user));
       setCurrentUserOriginal(user);
-      if (user.endsWith('.arco')) {
-        const userCd = user.split('.')[0].toLowerCase();
-        if (cd.toLowerCase() !== userCd) {
-          window.location.href = `/compras/insumos/${userCd}`;
-        }
+      
+      const role = getUserRole(user);
+      const userCd = getUserCD(user);
+      
+      setUserRole(role);
+      setUserCD(userCd);
+      
+      if (role === 'OPERACIONAL' && userCd && cd.toLowerCase() !== userCd.toLowerCase()) {
+        window.location.href = `/compras/insumos/${userCd.toLowerCase()}`;
       }
     }
     const admin = [
@@ -472,111 +480,110 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
         {activeTab !== 'insumos' && (
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4">
             <div className="overflow-x-auto w-full">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 border-b border-zinc-200">
-                  <tr>
-                    <th className="px-6 py-4 font-semibold">ID Mov.</th>
-                    <th className="px-6 py-4 font-semibold">Data / Hora</th>
-                    <th className="px-6 py-4 font-semibold">Nº Fatura</th>
-                    <th className="px-6 py-4 font-semibold">Conta Protheus</th>
-                    <th className="px-6 py-4 font-semibold">Código</th>
-                    <th className="px-6 py-4 font-semibold">Item</th>
-                    <th className="px-6 py-4 font-semibold text-center">Qtd</th>
+              <Table>
+                <TableHeader className="bg-zinc-50/50">
+                  <TableRow className="border-zinc-100 hover:bg-transparent">
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">ID Mov.</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data / Hora</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nº Fatura</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Conta Protheus</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Código</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd</TableHead>
                     {activeTab === 'saidas' && (
-                      <th className="px-6 py-4 font-semibold">Setor</th>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Setor</TableHead>
                     )}
-                    <th className="px-6 py-4 font-semibold">Status</th>
-                    <th className="px-6 py-4 font-semibold">Responsável</th>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status</TableHead>
+                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Responsável</TableHead>
                     {activeTab === 'saidas' && (
                       <>
-                        <th className="px-6 py-4 font-semibold">Solicitante</th>
-                        <th className="px-6 py-4 font-semibold">Justificativa</th>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Solicitante</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
                       </>
                     )}
                     {canEditOrDelete && (
-                      <th className="px-6 py-4 font-semibold text-right">Ações</th>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Ações</TableHead>
                     )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200">
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredMovs.length > 0 ? (
                     filteredMovs.map(mov => (
-                      <tr key={mov.id} className="hover:bg-zinc-50/50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap font-mono text-xs font-bold text-zinc-700">
+                      <TableRow key={mov.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
+                        <TableCell className="font-mono text-xs font-bold text-zinc-700">
                           {mov.codigo_movimentacao || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-zinc-500">
+                        </TableCell>
+                        <TableCell className="text-zinc-500 whitespace-nowrap">
                           {format(new Date(mov.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-600 font-medium">
+                        </TableCell>
+                        <TableCell className="text-zinc-600 font-medium">
                           {mov.fatura_id ? mov.fatura_id.split('__')[0] : '-'}
-                        </td>
-                        <td className="px-6 py-4 text-zinc-600">
+                        </TableCell>
+                        <TableCell className="text-zinc-600">
                           {mov.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-'}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-zinc-600">
+                        </TableCell>
+                        <TableCell className="font-mono text-zinc-600">
                           {mov.codigo || '-'}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-zinc-900">
+                        </TableCell>
+                        <TableCell className="font-medium text-zinc-900">
                           {mov.item}
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        </TableCell>
+                        <TableCell className="text-center">
                           <Badge variant="secondary" className="font-bold text-sm bg-zinc-100 text-zinc-800">
                             {mov.quantidade}
                           </Badge>
-                        </td>
+                        </TableCell>
                         {activeTab === 'saidas' && (
-                          <td className="px-6 py-4 text-zinc-600">
+                          <TableCell className="text-zinc-600">
                             {mov.setor}
-                          </td>
+                          </TableCell>
                         )}
-                        <td className="px-6 py-4">
+                        <TableCell>
                           <Badge className={
                             mov.status === 'PENDENTE' ? 'bg-orange-500' : 
-                            mov.status === 'Aprovada' || mov.status === 'CONFIRMADO' ? 'bg-green-600' :
+                            mov.status === 'Aprovada' || mov.status === 'CONFIRMADO' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 border hover:bg-emerald-50' :
                             'bg-zinc-500'
                           }>
                             {mov.status === 'CONFIRMADO' ? 'APROVADA' : (mov.status || 'APROVADA')}
                           </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-zinc-600">
+                        </TableCell>
+                        <TableCell className="text-zinc-600">
                           {mov.usuario}
-                        </td>
+                        </TableCell>
                         {activeTab === 'saidas' && (
                           <>
-                            <td className="px-6 py-4 text-zinc-600">
+                            <TableCell className="text-zinc-600">
                               {'-'}
-                            </td>
-                            <td className="px-6 py-4 text-zinc-500 max-w-[150px] truncate" title={mov.observacoes}>
+                            </TableCell>
+                            <TableCell className="text-zinc-500 max-w-[150px] truncate" title={mov.observacoes}>
                               {mov.observacoes || '-'}
-                            </td>
+                            </TableCell>
                           </>
                         )}
                         {canEditOrDelete && (
-                          <td className="px-6 py-4 text-right">
+                          <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {/* Não permite editar nem excluir registros imutáveis */}
                               <Button variant="ghost" size="icon" onClick={() => setItemToDelete(mov.id)}>
                                 <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
                             </div>
-                          </td>
+                          </TableCell>
                         )}
-                      </tr>
+                      </TableRow>
                     ))
                   ) : (
-                    <tr>
-                      <td colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 9 : 8) : (canEditOrDelete ? 12 : 11)} className="px-6 py-12 text-center text-zinc-500">
+                    <TableRow>
+                      <TableCell colSpan={activeTab === 'entradas' ? (canEditOrDelete ? 9 : 8) : (canEditOrDelete ? 12 : 11)} className="px-6 py-12 text-center text-zinc-500">
                         <div className="flex flex-col items-center justify-center space-y-2">
                           {activeTab === 'entradas' ? <LogIn className="w-8 h-8 text-zinc-300" /> : <LogOut className="w-8 h-8 text-zinc-300" />}
                           <p>Nenhum registro de {activeTab} encontrado.</p>
                           <p className="text-xs">As solicitações feitas na aba de Faturas ou Formulários aparecerão aqui.</p>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

@@ -97,7 +97,7 @@ export function LembretesClient() {
         </div>
         <button 
           onClick={openNewModal}
-          className="flex items-center gap-2 bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded-md font-semibold text-sm transition-colors shadow-sm"
+          className="flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded-md font-semibold text-sm transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Novo Lembrete
@@ -120,8 +120,8 @@ export function LembretesClient() {
                 className={cn(
                   "px-4 py-2 rounded-t-lg font-medium text-sm transition-colors border-b-2 -mb-[9px]",
                   filter === tab.id 
-                    ? "border-purple-800 text-purple-900"
-                    : "border-transparent text-zinc-500 hover:text-zinc-700"
+                    ? "border-purple-600 text-purple-700"
+                    : "border-transparent text-zinc-500 hover:text-zinc-800"
                 )}
               >
                 {tab.label}

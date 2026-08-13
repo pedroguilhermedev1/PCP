@@ -23,6 +23,7 @@ function NovoInsumoModal({
   const [formData, setFormData] = useState({
     cd: defaultCd,
     codigo: '',
+    item_adm: '',
     item: '',
     unidade: '',
     categoria: '',
@@ -61,7 +62,7 @@ function NovoInsumoModal({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-zinc-200">
         <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
           <h2 className="text-lg font-semibold text-zinc-800">Novo Insumo</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -79,13 +80,18 @@ function NovoInsumoModal({
               <Input required value={formData.cd} onChange={e => setFormData({...formData, cd: e.target.value})} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Código <span className="text-red-500">*</span></label>
-              <Input required value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
+              <label className="text-sm font-medium text-zinc-700">Código</label>
+              <Input value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
             </div>
           </div>
           
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-zinc-700">Item <span className="text-red-500">*</span></label>
+            <label className="text-sm font-medium text-zinc-700">Item ADM</label>
+            <Input value={formData.item_adm} onChange={e => setFormData({...formData, item_adm: e.target.value})} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-zinc-700">Item OP <span className="text-red-500">*</span></label>
             <Input required value={formData.item} onChange={e => setFormData({...formData, item: e.target.value})} />
           </div>
           
@@ -224,10 +230,11 @@ export function EstoqueInsumosTable({
         <table className="w-full text-sm text-left relative border-collapse">
           <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 sticky top-0 z-20 shadow-[0_1px_0_0_#e4e4e7]">
             <tr>
-              <th className="w-12 text-center px-6 py-4 font-semibold bg-zinc-50">#</th>
+              <th className="w-12 text-center px-6 py-4 font-semibold bg-zinc-50">ID</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">CD</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">Código</th>
-              <th className="px-6 py-4 font-semibold bg-zinc-50">Item</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50">Item ADM</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50">Item OP</th>
               <th className="px-6 py-4 font-semibold text-center bg-zinc-50">Unidade</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">Categoria</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Lead Time</th>
@@ -285,7 +292,10 @@ export function EstoqueInsumosTable({
                       {formatCd(rawCd)}
                     </td>
                     <td className="px-6 py-4 text-zinc-600 font-mono text-xs">
-                      {item.codigo}
+                      {item.codigo || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-900 font-medium whitespace-nowrap">
+                      {item.item_adm || '-'}
                     </td>
                     <td className="px-6 py-4 text-zinc-900 font-medium whitespace-nowrap">
                       {item.item}

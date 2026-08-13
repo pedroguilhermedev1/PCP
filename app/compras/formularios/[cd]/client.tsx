@@ -10,7 +10,7 @@ import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useSearchParams } from "next/navigation";
-import { getUserRole } from "@/lib/roles";
+import { getUserRole, getUserCD } from "@/lib/roles";
 
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
@@ -40,8 +40,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   const [responsavel, setResponsavel] = useState("");
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userCD, setUserCD] = useState<string | null>(null);
   const tipo = 'Saída';
   const [codigo, setCodigo] = useState("");
+  const [empresa, setEmpresa] = useState("");
   const [item, setItem] = useState("");
   const [quantidade, setQuantidade] = useState<number | "">("");
   const [identificador, setIdentificador] = useState("");
@@ -62,13 +64,14 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       const formatted = formatUserName(user);
       setResponsavel(formatted);
       setResponsavelOriginal(user);
-      setUserRole(getUserRole(user));
-
-      if (user.endsWith('.arco')) {
-        const userCd = user.split('.')[0].toLowerCase();
-        if (cd.toLowerCase() !== userCd) {
-          window.location.href = `/compras/formularios/${userCd}`;
-        }
+      const role = getUserRole(user);
+      const userCd = getUserCD(user);
+      
+      setUserRole(role);
+      setUserCD(userCd);
+      
+      if (role === 'OPERACIONAL' && userCd && cd.toLowerCase() !== userCd.toLowerCase()) {
+        window.location.href = `/compras/formularios/${userCd.toLowerCase()}`;
       }
     } else {
       setResponsavel("Usuário não identificado");
@@ -88,8 +91,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
     const selected = insumos.find(i => i.item === item);
     if (selected) {
       setCodigo(selected.codigo);
+      setEmpresa(selected.empresa || "");
     } else {
       setCodigo("");
+      setEmpresa("");
     }
   }, [item, insumos]);
 
@@ -110,6 +115,14 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       setErrorMsg("Para saídas, preencha setor responsável, solicitante e justificativa.");
       return;
     }
+    
+    if (tipo === 'Saída') {
+      const selectedInsumo = insumos.find(i => i.item === item);
+      if (selectedInsumo && Number(quantidade) > (selectedInsumo.estoque_real || 0)) {
+        setErrorMsg(`A quantidade solicitada (${quantidade}) é maior que o saldo em estoque (${selectedInsumo.estoque_real || 0}).`);
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     
@@ -122,6 +135,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           codigo,
           item,
           cd,
+          empresa,
           identificador: identificador || undefined,
           quantidade: Number(quantidade),
           usuario: responsavel,
@@ -332,35 +346,41 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                 </div>
 
                 <div className="pt-2">
-                  <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? 'Registrando...' : 'Registrar Solicitação'}
-                  </Button>
+                  {userRole === 'OPERACIONAL' && userCD?.toLowerCase() !== cd.toLowerCase() ? (
+                    <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm text-center border border-red-200">
+                      Você só pode registrar solicitações para o seu próprio CD.
+                    </div>
+                  ) : (
+                    <Button type="submit" disabled={isSubmitting} className="w-full">
+                      {isSubmitting ? 'Registrando...' : 'Registrar Solicitação'}
+                    </Button>
+                  )}
                 </div>
               </form>
             ) : (
               <div className="p-0 overflow-x-auto">
 
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nota Fiscal</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>CD</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Setor</TableHead>
-                      <TableHead className="text-right">Qtd</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Justificativa</TableHead>
-                      {userRole === 'OPERACIONAL' && <TableHead className="text-center">Ações</TableHead>}
+                  <TableHeader className="bg-zinc-50/50">
+                    <TableRow className="border-zinc-100 hover:bg-transparent">
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nota Fiscal</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Setor</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Qtd</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
+                      {userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase() && <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {movimentacoes.filter(m => m.status === 'PENDENTE').map(m => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">{m.identificador || 'S/ ID'}</TableCell>
-                        <TableCell>{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell>{m.cd.toUpperCase()}</TableCell>
+                      <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
+                        <TableCell className="font-medium text-xs text-zinc-700">{m.identificador || 'S/ ID'}</TableCell>
+                        <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="font-semibold text-zinc-600">{m.cd.toUpperCase()}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
                             {m.tipo}
@@ -368,24 +388,29 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="max-w-[200px]" style={{wordBreak: 'break-word'}}>{m.item}</span>
+                            <span className="max-w-[200px] text-zinc-900 font-medium" style={{wordBreak: 'break-word'}}>{m.item}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-zinc-600">
                           {m.setor || '-'}
                         </TableCell>
-                        <TableCell className="text-right font-bold">{m.quantidade}</TableCell>
-                        <TableCell>{m.usuario}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant="secondary" className="font-bold text-sm bg-zinc-100 text-zinc-800">
+                            {m.quantidade}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-zinc-600">{m.usuario}</TableCell>
                         <TableCell>
-                          <div className="max-w-[200px] text-xs text-zinc-600" style={{wordBreak: 'break-word'}}>
+                          <div className="max-w-[200px] text-xs text-zinc-500" style={{wordBreak: 'break-word'}}>
                             {m.observacoes || '-'}
                           </div>
                         </TableCell>
-                        {userRole === 'OPERACIONAL' && (
+                        {userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase() && (
                           <TableCell className="text-center">
                             <Button 
                               size="sm" 
                               variant="default"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
                               onClick={async () => {
                                 try {
                                   const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
@@ -407,8 +432,11 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                     ))}
                     {movimentacoes.filter(m => m.status === 'PENDENTE').length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-zinc-500">
-                          Nenhuma solicitação pendente encontrada.
+                        <TableCell colSpan={userRole === 'OPERACIONAL' ? 10 : 9} className="text-center py-12 text-zinc-500">
+                          <div className="flex flex-col items-center justify-center space-y-2">
+                            <CheckCircle2 className="w-8 h-8 text-zinc-300" />
+                            <p>Nenhuma solicitação pendente encontrada.</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}

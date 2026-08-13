@@ -32,6 +32,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterAno, setFilterAno] = useState<string>(qAno);
   const [filterMes, setFilterMes] = useState<string>(qMes);
   const [filterStatus, setFilterStatus] = useState<string>('todos');
+  const [filterResponsavel, setFilterResponsavel] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
@@ -51,6 +52,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     "Fortaleza", "Jundiaí", "NSE", "COC", "PSD",
     ...faturas.map(f => f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd)
   ].filter(Boolean)));
+  
+  const uniqueResponsaveis = Array.from(new Set(faturas.map(f => f.responsavel).filter(Boolean))).sort();
 
   const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria && f.is_sap);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {
@@ -77,6 +80,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     if (filterStatus !== "todos") {
       const stat = calcularStatus(f);
       if (stat.toLowerCase() !== filterStatus.toLowerCase()) return false;
+    }
+
+    if (filterResponsavel !== "todos") {
+      if ((f.responsavel || '') !== filterResponsavel) return false;
     }
 
     if (searchTerm.trim() !== "") {
@@ -302,6 +309,17 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <option value="Vencido">Vencida</option>
             </select>
           </div>
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Resp.</span>
+            <select 
+              value={filterResponsavel} 
+              onChange={(e) => setFilterResponsavel(e.target.value)}
+              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
+            >
+              <option value="todos">Todos</option>
+              {uniqueResponsaveis.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -400,12 +418,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                         <div className="p-6">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                             <h3 className="text-lg font-bold text-purple-900">Detalhes da Fatura</h3>
-                            {canEditOrDelete && (
-                              <Button variant="secondary" size="sm" onClick={() => handleEdit(f)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Editar Fatura
-                              </Button>
-                            )}
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

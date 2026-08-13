@@ -38,7 +38,9 @@ export interface Fatura {
   tipo_servico: string;
   codigo_servico: string;
   responsavel: string;
+  editado_por?: string;
   forma_pagamento: string; // pix, boleto, ted, etc.
+  fluxo_iniciado_por?: string;
 
   // Datas
   data_emissao: string;
