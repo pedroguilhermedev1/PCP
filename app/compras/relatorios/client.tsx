@@ -94,7 +94,6 @@ export function RelatoriosClient() {
         q = q.lte('data_emissao', dataFinal + 'T23:59:59');
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
-        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
         query = q;
       } else if (activeTab === 'faturas-sap') {
         let q = supabase.from('faturas')
@@ -105,7 +104,6 @@ export function RelatoriosClient() {
         q = q.lte('data_emissao', dataFinal + 'T23:59:59');
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
-        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
         query = q;
       }
 
@@ -132,6 +130,13 @@ export function RelatoriosClient() {
             }
           }
           finalData = flattened;
+
+          if (cdFiltro !== 'Todos') {
+            finalData = finalData.filter(d => {
+              const faturaCd = d.cd || d._insumo?.cd || (d.insumos && d.insumos[0]?.cd);
+              return faturaCd && faturaCd.toLowerCase() === cdFiltro.toLowerCase();
+            });
+          }
         }
 
         setData(finalData);
