@@ -503,9 +503,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                         <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
                       </>
                     )}
-                    {activeTab === 'insumos' && (
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Responsável</TableHead>
-                    )}
                     {canEditOrDelete && (
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Ações</TableHead>
                     )}
@@ -573,11 +570,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                             </>
                           );
                         })()}
-                        {activeTab === 'insumos' && (
-                          <TableCell className="text-zinc-600">
-                            {mov.usuario}
-                          </TableCell>
-                        )}
                         {canEditOrDelete && (
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
