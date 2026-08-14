@@ -27,7 +27,7 @@ export function LembretesClient() {
     }
   }, []);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   const filteredLembretes = lembretes
     .filter(l => {

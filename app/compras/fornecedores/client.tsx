@@ -186,7 +186,7 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
     }
   }, []);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   const filteredFornecedores = useMemo(() => {
     if (!searchTerm) {

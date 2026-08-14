@@ -22,6 +22,7 @@ export function RelatoriosClient() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('Todas');
+  const [cdFiltro, setCdFiltro] = useState<string>('Todos');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -44,7 +45,7 @@ export function RelatoriosClient() {
     }
   }, []);
 
-  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas', 'faturas-sap'];
+  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas-sap'];
   const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
@@ -74,6 +75,7 @@ export function RelatoriosClient() {
           .order('created_at', { ascending: false });
         q = q.gte('created_at', start);
         q = q.lte('created_at', end);
+        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
         query = q;
       } else if (activeTab === 'movimentacoes') {
         let q = supabase.from('estoque_movimentacoes')
@@ -81,6 +83,7 @@ export function RelatoriosClient() {
           .order('data_hora', { ascending: false });
         q = q.gte('data_hora', start);
         q = q.lte('data_hora', end);
+        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
         query = q;
       } else if (activeTab === 'faturas') {
         let q = supabase.from('faturas')
@@ -91,6 +94,7 @@ export function RelatoriosClient() {
         q = q.lte('data_emissao', dataFinal + 'T23:59:59');
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
+        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
         query = q;
       } else if (activeTab === 'faturas-sap') {
         let q = supabase.from('faturas')
@@ -101,6 +105,7 @@ export function RelatoriosClient() {
         q = q.lte('data_emissao', dataFinal + 'T23:59:59');
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
+        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
         query = q;
       }
 
@@ -237,12 +242,22 @@ export function RelatoriosClient() {
         };
         
         if (activeTab === 'faturas-sap') {
+          const isNexa = d.fluxo_iniciado_por === 'Nexa';
           Object.assign(baseFatura, {
-            "RC SAP": d.rc_sap || '-',
-            "Data RC SAP": d.data_rc_sap || '-',
-            "Pedido SAP": d.pedido_sap || '-',
-            "Data Pedido SAP": d.data_pedido_sap || '-',
-            "Doc Subsequente Criado": d.doc_subsequente_criado ? 'Sim' : 'Não'
+            "Fluxo Iniciado": d.fluxo_iniciado_por || 'SAP',
+            "RC SAP": isNexa ? '-' : (d.rc_sap || '-'),
+            "Data RC SAP": isNexa ? '-' : (d.data_rc_sap || '-'),
+            "Pedido SAP": isNexa ? '-' : (d.pedido_sap || '-'),
+            "Data Pedido SAP": isNexa ? '-' : (d.data_pedido_sap || '-'),
+            "Doc Subsequente Criado": isNexa ? '-' : (d.doc_subsequente_criado ? 'Sim' : 'Não'),
+            "PC Nexa Concluído": d.pc_nexa_concluido ? 'Sim' : 'Não',
+            "Nº PC Nexa": d.numero_pc_nexa || '-',
+            "Data PC Nexa": d.data_pc_nexa || '-',
+            "Lanc. Fiscal Concluído": d.nexa_lancamento_concluido ? 'Sim' : 'Não',
+            "Data Lanc. Fiscal": d.nexa_data_conclusao_lancamento || '-',
+            "Pagamento Programado": d.nexa_pagamento_programado ? 'Sim' : 'Não',
+            "Data Prevista Pgto": d.nexa_data_prevista_pagamento || '-',
+            "Pagamento Realizado": d.nexa_pagamento_realizado ? 'Sim' : 'Não'
           });
         }
 
@@ -344,6 +359,23 @@ export function RelatoriosClient() {
                   </select>
                 </div>
               )}
+              {(activeTab === 'produtos' || activeTab === 'movimentacoes' || activeTab === 'faturas-sap' || activeTab === 'faturas') && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">CD</label>
+                  <select 
+                    value={cdFiltro} 
+                    onChange={(e) => setCdFiltro(e.target.value)} 
+                    className="flex h-9 w-[160px] rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="jundiai">Jundiaí</option>
+                    <option value="fortaleza">Fortaleza</option>
+                    <option value="nse">NSE</option>
+                    <option value="psd">PSD</option>
+                    <option value="coc">COC</option>
+                  </select>
+                </div>
+              )}
               <Button onClick={handleSearch} disabled={loading} className="bg-purple-700 hover:bg-purple-800 text-white gap-2">
                 {loading ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 Gerar Relatório
@@ -395,6 +427,7 @@ export function RelatoriosClient() {
                         <TableHead>Dt Emissão</TableHead>
                         <TableHead>Dt Vencimento</TableHead>
                         <TableHead>Valor Fatura</TableHead>
+                        <TableHead>Fluxo</TableHead>
                         <TableHead>Tipo Serviço</TableHead>
                         <TableHead>Conta Contábil</TableHead>
                         <TableHead>Status</TableHead>
@@ -456,6 +489,13 @@ export function RelatoriosClient() {
                             <TableCell>{new Date(d.data_emissao).toLocaleDateString('pt-BR')}</TableCell>
                             <TableCell>{new Date(d.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
                             <TableCell>R$ {d.valor?.toFixed(2)}</TableCell>
+                            <TableCell>
+                              {activeTab === 'faturas-sap' ? (
+                                <span className={`px-2 py-1 text-[10px] font-bold rounded-md ${d.fluxo_iniciado_por === 'Nexa' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                                  {d.fluxo_iniciado_por || 'SAP'}
+                                </span>
+                              ) : '-'}
+                            </TableCell>
                             <TableCell>{d.tipo_servico || '-'}</TableCell>
                             <TableCell>{d.conta_contabil || '-'}</TableCell>
                             <TableCell>{d.status_pagamento}</TableCell>

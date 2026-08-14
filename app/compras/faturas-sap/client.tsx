@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign, Eye } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { FaturaSAPModal } from "@/components/faturas/FaturaSAPModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
@@ -46,7 +46,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
   }, [categoria]);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   const uniqueCDs = Array.from(new Set([
     "Fortaleza", "Jundiaí", "NSE", "COC", "PSD",
@@ -90,11 +90,12 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       const term = searchTerm.toLowerCase().trim();
       const matchFornecedor = f.fornecedor?.toLowerCase().startsWith(term);
       const matchNumero = f.numero_documento?.toLowerCase().startsWith(term);
-      const matchHeflo = f.heflo?.toLowerCase().startsWith(term);
-      const matchErp = f.erp?.toLowerCase().startsWith(term);
-      const matchV360 = f.v360?.toLowerCase().startsWith(term);
+      const matchRC = f.rc_sap?.toLowerCase().startsWith(term) || f.heflo?.toLowerCase().startsWith(term);
+      const matchPC = f.erp?.toLowerCase().startsWith(term) || f.v360?.toLowerCase().startsWith(term);
+      const matchPedidoSAP = f.pedido_sap?.toLowerCase().startsWith(term);
+      const matchCodigoNexa = f.identificador?.toLowerCase().startsWith(term);
       
-      if (!matchFornecedor && !matchNumero && !matchHeflo && !matchErp && !matchV360) {
+      if (!matchFornecedor && !matchNumero && !matchRC && !matchPC && !matchPedidoSAP && !matchCodigoNexa) {
         return false;
       }
     }
@@ -175,6 +176,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       case 'Aguardando pagamento': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'Aguardando lançamento fiscal': return 'bg-purple-50 text-purple-700 border-purple-200';
       case 'Aguardando emissão de NF': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Aguardando PC Nexa': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'Pago': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
     }
@@ -186,6 +188,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       case 'Aguardando lançamento fiscal': return 'Lançamento Fiscal';
       case 'Aguardando emissão de NF': return 'Emissão de NF';
       case 'Aguardando pagamento': return 'Pagamento';
+      case 'Aguardando PC Nexa': return 'PC Nexa';
       default: return etapa;
     }
   };
@@ -229,7 +232,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input 
               type="text" 
-              placeholder="Pesquisar por Fornecedor, Código, Fatura ou ERP..."
+              placeholder="Pesquisar por Fornecedor, NF, RC, PC, Pedido SAP ou Cód NEXA..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all shadow-sm"
@@ -356,8 +359,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               return (
                 <React.Fragment key={f.id}>
                   <TableRow 
-                    className={`cursor-pointer border-b border-zinc-100 transition-colors ${expandedFaturaId === f.id ? 'bg-purple-50/80 shadow-inner' : 'hover:bg-purple-50/50'}`}
-                    onClick={() => toggleExpand(f.id)}
+                    className={`border-b border-zinc-100 transition-colors ${expandedFaturaId === f.id ? 'bg-purple-50/80 shadow-inner' : 'hover:bg-purple-50/50'}`}
                   >
                     <TableCell className="text-center font-medium text-zinc-400 text-xs">
                       {index + 1}
@@ -401,6 +403,9 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     {canEditOrDelete && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); toggleExpand(f.id); }}>
+                            <Eye className="w-4 h-4 text-purple-600" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(f); }}>
                             <Edit className="w-4 h-4 text-zinc-500" />
                           </Button>
@@ -413,118 +418,217 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                   </TableRow>
                   
                   {expandedFaturaId === f.id && (
-                    <TableRow className="bg-zinc-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <TableRow className="bg-zinc-50/80 animate-in fade-in slide-in-from-top-2 duration-300">
                       <TableCell colSpan={canEditOrDelete ? 10 : 9} className="p-0 border-b">
-                        <div className="p-6">
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                            <h3 className="text-lg font-bold text-purple-900">Detalhes da Fatura</h3>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div className="space-y-4">
-                              <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Iniciais</h4>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Fornecedor</span>
-                                <span className="text-sm font-medium">{f.fornecedor}</span>
+                        <div className="flex flex-col lg:flex-row min-h-[400px]">
+                          {/* Main Content Area */}
+                          <div className="flex-1 p-8 border-r border-zinc-200">
+                            <div className="flex items-center gap-3 mb-6">
+                              <FileText className="w-6 h-6 text-purple-700" />
+                              <h3 className="text-xl font-bold text-zinc-900">Detalhes da Fatura</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                              {/* Iniciais */}
+                              <div className="space-y-5">
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b pb-2">Informações Básicas</h4>
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Fornecedor</span>
+                                    <span className="text-sm font-medium text-zinc-900">{f.fornecedor}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">CNPJ</span>
+                                    <span className="text-sm font-medium text-zinc-900">{formatCNPJ(f.cnpj)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Nota Fiscal</span>
+                                    <span className="text-sm font-medium text-zinc-900">{f.numero_documento}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Valor Total</span>
+                                    <span className="text-sm font-bold text-zinc-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(f.valor)}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">CNPJ</span>
-                                <span className="text-sm font-medium">{formatCNPJ(f.cnpj)}</span>
+                              
+                              {/* Classificação */}
+                              <div className="space-y-5">
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b pb-2">Classificação</h4>
+                                <div className="space-y-3">
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">CD / Unidade</span>
+                                    <span className="text-sm font-medium text-zinc-900">{f.cd || '-'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Centro de Custo</span>
+                                    <span className="text-sm font-medium text-zinc-900">{f.centro_custo || '-'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Conta Contábil</span>
+                                    <span className="text-sm font-medium text-zinc-900">{f.conta_contabil || '-'}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Tipo Serviço</span>
+                                    <span className="text-sm font-medium text-zinc-900">{f.tipo_servico || '-'}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Documento</span>
-                                <span className="text-sm font-medium">{f.numero_documento}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Valor</span>
-                                <span className="text-sm font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(f.valor)}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Emissão</span>
-                                <span className="text-sm font-medium">{f.data_emissao?.split('-').reverse().join('/')}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Recebimento</span>
-                                <span className="text-sm font-medium">{f.data_recebimento?.split('-').reverse().join('/')}</span>
+
+                              {/* Fluxo */}
+                              <div className="space-y-5">
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b pb-2">Fluxo de Trabalho ({f.fluxo_iniciado_por || 'SAP'})</h4>
+                                
+                                {f.fluxo_iniciado_por !== 'Nexa' ? (
+                                  <div className="space-y-3">
+                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                      <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1">RC SAP</span>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-purple-900">{f.rc_sap || 'Pendente'}</span>
+                                        <span className="text-xs text-purple-600">{f.data_rc_sap?.split('-').reverse().join('/') || '-'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                      <span className="text-[11px] font-bold text-indigo-800 uppercase block mb-1">Pedido SAP</span>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-indigo-900">{f.pedido_sap || 'Pendente'}</span>
+                                        <span className="text-xs text-indigo-600">{f.data_pedido_sap?.split('-').reverse().join('/') || '-'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                      <span className="text-[11px] font-bold text-emerald-800 uppercase block mb-1">Doc Subsequente</span>
+                                      <span className="text-sm font-medium text-emerald-900">{f.doc_subsequente_criado ? 'Criado' : 'Não criado'}</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                      <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1">PC Nexa</span>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-blue-900">{f.numero_pc_nexa || (f.pc_nexa_concluido ? 'Concluído' : 'Pendente')}</span>
+                                        <span className="text-xs text-blue-600">{f.data_pc_nexa?.split('-').reverse().join('/') || '-'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                                      <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Lançamento Fiscal</span>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-slate-900">{f.nexa_lancamento_concluido ? 'Concluído' : 'Pendente'}</span>
+                                        <span className="text-xs text-slate-500">{f.nexa_data_conclusao_lancamento?.split('-').reverse().join('/') || '-'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                      <span className="text-[11px] font-bold text-amber-800 uppercase block mb-1">Programação Pgto</span>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-amber-900">{f.nexa_pagamento_programado ? 'Programado' : 'Pendente'}</span>
+                                        <span className="text-xs text-amber-600">{f.nexa_data_prevista_pagamento?.split('-').reverse().join('/') || '-'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             
-                            <div className="space-y-4">
-                              <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Classificação</h4>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Centro de Custo</span>
-                                <span className="text-sm font-medium">{f.centro_custo}</span>
+                            {/* Insumos */}
+                            {f.insumos && f.insumos.length > 0 && f.insumos.some(i => !(i as any)._meta) && (
+                              <div className="mt-8">
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b pb-2 mb-4">Insumos Vinculados</h4>
+                                <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
+                                  <Table>
+                                    <TableHeader className="bg-zinc-50">
+                                      <TableRow>
+                                        <TableHead className="text-[10px] uppercase">Código</TableHead>
+                                        <TableHead className="text-[10px] uppercase">Item</TableHead>
+                                        <TableHead className="text-[10px] uppercase text-right">Qtd</TableHead>
+                                        <TableHead className="text-[10px] uppercase text-right">Total</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {f.insumos.filter(i => !(i as any)._meta).map((ins, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="text-xs font-mono text-zinc-500">{ins.codigo}</TableCell>
+                                          <TableCell className="text-xs font-medium">{ins.item}</TableCell>
+                                          <TableCell className="text-xs text-right">{ins.quantidade}</TableCell>
+                                          <TableCell className="text-xs text-right font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(ins.valor_total || 0)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
                               </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Filial</span>
-                                <span className="text-sm font-medium">{f.filial}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Conta Contábil</span>
-                                <span className="text-sm font-medium">{f.conta_contabil || '-'}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Descrição Contábil</span>
-                                <span className="text-sm font-medium">{f.descricao_contabil || '-'}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Tipo Serv</span>
-                                <span className="text-sm font-medium">{f.tipo_servico}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Cód Serv</span>
-                                <span className="text-sm font-medium">{f.codigo_servico}</span>
-                              </div>
-                            </div>
+                            )}
+                          </div>
 
-                            <div className="space-y-4">
-                              <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Processos SAP</h4>
-                              <div className="p-2 bg-purple-50/50 rounded border border-purple-100 flex flex-col gap-1">
-                                <span className="text-xs font-bold text-purple-800">RC SAP</span>
-                                <span className="text-sm">{f.rc_sap || '-'}</span>
-                                <span className="text-xs text-zinc-500">{f.data_rc_sap?.split('-').reverse().join('/') || '-'}</span>
-                              </div>
-                              <div className="p-2 bg-indigo-50/50 rounded border border-indigo-100 flex flex-col gap-1">
-                                <span className="text-xs font-bold text-indigo-800">Pedido SAP</span>
-                                <span className="text-sm">{f.pedido_sap || '-'}</span>
-                                <span className="text-xs text-zinc-500">{f.data_pedido_sap?.split('-').reverse().join('/') || '-'}</span>
-                              </div>
-                              <div className="p-2 bg-emerald-50/50 rounded border border-emerald-100 flex flex-col gap-1">
-                                <span className="text-xs font-bold text-emerald-800">Doc. Subsequente</span>
-                                <span className="text-sm font-semibold">{f.doc_subsequente_criado ? 'Criado' : 'Não criado'}</span>
-                              </div>
-                            </div>
-
-                            <div className="space-y-4">
-                              <h4 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">Controle e Financeiro</h4>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Responsável</span>
-                                <span className="text-sm font-medium">{f.responsavel}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Forma Pgto</span>
-                                <span className="text-sm font-medium">{f.forma_pagamento}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Status Pagamento</span>
-                                <Badge variant="outline" className="font-bold">{f.status_pagamento}</Badge>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Possui Encargo?</span>
-                                <span className="text-sm font-medium">{f.possui_encargo ? 'Sim' : 'Não'}</span>
-                                {f.possui_encargo && (
-                                  <span className="text-sm font-medium ml-2 text-red-600">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(f.valor_encargo || 0)}
+                          {/* Right Panel Summary */}
+                          <div className="w-full lg:w-80 bg-white p-6 border-l border-zinc-200 flex flex-col gap-6">
+                            <div>
+                              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Resumo Executivo</h4>
+                              
+                              <div className="space-y-4">
+                                <div>
+                                  <span className="text-[10px] text-zinc-500 font-semibold block uppercase mb-1">Status Atual</span>
+                                  <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold border inline-block", getStatusColor(status))}>
+                                    {status}
                                   </span>
+                                </div>
+                                
+                                <div>
+                                  <span className="text-[10px] text-zinc-500 font-semibold block uppercase mb-1">Etapa no Fluxo</span>
+                                  <span className={cn("px-2.5 py-1 rounded-md text-xs font-bold border inline-block", getEtapaColor(etapa))}>
+                                    {getEtapaLabel(etapa)}
+                                  </span>
+                                </div>
+
+                                <div className="pt-3 border-t border-zinc-100">
+                                  <span className="text-[10px] text-zinc-500 font-semibold block uppercase mb-1">Responsável</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] font-bold text-zinc-600">
+                                      {f.responsavel ? f.responsavel.substring(0, 2).toUpperCase() : '?'}
+                                    </div>
+                                    <span className="text-sm font-medium text-zinc-900">{f.responsavel || 'Não atribuído'}</span>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] text-zinc-500 font-semibold block uppercase mb-1">Datas Críticas</span>
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-zinc-500">Emissão</span>
+                                      <span className="font-medium">{f.data_emissao?.split('-').reverse().join('/')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                      <span className="text-zinc-500">Vencimento</span>
+                                      <span className="font-medium text-orange-600">{f.data_vencimento?.split('-').reverse().join('/')}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {(f.forma_pagamento || f.possui_encargo) && (
+                                  <div className="pt-3 border-t border-zinc-100 space-y-2">
+                                    {f.forma_pagamento && (
+                                      <div className="flex justify-between text-xs">
+                                        <span className="text-zinc-500 font-semibold">Forma Pagamento</span>
+                                        <span className="font-medium">{f.forma_pagamento}</span>
+                                      </div>
+                                    )}
+                                    {f.possui_encargo && (
+                                      <div className="flex justify-between text-xs">
+                                        <span className="text-red-500 font-semibold">Encargos</span>
+                                        <span className="font-medium text-red-600">
+                                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(f.valor_encargo || 0)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Observações</span>
-                                <span className="text-sm">{f.observacoes || '-'}</span>
-                              </div>
-                              <div className="space-y-1">
-                                <span className="text-xs text-zinc-500 block">Data Real de Pagamento</span>
-                                <span className="text-sm font-medium">{f.data_pagamento_real?.split('-').reverse().join('/') || '-'}</span>
+
+                                {f.observacoes && (
+                                  <div className="pt-3 border-t border-zinc-100">
+                                    <span className="text-[10px] text-zinc-500 font-semibold block uppercase mb-1">Observações</span>
+                                    <p className="text-xs text-zinc-600 bg-zinc-50 p-2 rounded border border-zinc-100 italic">
+                                      "{f.observacoes}"
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

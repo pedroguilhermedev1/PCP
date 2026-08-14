@@ -45,7 +45,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
   }, [categoria]);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson');
+  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   const uniqueCDs = Array.from(new Set([
     "Fortaleza", "Jundiaí", "NSE", "COC", "PSD",
@@ -83,11 +83,12 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       const term = searchTerm.toLowerCase().trim();
       const matchFornecedor = f.fornecedor?.toLowerCase().startsWith(term);
       const matchNumero = f.numero_documento?.toLowerCase().startsWith(term);
-      const matchHeflo = f.heflo?.toLowerCase().startsWith(term);
-      const matchErp = f.erp?.toLowerCase().startsWith(term);
-      const matchV360 = f.v360?.toLowerCase().startsWith(term);
+      const matchRC = f.rc_sap?.toLowerCase().startsWith(term) || f.heflo?.toLowerCase().startsWith(term);
+      const matchPC = f.erp?.toLowerCase().startsWith(term) || f.v360?.toLowerCase().startsWith(term);
+      const matchPedidoSAP = f.pedido_sap?.toLowerCase().startsWith(term);
+      const matchCodigoNexa = f.identificador?.toLowerCase().startsWith(term);
       
-      if (!matchFornecedor && !matchNumero && !matchHeflo && !matchErp && !matchV360) {
+      if (!matchFornecedor && !matchNumero && !matchRC && !matchPC && !matchPedidoSAP && !matchCodigoNexa) {
         return false;
       }
     }
@@ -222,7 +223,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input 
               type="text" 
-              placeholder="Pesquisar por Fornecedor, Fatura, Heflo, ERP ou V360..." 
+              placeholder="Pesquisar por Fornecedor, NF, RC, PC, Pedido SAP ou Cód NEXA..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all shadow-sm"

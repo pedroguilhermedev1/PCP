@@ -81,7 +81,20 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       motivo_desvio: faturaData.motivo_desvio || null,
       acao_corretiva: faturaData.acao_corretiva || null,
       acao_responsavel: faturaData.acao_responsavel || null,
-      acao_status: faturaData.acao_status || null
+      acao_status: faturaData.acao_status || null,
+      fluxo_iniciado_por: faturaData.fluxo_iniciado_por || 'SAP',
+      pc_nexa_concluido: faturaData.pc_nexa_concluido || false,
+      numero_pc_nexa: faturaData.numero_pc_nexa || null,
+      data_pc_nexa: faturaData.data_pc_nexa || null,
+      usuario_pc_nexa: faturaData.usuario_pc_nexa || null,
+      nexa_lancamento_concluido: faturaData.nexa_lancamento_concluido || false,
+      nexa_data_conclusao_lancamento: faturaData.nexa_data_conclusao_lancamento || null,
+      usuario_nexa_lancamento: faturaData.usuario_nexa_lancamento || null,
+      nexa_pagamento_programado: faturaData.nexa_pagamento_programado || false,
+      nexa_data_prevista_pagamento: faturaData.nexa_data_prevista_pagamento || null,
+      usuario_nexa_programacao: faturaData.usuario_nexa_programacao || null,
+      nexa_pagamento_realizado: faturaData.nexa_pagamento_realizado || false,
+      usuario_nexa_pagamento: faturaData.usuario_nexa_pagamento || null
     };
     
     // Convert undefined to null or omit, as supabase expects certain formats

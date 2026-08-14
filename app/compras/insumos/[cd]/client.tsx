@@ -139,7 +139,7 @@ function NovaMovimentacaoModal({
           quantidade: Number(quantidade),
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
-          observacoes: tipo === 'Saída' ? justificativa : undefined,
+          observacoes: tipo === 'Saída' ? `[Solicitante: ${solicitante}] ${justificativa}` : undefined,
           tipo_envio: tipoEnvio
         })
       });
@@ -486,7 +486,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">ID Mov.</TableHead>
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data / Hora</TableHead>
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nº Fatura</TableHead>
-                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Conta Protheus</TableHead>
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Código</TableHead>
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd</TableHead>
@@ -494,12 +493,18 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Setor</TableHead>
                     )}
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status</TableHead>
-                    <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Responsável</TableHead>
+                    {activeTab === 'entradas' && (
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Aprovado Por</TableHead>
+                    )}
                     {activeTab === 'saidas' && (
                       <>
-                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Solicitante</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Registrado Por</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Retirado Por</TableHead>
                         <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
                       </>
+                    )}
+                    {activeTab === 'insumos' && (
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Responsável</TableHead>
                     )}
                     {canEditOrDelete && (
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Ações</TableHead>
@@ -518,9 +523,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                         </TableCell>
                         <TableCell className="text-zinc-600 font-medium">
                           {mov.fatura_id ? mov.fatura_id.split('__')[0] : '-'}
-                        </TableCell>
-                        <TableCell className="text-zinc-600">
-                          {mov.observacoes?.match(/Conta Protheus: (.*?)(?: \||$)/)?.[1] || '-'}
                         </TableCell>
                         <TableCell className="font-mono text-zinc-600">
                           {mov.codigo || '-'}
@@ -547,18 +549,34 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                             {mov.status === 'CONFIRMADO' ? 'APROVADA' : (mov.status || 'APROVADA')}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-zinc-600">
-                          {mov.usuario}
-                        </TableCell>
-                        {activeTab === 'saidas' && (
-                          <>
-                            <TableCell className="text-zinc-600">
-                              {'-'}
-                            </TableCell>
-                            <TableCell className="text-zinc-500 max-w-[150px] truncate" title={mov.observacoes}>
-                              {mov.observacoes || '-'}
-                            </TableCell>
-                          </>
+                        {activeTab === 'entradas' && (
+                          <TableCell className="text-zinc-600">
+                            {mov.usuario}
+                          </TableCell>
+                        )}
+                        {activeTab === 'saidas' && (() => {
+                          const obs = mov.observacoes || '';
+                          const solMatch = obs.match(/\[Solicitante: (.*?)\]/);
+                          const solicitante = solMatch ? solMatch[1] : '-';
+                          const justificativa = solMatch ? obs.replace(solMatch[0], '').trim() : obs;
+                          return (
+                            <>
+                              <TableCell className="text-zinc-600 font-mono text-xs">
+                                {mov.usuario}
+                              </TableCell>
+                              <TableCell className="text-zinc-600 font-medium">
+                                {solicitante}
+                              </TableCell>
+                              <TableCell className="text-zinc-500 max-w-[150px] truncate" title={justificativa}>
+                                {justificativa || '-'}
+                              </TableCell>
+                            </>
+                          );
+                        })()}
+                        {activeTab === 'insumos' && (
+                          <TableCell className="text-zinc-600">
+                            {mov.usuario}
+                          </TableCell>
                         )}
                         {canEditOrDelete && (
                           <TableCell className="text-right">
