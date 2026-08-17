@@ -544,7 +544,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           fatura={faturaToEdit}
-          categoriaAtiva={categoria}
+          categoriaAtiva={categoria as "Serviço" | "Material"}
           onSave={handleSave}
         />
       )}
