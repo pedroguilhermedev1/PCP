@@ -363,7 +363,7 @@ export function DashboardClient({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <div 
-                      onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
+                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
                       className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
                     >
                       <div className="flex items-center justify-between mb-4">
@@ -376,7 +376,7 @@ export function DashboardClient({
                       </div>
                     </div>
                     <div 
-                      onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
+                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
                       className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
                     >
                       <div className="flex items-center justify-between mb-4">
@@ -389,7 +389,7 @@ export function DashboardClient({
                       </div>
                     </div>
                     <div 
-                      onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
+                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
                       className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
                     >
                       <div className="flex items-center justify-between mb-4">
@@ -413,7 +413,7 @@ export function DashboardClient({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas/${fatCategoria === 'Serviço' ? 'servicos' : 'materiais'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
                       <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
                     </div>
                     <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />

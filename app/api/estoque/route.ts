@@ -51,15 +51,28 @@ export async function PUT(request: Request) {
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
 
-  const result = await supabase.from('estoque_insumos').update({
+  // 1. Fetch existing item to get its old codigo and cd for mirroring
+  const { data: existing, error: fetchErr } = await supabase.from('estoque_insumos').select('codigo, cd, empresa').eq('id', id).single();
+  
+  if (fetchErr || !existing) return NextResponse.json({ error: 'Item não encontrado' }, { status: 404 });
+
+  let updateQuery = supabase.from('estoque_insumos').update({
     cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil
-  }).eq('id', id);
+  }).eq('codigo', existing.codigo).ilike('cd', existing.cd);
+
+  if (existing.empresa) {
+    updateQuery = updateQuery.ilike('empresa', existing.empresa);
+  } else {
+    updateQuery = updateQuery.is('empresa', null);
+  }
+
+  const result = await updateQuery;
 
   if (result.error) {
     return NextResponse.json({ error: result.error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, data: result.data }, { status: 200 });
+  return NextResponse.json({ success: true }, { status: 200 });
 }
 
 export async function POST(request: Request) {

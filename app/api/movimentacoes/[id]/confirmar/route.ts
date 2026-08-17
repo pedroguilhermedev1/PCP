@@ -29,10 +29,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .from('estoque_insumos')
     .select('*')
     .eq('codigo', mov.codigo)
-    .ilike('cd', mov.cd);
+    .ilike('cd', mov.cd)
+    .eq('tipo_envio', mov.tipo_envio || 'Principal');
 
   if (mov.empresa) {
-    insumoQuery = insumoQuery.ilike('empresa', mov.empresa);
+    insumoQuery = insumoQuery.or(`empresa.ilike.${mov.empresa},empresa.is.null`);
   }
 
   const { data: insumoList, error: insumoError } = await insumoQuery.limit(1);
@@ -60,9 +61,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   else if (cobertura > currentLt && cobertura <= (currentLt + 3)) novoStatus = 'ALERTA';
   else novoStatus = 'CONFORTÁVEL';
 
+  let updateInsQuery = supabase.from('estoque_insumos').update({ estoque_real: newReal, status: novoStatus }).eq('codigo', insumo.codigo).ilike('cd', insumo.cd);
+  if (insumo.empresa) {
+    updateInsQuery = updateInsQuery.ilike('empresa', insumo.empresa);
+  }
+
   const [updateMov, updateIns] = await Promise.all([
     supabase.from('estoque_movimentacoes').update({ status: 'Aprovada' }).eq('id', id),
-    supabase.from('estoque_insumos').update({ estoque_real: newReal, status: novoStatus }).eq('id', insumo.id)
+    updateInsQuery
   ]);
 
   if (updateMov.error) return NextResponse.json({ error: updateMov.error.message }, { status: 500 });

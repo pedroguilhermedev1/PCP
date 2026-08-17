@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic';
 export default async function FaturasComprasPage({ params }: { params: Promise<{ categoria: string }> }) {
   const faturas = await faturaRepository.getFaturas();
   const resParams = await params;
-  const categoria = resParams.categoria === 'materiais' ? 'Material' : 'Serviço';
+  const categoriaParam = resParams.categoria;
+  const categoria = categoriaParam === 'materiais' ? 'Material' : categoriaParam === 'servicos' ? 'Serviço' : 'Todas';
 
   return (
     <RoleGuard allowedRoles={['ADMIN']}>

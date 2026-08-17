@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Box, RefreshCw, AlertCircle, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
 function NovoInsumoModal({ 
@@ -27,12 +27,42 @@ function NovoInsumoModal({
     item: '',
     unidade: '',
     categoria: '',
-    lead_time: '-',
-    estoque_minimo: '0',
+    lead_time: '5',
+    estoque_minimo: '50',
     estoque_real: '0',
     cmd: '10',
     status: ''
   });
+
+  const [manualFields, setManualFields] = useState<string[]>(['lead_time', 'cmd']);
+
+  const handleCalcChange = (field: 'lead_time' | 'cmd' | 'estoque_minimo', value: string) => {
+    let newManual = [...manualFields];
+    if (!newManual.includes(field)) {
+      newManual = [newManual[1], field];
+      setManualFields(newManual);
+    }
+    
+    let lt = field === 'lead_time' ? parseFloat(value) : parseFloat(formData.lead_time);
+    let cmd = field === 'cmd' ? parseFloat(value) : parseFloat(formData.cmd);
+    let min = field === 'estoque_minimo' ? parseFloat(value) : parseFloat(formData.estoque_minimo);
+    
+    lt = isNaN(lt) ? 0 : lt;
+    cmd = isNaN(cmd) ? 0 : cmd;
+    min = isNaN(min) ? 0 : min;
+
+    let updates: any = { [field]: value };
+
+    if (!newManual.includes('estoque_minimo')) {
+      updates.estoque_minimo = (lt * cmd).toString();
+    } else if (!newManual.includes('cmd')) {
+      updates.cmd = lt > 0 ? (min / lt).toFixed(1) : '0';
+    } else if (!newManual.includes('lead_time')) {
+      updates.lead_time = cmd > 0 ? Math.ceil(min / cmd).toString() : '0';
+    }
+
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
 
   if (!isOpen) return null;
 
@@ -106,27 +136,239 @@ function NovoInsumoModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Lead Time</label>
-              <Input value={formData.lead_time} onChange={e => setFormData({...formData, lead_time: e.target.value})} />
+          <div className="bg-zinc-50 border border-zinc-200 p-3 rounded-lg flex flex-col gap-3 relative">
+            <div className="text-xs text-zinc-500 mb-1 flex items-center justify-between">
+              <span>Cálculo Automático Ativo</span>
+              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium">Os 2 últimos editados ditam o outro</span>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">CMD</label>
-              <Input type="number" value={formData.cmd} onChange={e => setFormData({...formData, cmd: e.target.value})} title="Consumo Médio Diário" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-zinc-700">Est. Real</label>
-              <Input type="number" value={formData.estoque_real} onChange={e => setFormData({...formData, estoque_real: e.target.value})} />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-xs font-medium text-zinc-700 flex justify-between">
+                  Lead Time {!manualFields.includes('lead_time') && <span className="text-purple-600 font-bold">(Auto)</span>}
+                </label>
+                <Input className={!manualFields.includes('lead_time') ? 'bg-purple-50 border-purple-200 font-medium text-purple-900' : ''} value={formData.lead_time} onChange={e => handleCalcChange('lead_time', e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-xs font-medium text-zinc-700 flex justify-between">
+                  CMD {!manualFields.includes('cmd') && <span className="text-purple-600 font-bold">(Auto)</span>}
+                </label>
+                <Input type="number" step="0.1" className={!manualFields.includes('cmd') ? 'bg-purple-50 border-purple-200 font-medium text-purple-900' : ''} value={formData.cmd} onChange={e => handleCalcChange('cmd', e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-xs font-medium text-zinc-700 flex justify-between">
+                  Estoque Mín. {!manualFields.includes('estoque_minimo') && <span className="text-purple-600 font-bold">(Auto)</span>}
+                </label>
+                <Input type="number" className={!manualFields.includes('estoque_minimo') ? 'bg-purple-50 border-purple-200 font-medium text-purple-900' : ''} value={formData.estoque_minimo} onChange={e => handleCalcChange('estoque_minimo', e.target.value)} />
+              </div>
             </div>
           </div>
 
-          {/* O status é calculado caso não enviado, não precisa exibir campo unless want to override */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-zinc-700">Estoque Real</label>
+            <Input type="number" value={formData.estoque_real} onChange={e => setFormData({...formData, estoque_real: e.target.value})} />
+          </div>
 
           <div className="mt-4 flex gap-3 justify-end border-t border-zinc-100 pt-5">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading} className="bg-purple-700 hover:bg-purple-800 text-white">
               {loading ? "Salvando..." : "Salvar Insumo"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditarInsumoModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  itemData
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  onSuccess: () => void;
+  itemData: any;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [formData, setFormData] = useState({
+    id: '',
+    cd: '',
+    codigo: '',
+    item_adm: '',
+    item: '',
+    unidade: '',
+    categoria: '',
+    lead_time: '5',
+    estoque_minimo: '50',
+    cmd: '10',
+    estoque_real: 0,
+    status: ''
+  });
+
+  const [manualFields, setManualFields] = useState<string[]>(['lead_time', 'cmd']);
+
+  const handleCalcChange = (field: 'lead_time' | 'cmd' | 'estoque_minimo', value: string) => {
+    let newManual = [...manualFields];
+    if (!newManual.includes(field)) {
+      newManual = [newManual[1], field];
+      setManualFields(newManual);
+    }
+    
+    let lt = field === 'lead_time' ? parseFloat(value) : parseFloat(formData.lead_time);
+    let cmd = field === 'cmd' ? parseFloat(value) : parseFloat(formData.cmd);
+    let min = field === 'estoque_minimo' ? parseFloat(value) : parseFloat(formData.estoque_minimo);
+    
+    lt = isNaN(lt) ? 0 : lt;
+    cmd = isNaN(cmd) ? 0 : cmd;
+    min = isNaN(min) ? 0 : min;
+
+    let updates: any = { [field]: value };
+
+    if (!newManual.includes('estoque_minimo')) {
+      updates.estoque_minimo = (lt * cmd).toString();
+    } else if (!newManual.includes('cmd')) {
+      updates.cmd = lt > 0 ? (min / lt).toFixed(1) : '0';
+    } else if (!newManual.includes('lead_time')) {
+      updates.lead_time = cmd > 0 ? Math.ceil(min / cmd).toString() : '0';
+    }
+
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
+
+  // Keep a copy to preserve existing fields not in the form
+  const [fullItem, setFullItem] = useState<any>(null);
+
+  if (isOpen && itemData && formData.id !== itemData.id) {
+    setFullItem(itemData);
+    
+    // Calculate initial estoque minimo properly since it's not saved explicitly if it's dynamic
+    const initialCmd = itemData.cmd ? parseFloat(itemData.cmd) : 10;
+    const initialLt = itemData.lead_time ? parseFloat(itemData.lead_time) : 0;
+    const initialMin = itemData.estoque_minimo ? parseFloat(itemData.estoque_minimo) : (initialCmd * initialLt);
+
+    setFormData({
+      id: itemData.id,
+      cd: itemData.cd,
+      codigo: itemData.codigo || '',
+      item_adm: itemData.item_adm || '',
+      item: itemData.item || '',
+      unidade: itemData.unidade || '',
+      categoria: itemData.categoria || '',
+      lead_time: itemData.lead_time || '-',
+      estoque_minimo: initialMin.toString(),
+      cmd: initialCmd.toString(),
+      estoque_real: itemData.estoque_real,
+      status: itemData.status
+    });
+    setManualFields(['lead_time', 'cmd']);
+    setError(null);
+  }
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        ...fullItem,
+        ...formData
+      };
+      const res = await fetch('/api/estoque', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao editar insumo.');
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 hover:cursor-auto text-left">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col border border-zinc-200">
+        <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
+          <h2 className="text-lg font-semibold text-zinc-800">Editar Insumo</h2>
+          <button type="button" onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+          {error && (
+            <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2 border border-red-100">
+              <AlertCircle className="w-4 h-4" /> {error}
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-zinc-700">Código</label>
+            <Input value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
+          </div>
+          
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-zinc-700">Item ADM</label>
+            <Input value={formData.item_adm} onChange={e => setFormData({...formData, item_adm: e.target.value})} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-zinc-700">Item OP <span className="text-red-500">*</span></label>
+            <Input required value={formData.item} onChange={e => setFormData({...formData, item: e.target.value})} />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-zinc-700">Unidade <span className="text-red-500">*</span></label>
+              <Input required placeholder="Ex: UN, ROLO" value={formData.unidade} onChange={e => setFormData({...formData, unidade: e.target.value})} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-zinc-700">Categoria <span className="text-red-500">*</span></label>
+              <Input required placeholder="Ex: CAIXA, ETIQUETA" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} />
+            </div>
+          </div>
+
+          <div className="bg-zinc-50 border border-zinc-200 p-3 rounded-lg flex flex-col gap-3 relative">
+            <div className="text-xs text-zinc-500 mb-1 flex items-center justify-between">
+              <span>Cálculo Automático Ativo</span>
+              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium">Os 2 últimos editados ditam o outro</span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-xs font-medium text-zinc-700 flex justify-between">
+                  Lead Time {!manualFields.includes('lead_time') && <span className="text-purple-600 font-bold">(Auto)</span>}
+                </label>
+                <Input className={!manualFields.includes('lead_time') ? 'bg-purple-50 border-purple-200 font-medium text-purple-900' : ''} value={formData.lead_time} onChange={e => handleCalcChange('lead_time', e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-xs font-medium text-zinc-700 flex justify-between">
+                  CMD {!manualFields.includes('cmd') && <span className="text-purple-600 font-bold">(Auto)</span>}
+                </label>
+                <Input type="number" step="0.1" className={!manualFields.includes('cmd') ? 'bg-purple-50 border-purple-200 font-medium text-purple-900' : ''} value={formData.cmd} onChange={e => handleCalcChange('cmd', e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5 relative">
+                <label className="text-xs font-medium text-zinc-700 flex justify-between">
+                  Estoque Mín. {!manualFields.includes('estoque_minimo') && <span className="text-purple-600 font-bold">(Auto)</span>}
+                </label>
+                <Input type="number" className={!manualFields.includes('estoque_minimo') ? 'bg-purple-50 border-purple-200 font-medium text-purple-900' : ''} value={formData.estoque_minimo} onChange={e => handleCalcChange('estoque_minimo', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex gap-3 justify-end border-t border-zinc-100 pt-5">
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={loading} className="bg-purple-700 hover:bg-purple-800 text-white">
+              {loading ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </form>
@@ -152,7 +394,17 @@ export function EstoqueInsumosTable({
 }) {
   const cdTarget = cd.toUpperCase();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<any | null>(null);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'Todos');
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const user = localStorage.getItem('pcp_user') || '';
+    const admin = ['pedro.queiroz', 'debora.mota', 'francisco.edson'].some(a => user.startsWith(a));
+    setIsAdmin(admin);
+  }, []);
 
   const filteredInsumos = useMemo(() => {
     return insumos.filter(item => {
@@ -176,6 +428,12 @@ export function EstoqueInsumosTable({
         onClose={() => setModalOpen(false)} 
         onSuccess={refetch}
         defaultCd={cdTarget}
+      />
+      <EditarInsumoModal 
+        isOpen={editModalOpen} 
+        onClose={() => { setEditModalOpen(false); setItemToEdit(null); }} 
+        onSuccess={refetch}
+        itemData={itemToEdit}
       />
       
       {error && (
@@ -242,12 +500,13 @@ export function EstoqueInsumosTable({
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Est. Real</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Cobert. Dias</th>
               <th className="px-6 py-4 font-semibold text-center bg-zinc-50">Status</th>
+              {isAdmin && <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Ações</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200">
             {loading ? (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-zinc-500">
+                <td colSpan={isAdmin ? 13 : 12} className="px-6 py-12 text-center text-zinc-500">
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <RefreshCw className="w-6 h-6 animate-spin text-purple-600" />
                     <p>Carregando insumos...</p>
@@ -334,12 +593,24 @@ export function EstoqueInsumosTable({
                         {dynamicStatus}
                       </Badge>
                     </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => { setItemToEdit(item); setEditModalOpen(true); }}
+                          className="text-zinc-500 hover:text-purple-700 hover:bg-purple-50"
+                        >
+                          Editar
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-zinc-500">
+                <td colSpan={isAdmin ? 13 : 12} className="px-6 py-12 text-center text-zinc-500">
                   <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-2">
                     <Box className="w-10 h-10 text-zinc-300 mb-2" />
                     <p className="font-medium text-zinc-900">Nenhum insumo encontrado</p>

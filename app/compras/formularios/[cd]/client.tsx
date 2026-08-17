@@ -22,8 +22,8 @@ const cd_names_map: Record<string, string> = {
 
 function FormulariosModuleClientInner({ cd }: { cd: string }) {
   
-  const { insumos } = useEstoqueInsumos(cd);
-  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd);
+  const { insumos, refetch: refetchInsumos } = useEstoqueInsumos(cd);
+  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd, undefined, 'PENDENTE');
 
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
 
@@ -150,7 +150,12 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         throw new Error(data.error || 'Erro ao registrar solicitação.');
       }
 
-      setSuccessMsg(`Solicitação de ${tipo.toLowerCase()} enviada para aprovação com sucesso!`);
+      if (tipo === 'Saída') {
+        setSuccessMsg(`Saída registrada e estoque atualizado com sucesso!`);
+        refetchInsumos();
+      } else {
+        setSuccessMsg(`Solicitação de entrada enviada para aprovação com sucesso!`);
+      }
       refresh();
       setTimeout(() => setSuccessMsg(""), 5000);
 

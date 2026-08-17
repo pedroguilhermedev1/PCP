@@ -31,14 +31,13 @@ export async function saveFaturaAction(fatura: Object) {
           const detail = insumoDetails?.find(d => d.codigo === insumo.codigo && formatCd(d.cd) === formattedCd);
           return {
             tipo: 'Entrada',
-            identificador: faturaData.numero_documento || '',
             codigo: insumo.codigo,
             item: insumo.item,
             cd: formattedCd,
             empresa: detail?.empresa || 'PCP',
             quantidade: insumo.quantidade,
             usuario: faturaData.responsavel || 'Sistema Faturas',
-            observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
+            observacoes: `${faturaData.numero_documento ? 'Fatura ' + faturaData.numero_documento : 'Fatura não informada'} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
             status: 'PENDENTE',
             fatura_id: faturaData.id,
             tipo_envio: 'Principal',

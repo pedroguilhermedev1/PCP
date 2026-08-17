@@ -20,7 +20,7 @@ export type InsumoMovimentacao = {
   status: 'PENDENTE' | 'Aprovada' | 'CONFIRMADO' | 'REJEITADO';
 };
 
-export function useInsumosMovimentacoes(cdTarget?: string, tipo_envio?: string) {
+export function useInsumosMovimentacoes(cdTarget?: string, tipo_envio?: string, status?: string) {
   const [movimentacoes, setMovimentacoes] = useState<InsumoMovimentacao[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +30,7 @@ export function useInsumosMovimentacoes(cdTarget?: string, tipo_envio?: string) 
       const timestamp = new Date().getTime();
       let url = cdTarget ? `/api/movimentacoes?cd=${cdTarget}&_t=${timestamp}` : `/api/movimentacoes?_t=${timestamp}`;
       url += `&tipo_envio=${encodeURIComponent(tipo_envio || 'Principal')}`;
+      if (status) url += `&status=${encodeURIComponent(status)}`;
       const res = await fetch(url, { 
         cache: 'no-store',
         signal: controller?.signal
@@ -50,7 +51,7 @@ export function useInsumosMovimentacoes(cdTarget?: string, tipo_envio?: string) 
     const abortController = new AbortController();
     fetchMovimentacoes(abortController);
     return () => { abortController.abort(); };
-  }, [cdTarget, tipo_envio]);
+  }, [cdTarget, tipo_envio, status]);
 
   return {
     movimentacoes,

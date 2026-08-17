@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { formatCNPJ, cn } from "@/lib/utils";
 
-export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' }) {
+export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' | 'Todas' }) {
   const [faturas, setFaturas] = useState<Fatura[]>(initialFaturas);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [faturaToEdit, setFaturaToEdit] = useState<Fatura | null>(null);
@@ -31,7 +31,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
   const [filterAno, setFilterAno] = useState<string>(qAno);
   const [filterMes, setFilterMes] = useState<string>(qMes);
-  const [filterStatus, setFilterStatus] = useState<string>('todos');
+  const defaultStatus = searchParams.get('status') || 'todos';
+  const [filterStatus, setFilterStatus] = useState<string>(defaultStatus);
   const [filterResponsavel, setFilterResponsavel] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -55,7 +56,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   
   const uniqueResponsaveis = Array.from(new Set(faturas.map(f => f.responsavel).filter(Boolean))).sort();
 
-  const faturasAposFiltroCategoria = faturas.filter(f => f.categoria === categoria && f.is_sap);
+  const faturasAposFiltroCategoria = faturas.filter(f => (categoria === 'Todas' || f.categoria === categoria) && f.is_sap);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {
     const fCD = (f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '').toLowerCase();
     if (filterCD !== 'todos' && fCD !== filterCD.toLowerCase()) return false;
@@ -328,10 +329,12 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
         <h2 className="text-lg font-semibold text-purple-900">Lista de Faturas 2.0</h2>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Fatura
-        </Button>
+        {categoria !== 'Todas' && (
+          <Button onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Fatura
+          </Button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-zinc-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] w-full overflow-hidden">

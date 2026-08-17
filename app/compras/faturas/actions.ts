@@ -22,13 +22,12 @@ export async function saveFaturaAction(fatura: Object) {
 
         const movimentacoes = validInsumos.map(insumo => ({
           tipo: 'Entrada',
-          identificador: faturaData.numero_documento || '',
           codigo: insumo.codigo,
           item: insumo.item,
           cd: formatCd(faturaData.cd || ''),
           quantidade: insumo.quantidade,
           usuario: faturaData.responsavel || 'Sistema Faturas',
-          observacoes: `Fatura ${faturaData.numero_documento || faturaData.id} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
+          observacoes: `${faturaData.numero_documento ? 'Fatura ' + faturaData.numero_documento : 'Fatura não informada'} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
           status: 'PENDENTE',
           fatura_id: faturaData.id,
           tipo_envio: 'Principal',
