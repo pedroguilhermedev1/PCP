@@ -218,8 +218,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         </div>
       </header>
 
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full flex justify-center items-start">
-        <div className="w-full max-w-4xl mt-4">
+      <div className={`flex-1 p-4 md:p-8 overflow-y-auto w-full flex justify-center items-start`}>
+        <div className={`w-full mt-4 ${activeTab === 'NOVA' ? 'max-w-4xl' : 'max-w-7xl'}`}>
           
           {successMsg && (
             <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-3 border border-green-200 shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -238,11 +238,13 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
               <h2 className="text-lg font-bold text-zinc-800">
-                NOVA SOLICITAÇÃO
+                {activeTab === 'NOVA' ? 'NOVA SOLICITAÇÃO' : 'APROVAÇÕES PENDENTES'}
               </h2>
-              <p className="text-sm text-zinc-500 mt-1">
-                Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
-              </p>
+              {activeTab === 'NOVA' && (
+                <p className="text-sm text-zinc-500 mt-1">
+                  Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
+                </p>
+              )}
             </div>
 
             {activeTab === 'NOVA' ? (

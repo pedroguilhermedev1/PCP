@@ -16,15 +16,27 @@ export async function saveFaturaAction(fatura: Object) {
           .delete()
           .eq('fatura_id', faturaData.id)
           .eq('status', 'PENDENTE');
+        // 1. Fetch existing movements to prevent duplicating CONFIRMADO ones
+        const { data: existingMovs } = await supabase.from('estoque_movimentacoes')
+          .select('codigo, status')
+          .eq('fatura_id', faturaData.id);
+          
+        const confirmedCodigos = new Set((existingMovs || []).filter(m => m.status === 'CONFIRMADO').map(m => m.codigo));
 
         const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
-        const validInsumos = faturaData.insumos.filter(ins => !(ins as any)._meta);
+        
+        // 3. Filter valid insumos, ignoring the ones already confirmed
+        const validInsumos = faturaData.insumos
+          .filter(ins => !(ins as any)._meta)
+          .filter(ins => !confirmedCodigos.has(ins.codigo));
 
-        // Fetch the empresa for each insumo
-        const insumoCodigos = validInsumos.map(ins => ins.codigo);
-        const { data: insumoDetails } = await supabase.from('estoque_insumos')
-          .select('codigo, cd, empresa')
-          .in('codigo', insumoCodigos);
+        if (validInsumos.length > 0) {
+          // Fetch the empresa for each insumo
+          const insumoCodigos = validInsumos.map(ins => ins.codigo);
+          const { data: insumoDetails } = await supabase.from('estoque_insumos')
+            .select('codigo, cd, empresa')
+            .in('codigo', insumoCodigos);
+
 
         const movimentacoes = validInsumos.map(insumo => {
           const formattedCd = formatCd(faturaData.cd || '');
@@ -44,9 +56,10 @@ export async function saveFaturaAction(fatura: Object) {
           };
         });
 
-        const { error } = await supabase.from('estoque_movimentacoes').insert(movimentacoes);
-        if (error) {
-          console.error("Erro ao gerar entradas de insumos:", error);
+          const { error } = await supabase.from('estoque_movimentacoes').insert(movimentacoes);
+          if (error) {
+            console.error("Erro ao gerar entradas de insumos:", error);
+          }
         }
       }
     }
