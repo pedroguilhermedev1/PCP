@@ -113,15 +113,20 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       e.stopPropagation();
     }
     
-    const prevFaturas = [...faturas];
-    setFaturas(prev => prev.filter(f => f.id !== id));
+    // Mostramos no painel de deleção que está processando? O toast cuidará disso.
     try {
-      await deleteFaturaAction(id);
+      const res = await deleteFaturaAction(id);
+      if (res && !res.success) {
+        toast.error(res.error);
+        return;
+      }
+      
+      // Se sucesso, remove do state
+      setFaturas(prev => prev.filter(f => f.id !== id));
       toast.success("Registro excluído com sucesso.");
     } catch (error) {
       console.error("Failed to delete", error);
       toast.error("Erro ao excluir registro.");
-      setFaturas(prevFaturas);
     }
   };
 

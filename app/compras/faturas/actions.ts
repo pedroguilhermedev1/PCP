@@ -49,9 +49,30 @@ export async function saveFaturaAction(fatura: Object) {
 }
 
 export async function deleteFaturaAction(id: string) {
-  await faturaRepository.deleteFatura(id);
-  revalidatePath('/compras/faturas');
-  revalidatePath('/compras/dashboard');
+  try {
+    if (supabase) {
+      // 1. Verificar movimentacoes
+      const { data: movs } = await supabase.from('estoque_movimentacoes').select('status, id').eq('fatura_id', id);
+      
+      if (movs && movs.length > 0) {
+        // Se alguma movimentacao ja foi confirmada, bloqueamos a exclusão
+        const hasConfirmed = movs.some(m => m.status === 'CONFIRMADO');
+        if (hasConfirmed) {
+          return { success: false, error: "Não é possível excluir esta fatura. Os insumos vinculados já foram recebidos (confirmados) no Centro de Distribuição. Faça uma 'Saída' manual no CD caso queira reverter o estoque." };
+        }
+        
+        // Se não tem confirmadas, mas tem pendentes, excluímos as movimentacoes pendentes primeiro (cascata segura)
+        await supabase.from('estoque_movimentacoes').delete().eq('fatura_id', id);
+      }
+    }
+
+    await faturaRepository.deleteFatura(id);
+    revalidatePath('/compras/faturas');
+    revalidatePath('/compras/dashboard');
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || String(error) };
+  }
 }
 
 export async function deleteMovimentacaoAction(movId: string) {
