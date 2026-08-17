@@ -42,7 +42,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async saveFatura(fatura: Fatura): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, identificador, cd, codigo_fornecedor, status, data_pagamento_ideal, etapa, tipo_servico, codigo_fatura, ...faturaData } = fatura as any;
+    const { categoria, identificador, codigo_fornecedor, status, data_pagamento_ideal, etapa, tipo_servico, codigo_fatura, ...faturaData } = fatura as any;
 
     let nextCodigoFatura = codigo_fatura;
     if (!nextCodigoFatura && !faturaData.id?.includes('FAT-') && !faturaData.id?.match(/^[a-zA-Z0-9-]+$/)) {
@@ -71,6 +71,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       cnpj: faturaData.cnpj || '',
       centro_custo: faturaData.centro_custo || '',
       filial: faturaData.filial || '',
+      cd: faturaData.cd || null,
       tipo_documento: nextCodigoFatura || '',
       codigo_servico: faturaData.codigo_servico || '',
       responsavel: faturaData.responsavel || '',

@@ -79,7 +79,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
   const matriz = useMemo(() => {
     const map = new Map<string, { planejado: number, realizado: number }>();
     planejadasW1.forEach(f => {
-      let key = agrupamento === "CD" ? (f.filial || f.cd || "SEM CD") : (f.fornecedor || "SEM FORNECEDOR");
+      let key = agrupamento === "CD" ? (f.cd || "SEM CD") : (f.fornecedor || "SEM FORNECEDOR");
       // simplificar o nome do fornecedor para a matriz caber
       if (agrupamento === "Fornecedor" && key.length > 15) {
         key = key.substring(0, 15) + '...';
@@ -368,7 +368,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                       </td>
                       <td className="px-6 py-4 font-medium text-zinc-800">
                         {f.fornecedor}
-                        <div className="text-zinc-500 text-xs font-normal mt-0.5">{f.filial || f.cd || '-'}</div>
+                        <div className="text-zinc-500 text-xs font-normal mt-0.5">{f.cd || '-'}</div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="bg-red-50 text-red-700 px-2.5 py-1 rounded-md text-xs font-semibold border border-red-100">
