@@ -103,6 +103,14 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     };
     
     // Convert undefined to null or omit, as supabase expects certain formats
+    delete sanitizedData.pc_nexa_concluido;
+    delete sanitizedData.numero_pc_nexa;
+    delete sanitizedData.data_pc_nexa;
+    delete sanitizedData.usuario_pc_nexa;
+    delete sanitizedData.usuario_nexa_lancamento;
+    delete sanitizedData.usuario_nexa_programacao;
+    delete sanitizedData.usuario_nexa_pagamento;
+
     const { error } = await supabase
       .from('faturas')
       .upsert([sanitizedData]);
