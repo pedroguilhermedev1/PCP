@@ -80,9 +80,10 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
     const map = new Map<string, { planejado: number, realizado: number }>();
     planejadasW1.forEach(f => {
       let key = agrupamento === "CD" ? (f.cd || "SEM CD") : (f.fornecedor || "SEM FORNECEDOR");
-      // simplificar o nome do fornecedor para a matriz caber
-      if (agrupamento === "Fornecedor" && key.length > 15) {
-        key = key.substring(0, 15) + '...';
+      if (agrupamento === "Fornecedor") {
+        // simplificar o nome do fornecedor para a matriz caber
+        if (key.length > 15) key = key.substring(0, 15) + '...';
+        if (f.numero_documento) key += ` (NF: ${f.numero_documento})`;
       }
       
       const stats = map.get(key) || { planejado: 0, realizado: 0 };
