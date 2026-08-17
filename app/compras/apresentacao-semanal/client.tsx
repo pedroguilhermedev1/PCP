@@ -58,6 +58,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
   const [responsavel, setResponsavel] = useState("");
   const [statusAcao, setStatusAcao] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedFaturaId, setExpandedFaturaId] = useState<string | null>(null);
 
   // Calculate Weeks
   const w1 = useMemo(() => getWeekBoundaries(selectedWeekOffset), [selectedWeekOffset]);
@@ -78,7 +79,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
   const matriz = useMemo(() => {
     const map = new Map<string, { planejado: number, realizado: number }>();
     planejadasW1.forEach(f => {
-      let key = agrupamento === "CD" ? (f.cd || "SEM CD") : (f.fornecedor || "SEM FORNECEDOR");
+      let key = agrupamento === "CD" ? (f.filial || f.cd || "SEM CD") : (f.fornecedor || "SEM FORNECEDOR");
       // simplificar o nome do fornecedor para a matriz caber
       if (agrupamento === "Fornecedor" && key.length > 15) {
         key = key.substring(0, 15) + '...';
@@ -289,7 +290,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                   <BarChart data={motivosData} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Tooltip cursor={{ fill: 'transparent' }} formatter={(value) => [value, "Qtd"]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="count" fill="#1e3a5f" radius={[0, 4, 4, 0]} barSize={24}>
                        {motivosData.map((entry, index) => (
                          <Cell key={`cell-${index}`} fill={entry.name === 'Não Classificado' ? '#e2e8f0' : '#1e3a5f'} />
@@ -315,7 +316,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                   <BarChart data={agingData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
                     <YAxis hide />
-                    <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(value) => [value, "Qtd"]} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                     <Bar dataKey="count" fill="#1e3a5f" radius={[4, 4, 0, 0]} barSize={60} label={{ position: 'top', fill: '#1e3a5f', fontWeight: 'bold' }} />
                   </BarChart>
                </ResponsiveContainer>
@@ -350,35 +351,85 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                 </tr>
               </thead>
               <tbody>
-                {backlogW1.map(f => (
-                  <tr key={f.id} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-semibold text-zinc-700">
-                      {f.tipo_documento || f.id.split('__')[0]}
-                      <div className="text-zinc-400 font-sans mt-0.5 font-normal">NF: {f.numero_documento || '-'}</div>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-zinc-800">
-                      {f.fornecedor}
-                      <div className="text-zinc-500 text-xs font-normal mt-0.5">{f.cd}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="bg-red-50 text-red-700 px-2.5 py-1 rounded-md text-xs font-semibold border border-red-100">
-                        {format(getIdealDate(f)!, 'dd/MM/yyyy')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {f.motivo_desvio ? (
-                        <span className="text-zinc-700 font-medium bg-zinc-100 px-2.5 py-1 rounded-md text-xs">{f.motivo_desvio}</span>
-                      ) : (
-                        <span className="text-amber-600 font-medium bg-amber-50 px-2.5 py-1 rounded-md text-xs border border-amber-200">Não classificado</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleEditClick(f)} className="text-xs font-bold text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-md transition-colors">
-                        Justificar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {backlogW1.map(f => {
+                  const hasJustificativa = !!f.motivo_desvio || !!f.acao_corretiva;
+                  const isExpanded = expandedFaturaId === f.id;
+                  return (
+                  <React.Fragment key={f.id}>
+                    <tr onClick={() => setExpandedFaturaId(isExpanded ? null : f.id)} className="border-b border-zinc-50 hover:bg-zinc-50/50 transition-colors cursor-pointer group">
+                      <td className="px-6 py-4 font-mono text-xs font-semibold text-zinc-700">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isExpanded && "rotate-90")} />
+                          <div>
+                            {f.tipo_documento || f.id.split('__')[0]}
+                            <div className="text-zinc-400 font-sans mt-0.5 font-normal">NF: {f.numero_documento || '-'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-zinc-800">
+                        {f.fornecedor}
+                        <div className="text-zinc-500 text-xs font-normal mt-0.5">{f.filial || f.cd || '-'}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="bg-red-50 text-red-700 px-2.5 py-1 rounded-md text-xs font-semibold border border-red-100">
+                          {format(getIdealDate(f)!, 'dd/MM/yyyy')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {f.motivo_desvio ? (
+                          <span className="text-zinc-700 font-medium bg-zinc-100 px-2.5 py-1 rounded-md text-xs">{f.motivo_desvio}</span>
+                        ) : (
+                          <span className="text-amber-600 font-medium bg-amber-50 px-2.5 py-1 rounded-md text-xs border border-amber-200">Não classificado</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(f); }} 
+                          className={cn(
+                            "text-xs font-bold px-3 py-1.5 rounded-md transition-colors",
+                            hasJustificativa 
+                              ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200" 
+                              : "text-purple-600 bg-purple-50 hover:bg-purple-100"
+                          )}
+                        >
+                          {hasJustificativa ? "Justificado" : "Justificar"}
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && hasJustificativa && (
+                      <tr className="bg-zinc-50 border-b border-zinc-100">
+                        <td colSpan={5} className="px-12 py-6">
+                          <div className="bg-white p-5 rounded-lg border border-zinc-200 shadow-sm grid grid-cols-3 gap-6">
+                            <div className="col-span-3 lg:col-span-1">
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">Ação Corretiva</span>
+                              <p className="text-sm text-zinc-700 font-medium leading-relaxed">{f.acao_corretiva || 'Nenhuma ação preenchida.'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">Responsável</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-zinc-200 flex items-center justify-center text-[10px] font-bold text-zinc-500">
+                                  {f.acao_responsavel ? f.acao_responsavel.substring(0, 2).toUpperCase() : '?'}
+                                </div>
+                                <span className="text-sm font-semibold text-zinc-800">{f.acao_responsavel || 'Não definido'}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">Status da Ação</span>
+                              <span className={cn(
+                                "text-xs font-bold px-2.5 py-1 rounded-md",
+                                f.acao_status === 'Concluído' ? "bg-emerald-100 text-emerald-700" :
+                                f.acao_status === 'Em Andamento' ? "bg-blue-100 text-blue-700" :
+                                "bg-zinc-200 text-zinc-700"
+                              )}>
+                                {f.acao_status || 'Pendente'}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                )})}
               </tbody>
             </table>
           </div>
@@ -408,11 +459,10 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                     className="w-full border border-zinc-300 rounded-lg p-2.5 text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                   >
                     <option value="">Selecione um motivo...</option>
-                    <option value="Atraso na emissão da NF">Atraso na emissão da NF (Fornecedor)</option>
-                    <option value="Entrega tardia da NF">Entrega tardia da NF (Fornecedor)</option>
-                    <option value="Falha de comunicação interna">Falha de comunicação interna</option>
-                    <option value="Informação pendente">Informação pendente</option>
-                    <option value="Correção necessária">Correção necessária no fluxo</option>
+                    <option value="Atraso Fornecedor">Atraso Fornecedor</option>
+                    <option value="Atraso Time de Compras">Atraso Time de Compras</option>
+                    <option value="Atraso Time de Recebimento">Atraso Time de Recebimento</option>
+                    <option value="Atraso Time de Pagamentos">Atraso Time de Pagamentos</option>
                     <option value="Outros">Outros</option>
                   </select>
                </div>
