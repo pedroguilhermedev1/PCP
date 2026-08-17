@@ -63,8 +63,10 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
   // Calculate Weeks
   const w1 = useMemo(() => getWeekBoundaries(selectedWeekOffset), [selectedWeekOffset]);
   
-  // Mapear faturas Planejadas da W-1
-  const planejadasW1 = faturas.filter(f => {
+  // Mapear faturas Planejadas da W-1 (apenas Faturas 2.0 / is_sap === true)
+  const faturas20 = useMemo(() => faturas.filter(f => f.is_sap === true), [faturas]);
+
+  const planejadasW1 = faturas20.filter(f => {
     const ideal = getIdealDate(f);
     if (!ideal) return false;
     return ideal >= w1.start && ideal <= w1.end;
