@@ -814,7 +814,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 mt-4">
+                <div className="space-y-2 mt-4 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8">
                   <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -824,6 +824,16 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                     />
                     Possui Encargo / Multa?
                   </label>
+                  
+                  <label className="flex items-center gap-2 text-sm font-bold cursor-pointer text-red-600">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                      checked={!!formData.is_backlog}
+                      onChange={(e) => handleChange('is_backlog', e.target.checked)}
+                    />
+                    Backlog
+                  </label>
                 </div>
                 {formData.possui_encargo && (
                   <div className="space-y-2">
@@ -832,6 +842,65 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   </div>
                 )}
               </div>
+
+              {formData.is_backlog && (
+                <div className="mt-6 p-5 border border-red-200 bg-red-50/50 rounded-lg space-y-4 animate-in fade-in">
+                  <h4 className="text-sm font-bold text-red-800 uppercase tracking-wider">Desvio / Backlog</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-red-900 uppercase tracking-wider">Motivo Principal</label>
+                      <select 
+                        value={formData.motivo_desvio || ""} 
+                        onChange={handleSelectChange('motivo_desvio')}
+                        className="flex h-9 w-full rounded-md border border-red-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500"
+                      >
+                        <option value="">Selecione um motivo...</option>
+                        <option value="Atraso Fornecedor">Atraso Fornecedor</option>
+                        <option value="Atraso Time de Compras">Atraso Time de Compras</option>
+                        <option value="Atraso Time de Recebimento">Atraso Time de Recebimento</option>
+                        <option value="Atraso Time de Pagamentos">Atraso Time de Pagamentos</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-red-900 uppercase tracking-wider">Ação Corretiva</label>
+                      <textarea 
+                        value={formData.acao_corretiva || ""}
+                        onChange={(e) => handleChange('acao_corretiva', e.target.value)}
+                        placeholder="O que está sendo feito para resolver?"
+                        className="flex w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500 min-h-[60px] resize-none"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-red-900 uppercase tracking-wider">Responsável</label>
+                      <Input 
+                        value={formData.acao_responsavel || ""}
+                        onChange={handleInputChange('acao_responsavel')}
+                        placeholder="Nome do responsável"
+                        className="border-red-200 focus-visible:ring-red-500"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-red-900 uppercase tracking-wider">Status da Ação</label>
+                      <select 
+                        value={formData.acao_status || ""} 
+                        onChange={handleSelectChange('acao_status')}
+                        className="flex h-9 w-full rounded-md border border-red-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-500"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="Pendente">Pendente</option>
+                        <option value="Em Andamento">Em Andamento</option>
+                        <option value="Concluído">Concluído</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className="space-y-4 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">

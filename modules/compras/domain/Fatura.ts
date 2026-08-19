@@ -90,6 +90,7 @@ export interface Fatura {
   usuario_nexa_pagamento?: string;
 
   // Apresentação Semanal (Desvios e Ações)
+  is_backlog?: boolean;
   motivo_desvio?: string;
   acao_corretiva?: string;
   acao_responsavel?: string;

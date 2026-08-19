@@ -34,7 +34,8 @@ export class SupabaseFaturaRepository implements FaturaRepository {
         nexa_pc_concluido: undefined,
         nexa_pc_numero: undefined,
         nexa_pc_data: undefined,
-        nexa_pc_usuario: undefined
+        nexa_pc_usuario: undefined,
+        is_backlog: !!d.motivo_desvio || !!d.acao_corretiva
       };
     }) as Fatura[];
   }

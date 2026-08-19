@@ -3,7 +3,7 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 
 export default function RelatoriosPage() {
   return (
-    <RoleGuard allowedRoles={['ADMIN', 'REPORTS_ONLY']}>
+    <RoleGuard allowedRoles={['ADMIN', 'REPORTS', 'OPERACIONAL']}>
       <RelatoriosClient />
     </RoleGuard>
   );

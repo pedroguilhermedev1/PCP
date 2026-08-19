@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { getUserRole } from "@/lib/roles";
+import { getUserRole, getUserCD } from "@/lib/roles";
 
 type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas' | 'faturas-sap';
 
@@ -18,6 +18,7 @@ export function RelatoriosClient() {
   const [dataInicial, setDataInicial] = useState<string>('');
   const [dataFinal, setDataFinal] = useState<string>('');
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userCD, setUserCD] = useState<string | null>(null);
   
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,8 +40,12 @@ export function RelatoriosClient() {
     if (user) {
       const role = getUserRole(user);
       setUserRole(role);
+      const cd = getUserCD(user);
+      setUserCD(cd);
+
       if (role === 'OPERACIONAL') {
         setActiveTab('produtos');
+        if (cd) setCdFiltro(cd);
       }
     }
   }, []);
@@ -64,6 +69,8 @@ export function RelatoriosClient() {
 
       if (!supabase) throw new Error("Supabase não inicializado.");
 
+      const effectiveCdFiltro = userRole === 'OPERACIONAL' && userCD ? userCD : cdFiltro;
+
       if (activeTab === 'fornecedores') {
         let q = supabase.from('fornecedores').select('*').order('created_at', { ascending: false });
         if (categoriaFiltro === 'Materiais') q = q.eq('tipo', 'Material');
@@ -75,7 +82,7 @@ export function RelatoriosClient() {
           .order('created_at', { ascending: false });
         q = q.gte('created_at', start);
         q = q.lte('created_at', end);
-        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
+        if (effectiveCdFiltro !== 'Todos') q = q.eq('cd', effectiveCdFiltro);
         query = q;
       } else if (activeTab === 'movimentacoes') {
         let q = supabase.from('estoque_movimentacoes')
@@ -83,7 +90,7 @@ export function RelatoriosClient() {
           .order('data_hora', { ascending: false });
         q = q.gte('data_hora', start);
         q = q.lte('data_hora', end);
-        if (cdFiltro !== 'Todos') q = q.eq('cd', cdFiltro);
+        if (effectiveCdFiltro !== 'Todos') q = q.eq('cd', effectiveCdFiltro);
         query = q;
       } else if (activeTab === 'faturas') {
         let q = supabase.from('faturas')
@@ -131,10 +138,10 @@ export function RelatoriosClient() {
           }
           finalData = flattened;
 
-          if (cdFiltro !== 'Todos') {
+          if (effectiveCdFiltro !== 'Todos') {
             finalData = finalData.filter(d => {
               const faturaCd = d.cd || d._insumo?.cd || (d.insumos && d.insumos[0]?.cd);
-              return faturaCd && faturaCd.toLowerCase() === cdFiltro.toLowerCase();
+              return faturaCd && faturaCd.toLowerCase() === effectiveCdFiltro.toLowerCase();
             });
           }
         }
@@ -368,9 +375,10 @@ export function RelatoriosClient() {
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">CD</label>
                   <select 
-                    value={cdFiltro} 
+                    value={userRole === 'OPERACIONAL' && userCD ? userCD : cdFiltro} 
                     onChange={(e) => setCdFiltro(e.target.value)} 
-                    className="flex h-9 w-[160px] rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    disabled={userRole === 'OPERACIONAL'}
+                    className="flex h-9 w-[160px] rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:opacity-50"
                   >
                     <option value="Todos">Todos</option>
                     <option value="jundiai">Jundiaí</option>

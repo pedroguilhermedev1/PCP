@@ -26,19 +26,11 @@ export function getUserRole(username?: string) {
     return 'ADMIN';
   }
 
-  if (OPERACIONAL_USERS.includes(normalized)) {
-    return 'OPERACIONAL';
-  }
-
   if (REPORTS_USERS.includes(normalized)) {
     return 'REPORTS';
   }
 
-  if (normalized.endsWith('.arco')) {
-    return 'OPERACIONAL';
-  }
-
-  return null;
+  return 'OPERACIONAL';
 }
 
 export function formatUserName(username?: string): string {

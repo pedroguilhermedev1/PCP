@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { updateDesvioFatura } from "./actions";
+import { saveFaturaAction } from "../faturas-sap/actions";
+import { FaturaSAPModal } from "@/components/faturas/FaturaSAPModal";
 
 // Ícones
 import { Check, X, FileText, ChevronRight, Filter, Target, BarChart2 } from "lucide-react";
@@ -139,27 +140,24 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
 
   const handleEditClick = (fatura: Fatura) => {
     setSelectedFatura(fatura);
-    setMotivo(fatura.motivo_desvio || "");
-    setAcao(fatura.acao_corretiva || "");
-    setResponsavel(fatura.acao_responsavel || "");
-    setStatusAcao(fatura.acao_status || "");
   };
 
-  const handleSaveDesvio = async () => {
-    if (!selectedFatura) return;
+  const handleSaveFatura = async (fatura: Fatura) => {
     setIsSaving(true);
     try {
-      await updateDesvioFatura(selectedFatura.id, {
-        motivo_desvio: motivo,
-        acao_corretiva: acao,
-        acao_responsavel: responsavel,
-        acao_status: statusAcao
-      });
-      // Atualizar estado local
-      selectedFatura.motivo_desvio = motivo;
-      selectedFatura.acao_corretiva = acao;
-      selectedFatura.acao_responsavel = responsavel;
-      selectedFatura.acao_status = statusAcao;
+      const res = await saveFaturaAction(fatura);
+      if (res && !res.success) {
+        alert("Erro ao salvar: " + res.error);
+        return;
+      }
+      // Atualizar estado local para refletir na UI imediatamente
+      if (selectedFatura) {
+        selectedFatura.is_backlog = fatura.is_backlog;
+        selectedFatura.motivo_desvio = fatura.motivo_desvio;
+        selectedFatura.acao_corretiva = fatura.acao_corretiva;
+        selectedFatura.acao_responsavel = fatura.acao_responsavel;
+        selectedFatura.acao_status = fatura.acao_status;
+      }
       setSelectedFatura(null);
     } catch (e: any) {
       alert("Erro ao salvar: " + e.message);
@@ -439,83 +437,15 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
         )}
       </div>
 
-      {/* Modal de Justificativa */}
+      {/* Modal da Fatura Completa */}
       {selectedFatura && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <h3 className="font-bold text-zinc-900 text-lg">Justificar Desvio</h3>
-              <button onClick={() => setSelectedFatura(null)} className="text-zinc-400 hover:text-zinc-600 p-1"><X className="w-5 h-5" /></button>
-            </div>
-            
-            <div className="p-6 space-y-5 flex-1 overflow-y-auto">
-               <div>
-                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Fatura</label>
-                  <p className="font-semibold text-zinc-800">{selectedFatura.fornecedor} (NF: {selectedFatura.numero_documento})</p>
-               </div>
-
-               <div>
-                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Motivo Principal</label>
-                  <select 
-                    value={motivo} 
-                    onChange={e => setMotivo(e.target.value)}
-                    className="w-full border border-zinc-300 rounded-lg p-2.5 text-sm font-medium focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
-                  >
-                    <option value="">Selecione um motivo...</option>
-                    <option value="Atraso Fornecedor">Atraso Fornecedor</option>
-                    <option value="Atraso Time de Compras">Atraso Time de Compras</option>
-                    <option value="Atraso Time de Recebimento">Atraso Time de Recebimento</option>
-                    <option value="Atraso Time de Pagamentos">Atraso Time de Pagamentos</option>
-                    <option value="Outros">Outros</option>
-                  </select>
-               </div>
-
-               <div>
-                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Ação Corretiva</label>
-                  <textarea 
-                    value={acao}
-                    onChange={e => setAcao(e.target.value)}
-                    placeholder="O que está sendo feito para resolver?"
-                    className="w-full border border-zinc-300 rounded-lg p-2.5 text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
-                    rows={3}
-                  />
-               </div>
-
-               <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Responsável</label>
-                    <input 
-                      type="text" 
-                      value={responsavel}
-                      onChange={e => setResponsavel(e.target.value)}
-                      placeholder="Nome do responsável"
-                      className="w-full border border-zinc-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Status da Ação</label>
-                    <select 
-                      value={statusAcao} 
-                      onChange={e => setStatusAcao(e.target.value)}
-                      className="w-full border border-zinc-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="Pendente">Pendente</option>
-                      <option value="Em Andamento">Em Andamento</option>
-                      <option value="Concluído">Concluído</option>
-                    </select>
-                  </div>
-               </div>
-            </div>
-
-            <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-3">
-              <button onClick={() => setSelectedFatura(null)} className="px-4 py-2 font-semibold text-zinc-600 hover:bg-zinc-200 rounded-lg transition-colors text-sm">Cancelar</button>
-              <button disabled={isSaving} onClick={handleSaveDesvio} className="px-6 py-2 font-semibold text-white bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-600/20 rounded-lg transition-colors text-sm flex items-center gap-2">
-                {isSaving ? "Salvando..." : <><Check className="w-4 h-4" /> Salvar</>}
-              </button>
-            </div>
-          </div>
-        </div>
+        <FaturaSAPModal 
+          isOpen={!!selectedFatura} 
+          onClose={() => setSelectedFatura(null)} 
+          fatura={selectedFatura}
+          categoriaAtiva={selectedFatura.categoria || 'Serviço'}
+          onSave={handleSaveFatura}
+        />
       )}
 
     </div>

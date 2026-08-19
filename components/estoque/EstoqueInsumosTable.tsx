@@ -377,6 +377,49 @@ function EditarInsumoModal({
   );
 }
 
+function ExcluirInsumoModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm,
+  itemData,
+  loading
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  onConfirm: () => void;
+  itemData: any;
+  loading: boolean;
+}) {
+  if (!isOpen || !itemData) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 hover:cursor-auto text-left">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col border border-zinc-200">
+        <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
+          <h2 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" /> Excluir Insumo
+          </h2>
+          <button type="button" onClick={onClose} disabled={loading} className="text-zinc-400 hover:text-zinc-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          <p className="text-zinc-700">Tem certeza que deseja excluir o insumo <strong>{itemData.item}</strong>?</p>
+          <p className="text-sm text-zinc-500 mt-2">Esta ação não poderá ser desfeita.</p>
+        </div>
+
+        <div className="px-6 py-4 flex gap-3 justify-end border-t border-zinc-100 bg-zinc-50">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button type="button" onClick={onConfirm} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white">
+            {loading ? "Excluindo..." : "Excluir Insumo"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function EstoqueInsumosTable({ 
   cd, 
   insumos, 
@@ -396,6 +439,9 @@ export function EstoqueInsumosTable({
   const [modalOpen, setModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<any | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'Todos');
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -405,6 +451,31 @@ export function EstoqueInsumosTable({
     const admin = ['pedro.queiroz', 'debora.mota', 'francisco.edson'].some(a => user.startsWith(a));
     setIsAdmin(admin);
   }, []);
+
+  const handleDeleteClick = (item: any) => {
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    
+    try {
+      const res = await fetch(`/api/estoque?codigo=${itemToDelete.codigo || ''}&cd=${itemToDelete.cd}&id=${itemToDelete.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao excluir insumo.');
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+      refetch();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredInsumos = useMemo(() => {
     return insumos.filter(item => {
@@ -434,6 +505,13 @@ export function EstoqueInsumosTable({
         onClose={() => { setEditModalOpen(false); setItemToEdit(null); }} 
         onSuccess={refetch}
         itemData={itemToEdit}
+      />
+      <ExcluirInsumoModal
+        isOpen={deleteModalOpen}
+        onClose={() => { if(!isDeleting) { setDeleteModalOpen(false); setItemToDelete(null); } }}
+        onConfirm={confirmDelete}
+        itemData={itemToDelete}
+        loading={isDeleting}
       />
       
       {error && (
@@ -595,14 +673,24 @@ export function EstoqueInsumosTable({
                     </td>
                     {isAdmin && (
                       <td className="px-6 py-4 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => { setItemToEdit(item); setEditModalOpen(true); }}
-                          className="text-zinc-500 hover:text-purple-700 hover:bg-purple-50"
-                        >
-                          Editar
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => { setItemToEdit(item); setEditModalOpen(true); }}
+                            className="text-zinc-500 hover:text-purple-700 hover:bg-purple-50"
+                          >
+                            Editar
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteClick(item)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Excluir
+                          </Button>
+                        </div>
                       </td>
                     )}
                   </tr>

@@ -65,7 +65,17 @@ export function DashboardClient({
   const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   // Tabs
+  const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('gerencial');
   const [activeTab, setActiveTab] = useState<'faturas2' | 'insumos' | 'movimentacoes' | 'performance'>('faturas2');
+
+  const handleMainTabChange = (tab: 'gerencial' | 'operacional') => {
+    setMainTab(tab);
+    if (tab === 'gerencial') {
+      setActiveTab('faturas2');
+    } else {
+      setActiveTab('insumos');
+    }
+  };
 
   // Filters Faturas
   const [fatAno, setFatAno] = useState<string>(currentYear);
@@ -89,6 +99,13 @@ export function DashboardClient({
     const role = getUserRole(user);
     setUserRole(role);
     const cd = getUserCD(user);
+    
+    const admin = !user || user.startsWith('pedro.queiroz') || user.startsWith('francisco.edson') || user.startsWith('debora.mota');
+    if (!admin) {
+      setMainTab('operacional');
+      setActiveTab('insumos');
+    }
+    
     if (role === 'OPERACIONAL' && cd) {
       setUserCD(cd);
       setInsCD(cd);
@@ -283,36 +300,60 @@ export function DashboardClient({
         )}
       </header>
       
-      {isAdmin && (
-        <div className="px-8 pt-6 pb-0">
-          <div className="flex flex-wrap gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
+      <div className="px-8 pt-6 pb-0 flex flex-col gap-5">
+        {isAdmin && (
+          <div className="flex gap-6 border-b border-zinc-200 w-full">
             <button
-              onClick={() => setActiveTab('faturas2')}
-              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+              onClick={() => handleMainTabChange('gerencial')}
+              className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'gerencial' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
             >
-              Faturas 2.0
+              Gerencial
             </button>
             <button
-              onClick={() => setActiveTab('insumos')}
-              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'insumos' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+              onClick={() => handleMainTabChange('operacional')}
+              className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'operacional' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
             >
-              Insumos
-            </button>
-            <button
-              onClick={() => setActiveTab('movimentacoes')}
-              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'movimentacoes' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
-            >
-              Movimentações
-            </button>
-            <button
-              onClick={() => setActiveTab('performance')}
-              className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'performance' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
-            >
-              Performance Semanal
+              Operacional
             </button>
           </div>
+        )}
+        
+        <div className="flex flex-wrap gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
+          {mainTab === 'gerencial' && isAdmin && (
+            <>
+              <button
+                onClick={() => setActiveTab('faturas2')}
+                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+              >
+                Faturas 2.0
+              </button>
+              <button
+                onClick={() => setActiveTab('performance')}
+                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'performance' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+              >
+                Performance Semanal
+              </button>
+            </>
+          )}
+          
+          {mainTab === 'operacional' && (
+            <>
+              <button
+                onClick={() => setActiveTab('insumos')}
+                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'insumos' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+              >
+                Insumos
+              </button>
+              <button
+                onClick={() => setActiveTab('movimentacoes')}
+                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'movimentacoes' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+              >
+                Movimentações
+              </button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="flex-1 p-6 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -428,7 +469,7 @@ export function DashboardClient({
           )}
 
           {/* Sessão Insumos (Apenas Entradas e Aprovações) */}
-          {(!isAdmin || activeTab === 'insumos') && (
+          {(activeTab === 'insumos') && (
             <div>
               <div className="mb-12">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -468,7 +509,7 @@ export function DashboardClient({
           )}
 
           {/* Sessão Movimentações / Estoque Geral */}
-          {(!isAdmin || activeTab === 'movimentacoes') && (
+          {(activeTab === 'movimentacoes') && (
             <div>
               <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-6">
                 <div className="flex items-center gap-2">

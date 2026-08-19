@@ -177,3 +177,31 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ success: true, new_real: newReal, new_status: finalStatusToReturn });
 }
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+  const codigo = searchParams.get('codigo');
+  const cd = searchParams.get('cd');
+
+  const supabase = getSupabase();
+  if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
+
+  if (!id && (!codigo || !cd)) {
+    return NextResponse.json({ error: 'Faltam dados para exclusão' }, { status: 400 });
+  }
+
+  let query = supabase.from('estoque_insumos').delete();
+  if (codigo && cd) {
+    query = query.eq('codigo', codigo).eq('cd', cd);
+  } else if (id) {
+    query = query.eq('id', id);
+  }
+
+  const result = await query;
+  if (result.error) {
+    return NextResponse.json({ error: result.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true }, { status: 200 });
+}
