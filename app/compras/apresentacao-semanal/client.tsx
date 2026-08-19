@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Fatura } from "@/modules/compras/domain/Fatura";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -48,7 +48,20 @@ function isRealizado(fatura: Fatura) {
   return fatura.nexa_pagamento_programado === true || fatura.nexa_pagamento_realizado === true;
 }
 
+import { getUserRole } from "@/lib/roles";
+
 export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura[] }) {
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
+
+  useEffect(() => {
+    const user = localStorage.getItem('pcp_user') || '';
+    setCurrentUser(user);
+    if (getUserRole(user) === 'LIDERANCA' || getUserRole(user) === 'REPORTS') {
+      setIsReadOnly(true);
+    }
+  }, []);
+
   const [selectedWeekOffset, setSelectedWeekOffset] = useState<number>(1);
   const [agrupamento, setAgrupamento] = useState<"CD" | "Fornecedor">("CD");
   const [selectedFatura, setSelectedFatura] = useState<Fatura | null>(null);
@@ -81,8 +94,20 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
   // Matriz de Aderência (Grouping)
   const matriz = useMemo(() => {
     const map = new Map<string, { planejado: number, realizado: number }>();
+    
+    if (agrupamento === "CD") {
+      const allCds = ["Fortaleza", "Jundiaí", "NSE", "COC", "PSD"];
+      allCds.forEach(cd => map.set(cd, { planejado: 0, realizado: 0 }));
+    }
+
     planejadasW1.forEach(f => {
       let key = agrupamento === "CD" ? (f.cd || "SEM CD") : (f.fornecedor || "SEM FORNECEDOR");
+      
+      if (agrupamento === "CD") {
+        const match = Array.from(map.keys()).find(k => k.toLowerCase() === key.toLowerCase());
+        if (match) key = match;
+      }
+
       if (agrupamento === "Fornecedor") {
         // simplificar o nome do fornecedor para a matriz caber
         if (key.length > 15) key = key.substring(0, 15) + '...';
@@ -99,7 +124,18 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
       name,
       ...stats,
       aderencia: stats.planejado > 0 ? (stats.realizado / stats.planejado) * 100 : 0
-    })).sort((a, b) => b.planejado - a.planejado); // sort by volume
+    })).sort((a, b) => {
+      if (agrupamento === "CD") {
+        const order = ["Fortaleza", "Jundiaí", "NSE", "COC", "PSD", "SEM CD"];
+        const idxA = order.indexOf(a.name);
+        const idxB = order.indexOf(b.name);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return 0;
+      }
+      return b.planejado - a.planejado;
+    });
   }, [planejadasW1, agrupamento]);
 
   // Motivos do Desvio (Chart Data)
@@ -257,9 +293,11 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                 {matriz.map((item, i) => (
                   <td key={i} className={cn(
                     "px-4 py-4 font-bold text-center border-r border-zinc-100",
-                    item.aderencia === 100 ? "bg-emerald-50 text-emerald-600" : (item.aderencia === 0 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-600")
+                    item.planejado === 0 ? "bg-zinc-50 text-zinc-400" :
+                    item.aderencia === 100 ? "bg-emerald-50 text-emerald-600" : 
+                    (item.aderencia === 0 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-600")
                   )}>
-                    {item.aderencia.toFixed(0)}%
+                    {item.planejado === 0 ? "N/A" : `${item.aderencia.toFixed(0)}%`}
                   </td>
                 ))}
               </tr>
@@ -384,17 +422,28 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleEditClick(f); }} 
-                          className={cn(
-                            "text-xs font-bold px-3 py-1.5 rounded-md transition-colors",
+                        {isReadOnly ? (
+                          <span className={cn(
+                            "text-xs font-bold px-3 py-1.5 rounded-md",
                             hasJustificativa 
-                              ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200" 
-                              : "text-purple-600 bg-purple-50 hover:bg-purple-100"
-                          )}
-                        >
-                          {hasJustificativa ? "Justificado" : "Justificar"}
-                        </button>
+                              ? "text-emerald-700 bg-emerald-50 border border-emerald-200" 
+                              : "text-zinc-500 bg-zinc-50 border border-zinc-200"
+                          )}>
+                            {hasJustificativa ? "Ação Mapeada" : "Sem justificativa"}
+                          </span>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleEditClick(f); }} 
+                            className={cn(
+                              "text-xs font-bold px-3 py-1.5 rounded-md transition-colors",
+                              hasJustificativa 
+                                ? "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200" 
+                                : "text-purple-600 bg-purple-50 hover:bg-purple-100"
+                            )}
+                          >
+                            {hasJustificativa ? "Ação Mapeada" : "Justificar"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                     {isExpanded && hasJustificativa && (

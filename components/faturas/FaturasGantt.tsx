@@ -18,6 +18,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
   const [filtroAno, setFiltroAno] = useState<string>('todos');
   const [filtroMes, setFiltroMes] = useState<string>('todos');
   const [filtroCD, setFiltroCD] = useState<string>('todos');
+  const [filtroStatus, setFiltroStatus] = useState<string>('em_aberto');
 
   const getFaturaCD = (f: Fatura): string => {
     return f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '';
@@ -41,11 +42,19 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
 
   const processedFaturas = useMemo(() => {
     return faturas
-      .filter(f => f.data_vencimento && f.status_pagamento !== 'Pago') // Faturas ativas
+      .filter(f => {
+        if (!f.data_vencimento) return false;
+        if (filtroStatus === 'em_aberto') return f.status_pagamento !== 'Pago';
+        if (filtroStatus === 'pagos') return f.status_pagamento === 'Pago';
+        return true;
+      })
       .filter(f => {
         // Filtros locais
         const d = new Date(f.data_emissao || (f as any).created_at || f.data_vencimento || new Date().toISOString());
-        const ano = d.getFullYear().toString();
+        const anoInt = d.getFullYear();
+        if (anoInt < 2026) return false;
+
+        const ano = anoInt.toString();
         const mes = (d.getMonth() + 1).toString().padStart(2, '0');
         
         if (filtroAno !== 'todos' && ano !== filtroAno) return false;
@@ -129,12 +138,9 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
         };
       })
       .sort((a, b) => {
-        // Red > Yellow > Green
-        const riskOrder = { 'red': 0, 'yellow': 1, 'green': 2 };
-        if (riskOrder[a.riskStatus] !== riskOrder[b.riskStatus]) {
-          return riskOrder[a.riskStatus] - riskOrder[b.riskStatus];
-        }
-        return a.diasRestantesMeta - b.diasRestantesMeta;
+        const dateA = new Date(a.fatura.data_vencimento || 0).getTime();
+        const dateB = new Date(b.fatura.data_vencimento || 0).getTime();
+        return dateB - dateA; // Do mais recente ao mais antigo
       });
   }, [faturas, todayStr, filtroAno, filtroMes, filtroCD, flowType]);
 
@@ -164,8 +170,12 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
     const _anos = new Set<string>();
     faturas.forEach(f => {
       const d = new Date(f.data_emissao || (f as any).created_at || f.data_vencimento || new Date().toISOString());
-      _anos.add(d.getFullYear().toString());
+      const anoStr = d.getFullYear().toString();
+      if (parseInt(anoStr, 10) >= 2026) {
+        _anos.add(anoStr);
+      }
     });
+    if (_anos.size === 0) _anos.add("2026");
     return Array.from(_anos).sort();
   }, [faturas]);
 
@@ -201,6 +211,16 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
         <h2 className="text-lg font-bold text-zinc-800 shrink-0">Gantt Operacional</h2>
         
         <div className="flex flex-wrap items-center gap-3">
+          <SelectFilter 
+            label="Status"
+            value={filtroStatus} 
+            onChange={(e) => setFiltroStatus(e.target.value)}
+            options={[
+              { value: "em_aberto", label: "Em aberto" },
+              { value: "pagos", label: "Pagos" },
+              { value: "todos", label: "Todos" }
+            ]}
+          />
           <SelectFilter 
             label="CD"
             value={filtroCD} 

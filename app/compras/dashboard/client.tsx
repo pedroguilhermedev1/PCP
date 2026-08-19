@@ -2,7 +2,7 @@
 
 import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { Fatura, calcularEtapa, calcularSLA, calcularStatus } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -151,13 +151,10 @@ export function DashboardClient({
 
   // Faturas Status
   const faturasCards = useMemo(() => {
-    let cadastro = { count: 0, val: 0 };
-    let requisicao = { count: 0, val: 0 };
-    let aprovacaoOuPedido = { count: 0, val: 0 };
-    let v360 = { count: 0, val: 0 };
-    let aguardando = { count: 0, val: 0 };
-    let pago = { count: 0, val: 0 };
-    let atrasadasAberto = { count: 0, val: 0 };
+    let emAbertoAtraso = { count: 0, val: 0 };
+    let emAbertoNoPrazo = { count: 0, val: 0 };
+    let aguardandoAtraso = { count: 0, val: 0 };
+    let aguardandoNoPrazo = { count: 0, val: 0 };
 
     let slaNoPrazo = 0;
     let slaProximo = 0;
@@ -166,26 +163,34 @@ export function DashboardClient({
     filteredFaturas.forEach(f => {
       const etapa = calcularEtapa(f);
       const v = f.valor || 0;
-      if (etapa === 'Cadastro da NF') { cadastro.count++; cadastro.val += v; }
-      else if (etapa === 'Requisição de Compras') { requisicao.count++; requisicao.val += v; }
-      else if (etapa === 'Aprovação' || etapa === 'Pedido de Compras') { aprovacaoOuPedido.count++; aprovacaoOuPedido.val += v; }
-      else if (etapa === 'Inclusão no V360') { v360.count++; v360.val += v; }
-      else if (etapa === 'Aguardando pagamento') { aguardando.count++; aguardando.val += v; }
-      else if (etapa === 'Pago') { pago.count++; pago.val += v; }
+
+      const isFinalizado = (etapa === 'Aguardando pagamento');
+      const isEmAberto = (etapa !== 'Aguardando pagamento' && etapa !== 'Pago');
+      const diasRestantes = calcularDiasRestantes(f.data_vencimento || '');
+      // Considera atrasado apenas se data_vencimento existir e dias < 0
+      const isAtrasado = !!f.data_vencimento && diasRestantes < 0;
+
+      if (isEmAberto) {
+        if (isAtrasado) {
+          emAbertoAtraso.count++; emAbertoAtraso.val += v;
+        } else {
+          emAbertoNoPrazo.count++; emAbertoNoPrazo.val += v;
+        }
+      } else if (isFinalizado) {
+        if (isAtrasado) {
+          aguardandoAtraso.count++; aguardandoAtraso.val += v;
+        } else {
+          aguardandoNoPrazo.count++; aguardandoNoPrazo.val += v;
+        }
+      }
 
       const sla = calcularSLA(f);
       if (sla === 'Dentro do prazo') slaNoPrazo++;
       else if (sla === 'Próximo do vencimento') slaProximo++;
       else if (sla === 'Atrasado') slaAtrasado++;
-
-      const status = calcularStatus(f);
-      if (status === 'Vencido' && f.status_pagamento !== 'Pago') {
-        atrasadasAberto.count++;
-        atrasadasAberto.val += v;
-      }
     });
 
-    return { cadastro, requisicao, aprovacaoOuPedido, v360, aguardando, pago, atrasadasAberto, slaNoPrazo, slaProximo, slaAtrasado };
+    return { emAbertoAtraso, emAbertoNoPrazo, aguardandoAtraso, aguardandoNoPrazo, slaNoPrazo, slaProximo, slaAtrasado };
   }, [filteredFaturas]);
 
 
@@ -447,21 +452,24 @@ export function DashboardClient({
                   <div className="mt-8 mb-8">
                     <FaturasGantt faturas={filteredFaturas} flowType="2.0" />
                   </div>
-
                   <div className="flex items-center gap-2 mb-6 mt-8">
                     <Layers className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Status das Faturas</h2>
+                    <h2 className="text-lg font-bold text-zinc-800">Status Faturas por Vencimento</h2>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
-                      <FaturaCard title="Atrasadas em Aberto" value={formatBRL(faturasCards.atrasadasAberto.val)} count={faturasCards.atrasadasAberto.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                      <FaturaCard title="Em Aberto, Em Atraso" value={formatBRL(faturasCards.emAbertoAtraso.val)} count={faturasCards.emAbertoAtraso.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
                     </div>
-                    <FaturaCard title="Cadastro da NF" value={formatBRL(faturasCards.cadastro.val)} count={faturasCards.cadastro.count} colorClass="text-red-500" borderClass="border-red-200" bgClass="bg-red-50/20" />
-                    <FaturaCard title="Requisição de Compras" value={formatBRL(faturasCards.requisicao.val)} count={faturasCards.requisicao.count} colorClass="text-blue-500" borderClass="border-blue-200" bgClass="bg-blue-50/20" />
-                    <FaturaCard title="Pedido de Compras" value={formatBRL(faturasCards.aprovacaoOuPedido.val)} count={faturasCards.aprovacaoOuPedido.count} colorClass="text-zinc-500" borderClass="border-zinc-200" bgClass="bg-zinc-50/20" />
-                    <FaturaCard title="Aguardando Pagamento" value={formatBRL(faturasCards.aguardando.val)} count={faturasCards.aguardando.count} colorClass="text-emerald-500" borderClass="border-emerald-200" bgClass="bg-emerald-50/20" />
-                    <FaturaCard title="Pago" value={formatBRL(faturasCards.pago.val)} count={faturasCards.pago.count} colorClass="text-green-600" borderClass="border-green-200" bgClass="bg-green-50/20" />
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Em Aberto No Prazo" value={formatBRL(faturasCards.emAbertoNoPrazo.val)} count={faturasCards.emAbertoNoPrazo.count} colorClass="text-blue-600" borderClass="border-blue-200" bgClass="bg-blue-50/50" />
+                    </div>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Aguardando Pgto em Atraso" value={formatBRL(faturasCards.aguardandoAtraso.val)} count={faturasCards.aguardandoAtraso.count} colorClass="text-orange-600" borderClass="border-orange-300" bgClass="bg-orange-100/50" />
+                    </div>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Aguardando Pgto no Prazo" value={formatBRL(faturasCards.aguardandoNoPrazo.val)} count={faturasCards.aguardandoNoPrazo.count} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/50" />
+                    </div>
                   </div>
                 </div>
               )}

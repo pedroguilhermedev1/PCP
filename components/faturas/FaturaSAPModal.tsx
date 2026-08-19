@@ -8,7 +8,7 @@ import { Trash2, Plus } from "lucide-react";
 import { cn, formatCNPJ } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
-import { formatUserName } from "@/lib/roles";
+import { formatUserName, getUserRole } from "@/lib/roles";
 
 interface FaturaModalProps {
   isOpen: boolean;
@@ -21,6 +21,9 @@ interface FaturaModalProps {
 export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }: FaturaModalProps) {
   const isEditing = !!fatura;
   const { fornecedores } = useFornecedores(categoriaAtiva);
+
+  const currentUser = typeof window !== 'undefined' ? localStorage.getItem('pcp_user') || '' : '';
+  const isReadOnly = getUserRole(currentUser) === 'LIDERANCA' || getUserRole(currentUser) === 'REPORTS';
 
   const [formData, setFormData] = useState<Partial<Fatura>>({
     categoria: categoriaAtiva,
@@ -93,6 +96,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setFormError(null);
 
     if (categoriaAtiva === 'Material' && formData.insumos && formData.insumos.length > 0) {
@@ -956,8 +960,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-zinc-200 py-4 px-6 flex justify-end gap-2 shrink-0 rounded-b-xl">
-          <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
-          <Button form="fatura-form" type="submit">{isEditing ? 'Salvar Alterações' : 'Criar Fatura'}</Button>
+          <Button variant="outline" type="button" onClick={onClose}>{isReadOnly ? 'Fechar' : 'Cancelar'}</Button>
+          {!isReadOnly && <Button form="fatura-form" type="submit">{isEditing ? 'Salvar Alterações' : 'Criar Fatura'}</Button>}
         </div>
 
       </div>

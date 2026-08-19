@@ -199,14 +199,17 @@ export function Sidebar() {
 }, [pathname]);
 
   const isReportsOnly = currentUser === 'ivna.teixeira';
+  const isLideranca = getUserRole(currentUser || '') === 'LIDERANCA';
 
   const visibleItems = (isAdmin
   ? sidebarItems.filter(item => item.title !== 'Solicitações')
   : isReportsOnly 
     ? sidebarItems.filter(item => item.title === 'Relatórios')
-    : sidebarItems.filter(item =>
-        item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Cronograma' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
-      )).map(item => {
+    : isLideranca
+      ? sidebarItems.filter(item => item.title === 'Dashboard' || item.title === 'Cronograma' || item.title === 'Relatórios')
+      : sidebarItems.filter(item =>
+          item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Cronograma' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
+        )).map(item => {
         if (!isAdmin && (item.title === 'Insumos' || item.title === 'Solicitações')) {
           const userCd = getUserCD(currentUser || undefined)?.toLowerCase();
           if (userCd) {

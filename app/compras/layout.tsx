@@ -4,6 +4,7 @@ console.log('LAYOUT COMPRAS CARREGADO');
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { getUserRole } from '@/lib/roles';
 
 import { Sidebar } from '@/components/layout/sidebar';
 import { LembretesProvider } from '@/components/lembretes/LembretesContext';
@@ -26,6 +27,9 @@ export default function ComprasLayout({
     console.log('Usuário atual:', user);
     console.log('Path atual:', pathname);
 
+    const role = getUserRole(user || '');
+    const isLideranca = role === 'LIDERANCA';
+
     const admins = [
       'pedro.queiroz',
       'debora.mota',
@@ -37,14 +41,24 @@ export default function ComprasLayout({
     console.log('É admin?', isAdmin);
 
     if (!isAdmin) {
-      const allowedRoutes = [
+      let allowedRoutes = [
         '/compras/dashboard',
         '/compras/cronograma',
         '/compras/formularios',
-        '/compras/insumos', // allow insumos for non-admins
-        '/compras/fornecedores/cronograma', // allow fornecedores cronograma
-        '/compras/relatorios' // allow relatorios
+        '/compras/insumos',
+        '/compras/fornecedores/cronograma',
+        '/compras/relatorios'
       ];
+
+      if (isLideranca) {
+        allowedRoutes = [
+          '/compras/dashboard',
+          '/compras/cronograma',
+          '/compras/relatorios'
+        ];
+      } else if (role === 'REPORTS') {
+        allowedRoutes = ['/compras/relatorios'];
+      }
 
       const hasAccess = allowedRoutes.some((route) =>
         pathname.startsWith(route)
@@ -54,7 +68,7 @@ export default function ComprasLayout({
 
       if (!hasAccess) {
         console.log('REDIRECIONANDO...');
-        router.push('/compras/dashboard');
+        router.push(isLideranca ? '/compras/dashboard' : '/compras/dashboard');
       }
     }
   }, [pathname, router]);

@@ -17,6 +17,11 @@ export const OPERACIONAL_USERS = [
   'gabriel.oliveira'
 ];
 
+export const LIDERANCA_USERS = [
+  'lideranca.arco',
+  'liderança.arco'
+];
+
 export function getUserRole(username?: string) {
   if (!username) return null;
 
@@ -28,6 +33,10 @@ export function getUserRole(username?: string) {
 
   if (REPORTS_USERS.includes(normalized)) {
     return 'REPORTS';
+  }
+
+  if (LIDERANCA_USERS.includes(normalized)) {
+    return 'LIDERANCA';
   }
 
   return 'OPERACIONAL';
@@ -49,6 +58,7 @@ export function formatUserName(username?: string): string {
 
   if (normalized === 'psd.arco') return 'PSD';
   if (normalized === 'coc.arco') return 'COC';
+  if (normalized === 'lideranca.arco' || normalized === 'liderança.arco') return 'Liderança Arco';
   
   return username;
 }

@@ -36,13 +36,16 @@ export function LoginForm() {
       'rafael.soares'
     ].includes(parsedUsername) && password === `${parsedUsername}@2026`;
 
+    const isLideranca = (parsedUsername === 'lideranca.arco' || parsedUsername === 'liderança.arco') && 
+                        (password === 'lideranca.arco@2026' || password === 'liderança.arco@2026');
+
     const isDefaultAdminOrOldOpPassword = (
       (validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') &&
       !['fabio.pessoa', 'gabriel.oliveira', 'josiane.ferreira', 'rafael.soares'].includes(parsedUsername) &&
       password === '123@456'
     );
 
-    if (isOperationalNewPassword || isDefaultAdminOrOldOpPassword) {
+    if (isOperationalNewPassword || isDefaultAdminOrOldOpPassword || isLideranca) {
       localStorage.setItem('pcp_user', parsedUsername);
       toast.success('Login efetuado com sucesso!');
       router.push('/compras/dashboard');
