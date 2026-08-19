@@ -369,10 +369,11 @@ export function DashboardClient({
 
               {isAdmin && (
                 <div>
+                  {/* 1. Status Faturas por Vencimento */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-zinc-400" />
-                      <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas 2.0 <span className="text-sm font-normal text-zinc-500">(Nexa / SAP)</span></h2>
+                      <Layers className="w-5 h-5 text-zinc-400" />
+                      <h2 className="text-lg font-bold text-zinc-800">Status Faturas por Vencimento</h2>
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-3">
@@ -407,7 +408,28 @@ export function DashboardClient({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Em Aberto, Em Atraso" value={formatBRL(faturasCards.emAbertoAtraso.val)} count={faturasCards.emAbertoAtraso.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
+                    </div>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Em Aberto No Prazo" value={formatBRL(faturasCards.emAbertoNoPrazo.val)} count={faturasCards.emAbertoNoPrazo.count} colorClass="text-blue-600" borderClass="border-blue-200" bgClass="bg-blue-50/50" />
+                    </div>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Aguardando Pgto em Atraso" value={formatBRL(faturasCards.aguardandoAtraso.val)} count={faturasCards.aguardandoAtraso.count} colorClass="text-orange-600" borderClass="border-orange-300" bgClass="bg-orange-100/50" />
+                    </div>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
+                      <FaturaCard title="Aguardando Pgto no Prazo" value={formatBRL(faturasCards.aguardandoNoPrazo.val)} count={faturasCards.aguardandoNoPrazo.count} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/50" />
+                    </div>
+                  </div>
+
+                  {/* 2. Fluxo de Faturas 2.0 */}
+                  <div className="flex items-center gap-2 mb-6">
+                    <FileText className="w-5 h-5 text-zinc-400" />
+                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas 2.0 <span className="text-sm font-normal text-zinc-500">(Nexa / SAP)</span></h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                     <div 
                       onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
                       className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
@@ -449,27 +471,9 @@ export function DashboardClient({
                     </div>
                   </div>
 
+                  {/* 3. Gantt Operacional */}
                   <div className="mt-8 mb-8">
                     <FaturasGantt faturas={filteredFaturas} flowType="2.0" />
-                  </div>
-                  <div className="flex items-center gap-2 mb-6 mt-8">
-                    <Layers className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Status Faturas por Vencimento</h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
-                      <FaturaCard title="Em Aberto, Em Atraso" value={formatBRL(faturasCards.emAbertoAtraso.val)} count={faturasCards.emAbertoAtraso.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
-                    </div>
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
-                      <FaturaCard title="Em Aberto No Prazo" value={formatBRL(faturasCards.emAbertoNoPrazo.val)} count={faturasCards.emAbertoNoPrazo.count} colorClass="text-blue-600" borderClass="border-blue-200" bgClass="bg-blue-50/50" />
-                    </div>
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
-                      <FaturaCard title="Aguardando Pgto em Atraso" value={formatBRL(faturasCards.aguardandoAtraso.val)} count={faturasCards.aguardandoAtraso.count} colorClass="text-orange-600" borderClass="border-orange-300" bgClass="bg-orange-100/50" />
-                    </div>
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
-                      <FaturaCard title="Aguardando Pgto no Prazo" value={formatBRL(faturasCards.aguardandoNoPrazo.val)} count={faturasCards.aguardandoNoPrazo.count} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/50" />
-                    </div>
                   </div>
                 </div>
               )}
