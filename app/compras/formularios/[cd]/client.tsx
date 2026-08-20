@@ -828,8 +828,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                       <Input 
                         type="text" 
                         disabled
-                        value={extDiferenca > 0 ? `+${extDiferenca}` : extDiferenca}
-                        className={`w-full font-bold ${extDiferenca > 0 ? 'text-blue-600' : extDiferenca < 0 ? 'text-orange-600' : 'text-zinc-500'}`}
+                        value={typeof extDiferenca === 'number' && extDiferenca > 0 ? `+${extDiferenca}` : extDiferenca}
+                        className={`w-full font-bold ${typeof extDiferenca === 'number' && extDiferenca > 0 ? 'text-blue-600' : typeof extDiferenca === 'number' && extDiferenca < 0 ? 'text-orange-600' : 'text-zinc-500'}`}
                         placeholder="Automático"
                       />
                     </div>
