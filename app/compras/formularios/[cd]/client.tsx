@@ -83,8 +83,12 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   }, [responsavel]);
 
   const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
-  const isPrivileged = responsavelOriginal.startsWith('pedro.queiroz') || responsavelOriginal.startsWith('francisco.edson');
-  const setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
+  const isPrivileged = responsavelOriginal.toLowerCase().startsWith('pedro.queiroz') || responsavelOriginal.toLowerCase().startsWith('francisco.edson');
+  let setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
+
+  if (cd.toLowerCase() === 'jundiai' && responsavelOriginal.toLowerCase().startsWith('josiane.ferreira')) {
+    setores = ["Conferência", "Pedidos", "QG"];
+  }
 
   useEffect(() => {
     // When item changes, set the code automatically.
