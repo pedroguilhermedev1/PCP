@@ -126,13 +126,28 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
     setIsSubmitting(true);
     
+    let finalCodigo = codigo;
+    const isLeadership = userRole !== 'OPERACIONAL';
+    const respLower = responsavelOriginal.toLowerCase();
+    const isExcludedUser = respLower.includes('pedro') || respLower.includes('edson') || respLower.includes('débora') || respLower.includes('debora');
+
+    if (!finalCodigo) {
+      if (userRole === 'OPERACIONAL' && !isExcludedUser && !isLeadership) {
+        finalCodigo = "-";
+      } else {
+        setErrorMsg("O código do item é obrigatório para o seu perfil.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch('/api/movimentacoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo,
-          codigo,
+          codigo: finalCodigo,
           item,
           cd,
           empresa,

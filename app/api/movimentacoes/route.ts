@@ -41,10 +41,15 @@ export async function POST(request: Request) {
   let query = supabase
     .from('estoque_insumos')
     .select('*')
-    .eq('codigo', codigo)
     .ilike('cd', cd)
     .eq('tipo_envio', t_envio);
     
+  if (codigo !== '-') {
+    query = query.eq('codigo', codigo);
+  } else {
+    query = query.eq('item', item);
+  }
+
   if (empresa) {
     query = query.ilike('empresa', empresa);
   }
@@ -55,6 +60,7 @@ export async function POST(request: Request) {
   if (fetchError || !insumo) {
     return NextResponse.json({ error: 'Insumo não encontrado no CD especificado.' }, { status: 404 });
   }
+
 
   if (tipo === 'Saída') {
     const newReal = (insumo.estoque_real || 0) - quantidade;
