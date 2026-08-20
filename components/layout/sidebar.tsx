@@ -201,8 +201,10 @@ export function Sidebar() {
   const isReportsOnly = currentUser === 'ivna.teixeira';
   const isLideranca = getUserRole(currentUser || '') === 'LIDERANCA';
 
+  const isAjusteEstoqueUser = currentUser === 'pedro.queiroz' || currentUser === 'francisco.edson';
+
   const visibleItems = (isAdmin
-  ? sidebarItems.filter(item => item.title !== 'Solicitações')
+  ? sidebarItems.filter(item => item.title !== 'Solicitações' || isAjusteEstoqueUser)
   : isReportsOnly 
     ? sidebarItems.filter(item => item.title === 'Relatórios')
     : isLideranca

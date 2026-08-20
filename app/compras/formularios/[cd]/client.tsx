@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, CheckCircle2, AlertCircle, MessageCircle, MessageSquare } from "lucide-react";
+import { Box, CheckCircle2, AlertCircle, MessageCircle, MessageSquare, Settings2 } from "lucide-react";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,9 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   
   const { insumos, refetch: refetchInsumos } = useEstoqueInsumos(cd);
   const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd, undefined, 'PENDENTE');
+  const { movimentacoes: histAprovadas, refresh: refreshAprovadas } = useInsumosMovimentacoes(cd, undefined, 'Aprovada');
 
-  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES'>('NOVA');
+  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'AJUSTE'>('NOVA');
 
   const [filterCD, setFilterCD] = useState("TODOS");
 
@@ -57,6 +58,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const cdName = cd_names_map[cd] || cd.toUpperCase();
 
   const [responsavelOriginal, setResponsavelOriginal] = useState("");
+  const isAjusteAllowed = responsavelOriginal.toLowerCase() === 'pedro.queiroz' || responsavelOriginal.toLowerCase() === 'francisco.edson';
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
@@ -101,8 +103,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       setEmpresa("");
     }
   }, [item, insumos]);
-
-
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -194,12 +194,86 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
     }
   };
 
+  // Ajuste Form State
+  const [ajusteItem, setAjusteItem] = useState("");
+  const [ajusteTipo, setAjusteTipo] = useState<"Ajuste de Entrada" | "Ajuste de Saída">("Ajuste de Entrada");
+  const [ajusteQuantidade, setAjusteQuantidade] = useState<number | "">("");
+  const [ajusteMotivo, setAjusteMotivo] = useState("");
+  const [ajusteObs, setAjusteObs] = useState("");
+
+  const handleAjusteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    if (!ajusteItem || !ajusteTipo || !ajusteQuantidade || !ajusteMotivo) {
+      setErrorMsg("Preencha Item, Tipo, Quantidade e Motivo.");
+      return;
+    }
+    const selected = insumos.find(i => i.item === ajusteItem);
+    if (!selected) {
+      setErrorMsg("Item inválido.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      
+      const estoqueAnterior = selected.estoque_real || 0;
+      let estoquePosterior = estoqueAnterior;
+      if (ajusteTipo === 'Ajuste de Entrada') estoquePosterior += Number(ajusteQuantidade);
+      else estoquePosterior -= Number(ajusteQuantidade);
+      
+      const obsPayload = JSON.stringify({
+        motivo: ajusteMotivo,
+        obs: ajusteObs,
+        estoque_anterior: estoqueAnterior,
+        estoque_posterior: estoquePosterior
+      });
+
+      const res = await fetch('/api/movimentacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: ajusteTipo,
+          codigo: selected.codigo || "-",
+          item: ajusteItem,
+          cd,
+          empresa: selected.empresa || "",
+          quantidade: Number(ajusteQuantidade),
+          usuario: responsavel,
+          observacoes: obsPayload
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao registrar ajuste.');
+
+      setSuccessMsg(`Ajuste de estoque salvo com sucesso! Novo saldo: ${data.novo_estoque}`);
+      refetchInsumos();
+      refreshAprovadas();
+      
+      setTimeout(() => setSuccessMsg(""), 5000);
+
+      setAjusteItem("");
+      setAjusteQuantidade("");
+      setAjusteMotivo("");
+      setAjusteObs("");
+    } catch(err: any) {
+      setErrorMsg(err.message || 'Erro ao ajustar estoque.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredMovs = useMemo(() => {
     let list = movimentacoes;
     const allowedCodigos = new Set(insumos.map(i => i.codigo));
     list = list.filter(m => allowedCodigos.has(m.codigo));
     return list;
   }, [movimentacoes, insumos]);
+
+  const ajustesHistory = useMemo(() => {
+    return histAprovadas.filter(m => m.tipo === 'Ajuste de Entrada' || m.tipo === 'Ajuste de Saída');
+  }, [histAprovadas]);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -214,8 +288,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           </div>
         </div>
 
-        {/* Navegação Superior Removida */}
-        
         <div className="flex gap-4 border-b border-transparent">
           <button 
             className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
@@ -234,11 +306,20 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               </span>
             )}
           </button>
+          {isAjusteAllowed && (
+            <button 
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'AJUSTE' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              onClick={() => setActiveTab('AJUSTE')}
+            >
+              <Settings2 className="w-4 h-4" />
+              AJUSTE DE ESTOQUE
+            </button>
+          )}
         </div>
       </header>
 
       <div className={`flex-1 p-4 md:p-8 overflow-y-auto w-full flex justify-center items-start`}>
-        <div className={`w-full mt-4 ${activeTab === 'NOVA' ? 'max-w-4xl' : 'max-w-7xl'}`}>
+        <div className={`w-full mt-4 max-w-7xl`}>
           
           {successMsg && (
             <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-3 border border-green-200 shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -257,7 +338,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
               <h2 className="text-lg font-bold text-zinc-800">
-                {activeTab === 'NOVA' ? 'NOVA SOLICITAÇÃO' : 'APROVAÇÕES PENDENTES'}
+                {activeTab === 'NOVA' ? 'NOVA SOLICITAÇÃO' : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' : 'AJUSTE DE ESTOQUE'}
               </h2>
               {activeTab === 'NOVA' && (
                 <p className="text-sm text-zinc-500 mt-1">
@@ -266,7 +347,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               )}
             </div>
 
-            {activeTab === 'NOVA' ? (
+            {activeTab === 'NOVA' && (
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 <div className="space-y-4">
                   
@@ -298,11 +379,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                     </div>
                   </div>
 
-                  {/* Entrada fields removed */}
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-
                     <div className="space-y-2 col-span-2 sm:col-span-1">
                       <label className="text-sm font-medium text-zinc-700">Item / Material *</label>
                       <select 
@@ -332,43 +409,40 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Setor Responsável *</label>
+                      <select 
+                        required
+                        value={setor}
+                        onChange={(e) => setSetor(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2"
+                      >
+                        <option value="" disabled>Selecione...</option>
+                        {setores.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Solicitante</label>
+                      <Input 
+                        disabled
+                        type="text" 
+                        value={solicitante}
+                        className="w-full bg-zinc-50"
+                      />
+                    </div>
+                  </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-zinc-700">Setor Responsável *</label>
-                          <select 
-                            required
-                            value={setor}
-                            onChange={(e) => setSetor(e.target.value)}
-                            className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2"
-                          >
-                            <option value="" disabled>Selecione...</option>
-                            {setores.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-zinc-700">Solicitante</label>
-                          <Input 
-                            disabled
-                            type="text" 
-                            value={solicitante}
-                            className="w-full bg-zinc-50"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-700">Justificativa / Motivo *</label>
-                        <textarea 
-                          required
-                          className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 resize-y"
-                          placeholder="Descreva o motivo desta solicitação..."
-                          value={justificativa}
-                          onChange={(e) => setJustificativa(e.target.value)}
-                        />
-                      </div>
-
-
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700">Justificativa / Motivo *</label>
+                    <textarea 
+                      required
+                      className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2 resize-y"
+                      placeholder="Descreva o motivo desta solicitação..."
+                      value={justificativa}
+                      onChange={(e) => setJustificativa(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-2">
@@ -383,9 +457,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   )}
                 </div>
               </form>
-            ) : (
-              <div className="p-0 overflow-x-auto">
+            )}
 
+            {activeTab === 'PENDENTES' && (
+              <div className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-zinc-50/50">
                     <TableRow className="border-zinc-100 hover:bg-transparent">
@@ -468,6 +543,145 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {activeTab === 'AJUSTE' && isAjusteAllowed && (
+              <div className="flex flex-col">
+                <form onSubmit={handleAjusteSubmit} className="p-6 space-y-6 border-b border-zinc-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Item *</label>
+                      <select 
+                        required
+                        value={ajusteItem}
+                        onChange={(e) => setAjusteItem(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      >
+                        <option value="" disabled>Selecione um item...</option>
+                        {insumos.map(mat => (
+                          <option key={mat.id} value={mat.item}>{mat.item}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Tipo de Ajuste *</label>
+                      <select
+                        required
+                        value={ajusteTipo}
+                        onChange={(e) => setAjusteTipo(e.target.value as any)}
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      >
+                        <option value="Ajuste de Entrada">Entrada (Adicionar ao estoque)</option>
+                        <option value="Ajuste de Saída">Saída (Remover do estoque)</option>
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Quantidade Ajustada *</label>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        required
+                        placeholder="Ex: 30"
+                        value={ajusteQuantidade}
+                        onChange={(e) => setAjusteQuantidade(e.target.value ? Number(e.target.value) : "")}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Motivo do Ajuste *</label>
+                      <Input 
+                        type="text" 
+                        required
+                        placeholder="Ex: Contagem física divergente"
+                        value={ajusteMotivo}
+                        onChange={(e) => setAjusteMotivo(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-700">Observação Adicional</label>
+                    <textarea 
+                      className="flex min-h-[60px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 resize-y"
+                      placeholder="Detalhes..."
+                      value={ajusteObs}
+                      onChange={(e) => setAjusteObs(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" disabled={isSubmitting} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                      {isSubmitting ? 'Salvando Ajuste...' : 'Realizar Ajuste'}
+                    </Button>
+                  </div>
+                </form>
+
+                <div className="p-0 overflow-x-auto">
+                  <div className="p-6 bg-zinc-50 border-b border-zinc-200">
+                    <h3 className="font-bold text-zinc-800">Histórico de Ajustes</h3>
+                  </div>
+                  <Table>
+                    <TableHeader className="bg-zinc-50/50">
+                      <TableRow className="border-zinc-100 hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Qtd Ajustada</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Estoque Ant.</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Estoque Post.</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Motivo</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Obs</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ajustesHistory.map(m => {
+                        let parsed: any = {};
+                        try {
+                          parsed = JSON.parse(m.observacoes || "{}");
+                        } catch(e) {}
+                        
+                        return (
+                          <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
+                            <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="max-w-[150px] text-zinc-900 font-medium" style={{wordBreak: 'break-word'}}>{m.item}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={m.tipo === 'Ajuste de Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
+                                {m.tipo.replace('Ajuste de ', '')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-zinc-800">{m.quantidade}</TableCell>
+                            <TableCell className="text-right text-zinc-500">{parsed.estoque_anterior ?? '-'}</TableCell>
+                            <TableCell className="text-right font-semibold text-purple-700">{parsed.estoque_posterior ?? '-'}</TableCell>
+                            <TableCell>
+                              <span className="text-xs text-zinc-600 block max-w-[120px] truncate" title={parsed.motivo || '-'}>{parsed.motivo || '-'}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-zinc-500 block max-w-[120px] truncate" title={parsed.obs || '-'}>{parsed.obs || '-'}</span>
+                            </TableCell>
+                            <TableCell className="text-zinc-600 text-xs">{m.usuario}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      {ajustesHistory.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-12 text-zinc-500">
+                            <p>Nenhum ajuste de estoque registrado.</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </div>

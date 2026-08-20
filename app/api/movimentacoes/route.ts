@@ -62,9 +62,15 @@ export async function POST(request: Request) {
   }
 
 
-  if (tipo === 'Saída') {
-    const newReal = (insumo.estoque_real || 0) - quantidade;
-    if (newReal < 0) {
+  if (tipo === 'Saída' || tipo === 'Ajuste de Saída' || tipo === 'Ajuste de Entrada') {
+    let newReal = insumo.estoque_real || 0;
+    if (tipo === 'Ajuste de Entrada') {
+      newReal += quantidade;
+    } else {
+      newReal -= quantidade;
+    }
+
+    if (newReal < 0 && tipo === 'Saída') {
       return NextResponse.json({ error: 'Estoque insuficiente para esta saída.' }, { status: 400 });
     }
 

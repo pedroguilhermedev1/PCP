@@ -7,7 +7,7 @@ export type InsumoMovimentacao = {
   identificador?: string;
   codigo_movimentacao?: string;
   usuario: string;
-  tipo: 'Entrada' | 'Saída';
+  tipo: 'Entrada' | 'Saída' | 'Ajuste de Entrada' | 'Ajuste de Saída';
   item: string;
   codigo: string;
   quantidade: number;
