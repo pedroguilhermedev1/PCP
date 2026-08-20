@@ -62,11 +62,11 @@ export async function POST(request: Request) {
   }
 
 
-  if (tipo === 'Saída' || tipo === 'Ajuste de Saída' || tipo === 'Ajuste de Entrada') {
+  if (tipo === 'Saída' || tipo === 'Ajuste de Saída' || tipo === 'Ajuste de Entrada' || tipo === 'Atualização Externa de Entrada' || tipo === 'Atualização Externa de Saída' || tipo === 'Atualização Externa Neutra') {
     let newReal = insumo.estoque_real || 0;
-    if (tipo === 'Ajuste de Entrada') {
+    if (tipo === 'Ajuste de Entrada' || tipo === 'Atualização Externa de Entrada') {
       newReal += quantidade;
-    } else {
+    } else if (tipo === 'Ajuste de Saída' || tipo === 'Atualização Externa de Saída' || tipo === 'Saída') {
       newReal -= quantidade;
     }
 

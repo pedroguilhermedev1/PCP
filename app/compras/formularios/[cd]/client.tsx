@@ -26,7 +26,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd, undefined, 'PENDENTE');
   const { movimentacoes: histAprovadas, refresh: refreshAprovadas } = useInsumosMovimentacoes(cd, undefined, 'Aprovada');
 
-  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'AJUSTE'>('NOVA');
+  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'AJUSTE' | 'EXTERNA'>('NOVA');
 
   const [filterCD, setFilterCD] = useState("TODOS");
 
@@ -59,6 +59,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   const [responsavelOriginal, setResponsavelOriginal] = useState("");
   const isAjusteAllowed = responsavelOriginal.toLowerCase() === 'pedro.queiroz' || responsavelOriginal.toLowerCase() === 'francisco.edson';
+  const isExternaAllowed = isAjusteAllowed && cd.toLowerCase() === 'psd';
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
@@ -268,6 +269,79 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
     }
   };
 
+  // Externa Form State
+  const [extItem, setExtItem] = useState("");
+  const [extNovaQtd, setExtNovaQtd] = useState<number | "">("");
+
+  const extInsumo = useMemo(() => insumos.find(i => i.item === extItem), [extItem, insumos]);
+  const extEstoqueAtual = extInsumo ? (extInsumo.estoque_real || 0) : "";
+  const extDiferenca = (typeof extNovaQtd === 'number' && typeof extEstoqueAtual === 'number') 
+    ? extNovaQtd - extEstoqueAtual 
+    : "";
+
+  const handleExternaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    if (!extItem || extNovaQtd === "") {
+      setErrorMsg("Preencha o Item e a Nova Quantidade.");
+      return;
+    }
+    const selected = insumos.find(i => i.item === extItem);
+    if (!selected) {
+      setErrorMsg("Item inválido.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const anterior = selected.estoque_real || 0;
+      const posterior = Number(extNovaQtd);
+      const diff = posterior - anterior;
+      
+      let tipoExterna = 'Atualização Externa Neutra';
+      if (diff > 0) tipoExterna = 'Atualização Externa de Entrada';
+      else if (diff < 0) tipoExterna = 'Atualização Externa de Saída';
+      
+      const obsPayload = JSON.stringify({
+        estoque_anterior: anterior,
+        estoque_posterior: posterior,
+        diferenca: diff,
+        origem: "Atualização Externa"
+      });
+
+      const res = await fetch('/api/movimentacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: tipoExterna,
+          codigo: selected.codigo || "-",
+          item: extItem,
+          cd,
+          empresa: selected.empresa || "",
+          quantidade: Math.abs(diff),
+          usuario: responsavel,
+          observacoes: obsPayload
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao registrar atualização externa.');
+
+      setSuccessMsg(`Atualização externa salva com sucesso! Novo saldo: ${data.novo_estoque ?? posterior}`);
+      refetchInsumos();
+      refreshAprovadas();
+      
+      setTimeout(() => setSuccessMsg(""), 5000);
+
+      setExtItem("");
+      setExtNovaQtd("");
+    } catch(err: any) {
+      setErrorMsg(err.message || 'Erro ao atualizar estoque externamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredMovs = useMemo(() => {
     let list = movimentacoes;
     const allowedCodigos = new Set(insumos.map(i => i.codigo));
@@ -277,6 +351,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   const ajustesHistory = useMemo(() => {
     return histAprovadas.filter(m => m.tipo === 'Ajuste de Entrada' || m.tipo === 'Ajuste de Saída');
+  }, [histAprovadas]);
+
+  const externaHistory = useMemo(() => {
+    return histAprovadas.filter(m => m.tipo.startsWith('Atualização Externa'));
   }, [histAprovadas]);
 
   return (
@@ -321,6 +399,15 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             >
               <Settings2 className="w-4 h-4" />
               AJUSTE DE ESTOQUE
+            </button>
+          )}
+          {isExternaAllowed && (
+            <button 
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'EXTERNA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              onClick={() => setActiveTab('EXTERNA')}
+            >
+              <Settings2 className="w-4 h-4" />
+              ATUALIZAÇÃO EXTERNA
             </button>
           )}
         </div>
@@ -684,6 +771,126 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                         <TableRow>
                           <TableCell colSpan={9} className="text-center py-12 text-zinc-500">
                             <p>Nenhum ajuste de estoque registrado.</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'EXTERNA' && isExternaAllowed && (
+              <div className="flex flex-col">
+                <form onSubmit={handleExternaSubmit} className="p-6 space-y-6 border-b border-zinc-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Insumo *</label>
+                      <select 
+                        required
+                        value={extItem}
+                        onChange={(e) => setExtItem(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      >
+                        <option value="" disabled>Selecione um insumo...</option>
+                        {insumos.map(mat => (
+                          <option key={mat.id} value={mat.item}>{mat.item}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Estoque Atual (Anterior)</label>
+                      <Input 
+                        type="text" 
+                        disabled
+                        value={extEstoqueAtual}
+                        className="w-full bg-zinc-50 text-zinc-500"
+                        placeholder="Automático"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Nova Quantidade Externa *</label>
+                      <Input 
+                        type="number" 
+                        min="0"
+                        required
+                        placeholder="Ex: 50"
+                        value={extNovaQtd}
+                        onChange={(e) => setExtNovaQtd(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="w-full font-bold text-purple-700"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-zinc-700">Diferença</label>
+                      <Input 
+                        type="text" 
+                        disabled
+                        value={extDiferenca > 0 ? `+${extDiferenca}` : extDiferenca}
+                        className={`w-full font-bold ${extDiferenca > 0 ? 'text-blue-600' : extDiferenca < 0 ? 'text-orange-600' : 'text-zinc-500'}`}
+                        placeholder="Automático"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" disabled={isSubmitting} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                      {isSubmitting ? 'Registrando Atualização...' : 'Registrar Atualização'}
+                    </Button>
+                  </div>
+                </form>
+
+                <div className="p-0 overflow-x-auto">
+                  <div className="p-6 bg-zinc-50 border-b border-zinc-200">
+                    <h3 className="font-bold text-zinc-800">Histórico de Atualizações Externas</h3>
+                  </div>
+                  <Table>
+                    <TableHeader className="bg-zinc-50/50">
+                      <TableRow className="border-zinc-100 hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Insumo</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Estoque Ant.</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Nova Qtd</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Diferença</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Movimentação</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {externaHistory.map(m => {
+                        let parsed: any = {};
+                        try {
+                          parsed = JSON.parse(m.observacoes || "{}");
+                        } catch(e) {}
+                        
+                        return (
+                          <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
+                            <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="max-w-[180px] text-zinc-900 font-medium" style={{wordBreak: 'break-word'}}>{m.item}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center text-zinc-500">{parsed.estoque_anterior ?? '-'}</TableCell>
+                            <TableCell className="text-center font-bold text-purple-700">{parsed.estoque_posterior ?? '-'}</TableCell>
+                            <TableCell className={`text-center font-bold ${parsed.diferenca > 0 ? 'text-blue-600' : parsed.diferenca < 0 ? 'text-orange-600' : 'text-zinc-400'}`}>
+                              {parsed.diferenca > 0 ? `+${parsed.diferenca}` : parsed.diferenca}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className={m.tipo.includes('Entrada') ? 'text-blue-700 border-blue-200 bg-blue-50' : m.tipo.includes('Saída') ? 'text-orange-700 border-orange-200 bg-orange-50' : 'text-zinc-600 border-zinc-200 bg-zinc-50'}>
+                                {m.tipo.includes('Entrada') ? 'Entrada' : m.tipo.includes('Saída') ? 'Saída' : 'Neutra'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-zinc-600 text-xs">{m.usuario}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      {externaHistory.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-12 text-zinc-500">
+                            <p>Nenhuma atualização externa registrada.</p>
                           </TableCell>
                         </TableRow>
                       )}
