@@ -71,6 +71,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       
       setUserRole(role);
       setUserCD(userCd);
+
+      if (user.toLowerCase() === 'pedro.queiroz' || user.toLowerCase() === 'francisco.edson') {
+        setActiveTab('AJUSTE');
+      }
       
       if (role === 'OPERACIONAL' && userCd && cd.toLowerCase() !== userCd.toLowerCase()) {
         window.location.href = `/compras/formularios/${userCd.toLowerCase()}`;
@@ -289,23 +293,27 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         </div>
 
         <div className="flex gap-4 border-b border-transparent">
-          <button 
-            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-            onClick={() => setActiveTab('NOVA')}
-          >
-            NOVA SOLICITAÇÃO
-          </button>
-          <button 
-            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-            onClick={() => setActiveTab('PENDENTES')}
-          >
-            APROVAÇÕES PENDENTES
-            {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
-              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                {movimentacoes.filter(m => m.status === 'PENDENTE').length}
-              </span>
-            )}
-          </button>
+          {!isAjusteAllowed && (
+            <>
+              <button 
+                className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                onClick={() => setActiveTab('NOVA')}
+              >
+                NOVA SOLICITAÇÃO
+              </button>
+              <button 
+                className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                onClick={() => setActiveTab('PENDENTES')}
+              >
+                APROVAÇÕES PENDENTES
+                {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                    {movimentacoes.filter(m => m.status === 'PENDENTE').length}
+                  </span>
+                )}
+              </button>
+            </>
+          )}
           {isAjusteAllowed && (
             <button 
               className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'AJUSTE' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
