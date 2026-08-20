@@ -94,7 +94,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   let setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
 
   if (cd.toLowerCase() === 'jundiai' && responsavelOriginal.toLowerCase().startsWith('josiane.ferreira')) {
-    setores = ["Conferência", "Pedidos", "QG"];
+    setores = [...setoresBase, "Conferência", "Pedidos", "QG"];
   }
 
   useEffect(() => {
