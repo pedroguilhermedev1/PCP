@@ -63,6 +63,7 @@ export function DashboardClient({
   // Auth
   const [currentUser, setCurrentUser] = useState("");
   const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
+  const isGabriel = currentUser.toLowerCase() === 'gabriel.oliveira';
 
   // Tabs
   const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('gerencial');
@@ -483,40 +484,47 @@ export function DashboardClient({
           {/* Sessão Insumos (Apenas Entradas e Aprovações) */}
           {(activeTab === 'insumos') && (
             <div>
-              <div className="mb-12">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
+              {!isGabriel ? (
+                <div className="mb-12">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-zinc-400" />
+                      <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <SelectFilter 
+                        label="CD"
+                        value={userCD} 
+                        onChange={(e) => setUserCD(e.target.value)}
+                        disabled={userRole === 'OPERACIONAL'}
+                        options={[
+                          { value: "todos", label: "Todos" },
+                          ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
+                        ]}
+                      />
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <SelectFilter 
-                      label="CD"
-                      value={userCD} 
-                      onChange={(e) => setUserCD(e.target.value)}
-                      disabled={userRole === 'OPERACIONAL'}
-                      options={[
-                        { value: "todos", label: "Todos" },
-                        ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
-                      ]}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <InsumoCard 
+                      title="Aprovações Pendentes"
+                      value={entradasPendentesCount}
+                      subtitle={userCD === "todos" ? "Filtre por CD para habilitar o atalho" : "Movimentações aguardando aprovação"}
+                      icon={Package}
+                      colorClass="text-orange-600"
+                      borderClass={userCD === "todos" ? "border-orange-200" : "border-orange-200 cursor-pointer hover:shadow-md transition-all"}
+                      bgClass="bg-orange-50/20"
+                      onClick={userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
                     />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <InsumoCard 
-                    title="Aprovações Pendentes"
-                    value={entradasPendentesCount}
-                    subtitle={userCD === "todos" ? "Filtre por CD para habilitar o atalho" : "Movimentações aguardando aprovação"}
-                    icon={Package}
-                    colorClass="text-orange-600"
-                    borderClass={userCD === "todos" ? "border-orange-200" : "border-orange-200 cursor-pointer hover:shadow-md transition-all"}
-                    bgClass="bg-orange-50/20"
-                    onClick={userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
-                  />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 mb-12 text-zinc-500 bg-white rounded-xl border border-zinc-200 shadow-sm">
+                  <Package className="w-12 h-12 mb-4 text-zinc-300" />
+                  <p className="text-lg font-medium">Esta seção é restrita aos responsáveis por entradas.</p>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

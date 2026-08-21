@@ -60,6 +60,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const [responsavelOriginal, setResponsavelOriginal] = useState("");
   const isAjusteAllowed = responsavelOriginal.toLowerCase() === 'pedro.queiroz' || responsavelOriginal.toLowerCase() === 'francisco.edson';
   const isExternaAllowed = isAjusteAllowed && cd.toLowerCase() === 'psd';
+  const isFabio = responsavelOriginal.toLowerCase() === 'fabio.pessoa';
+  const isGabriel = responsavelOriginal.toLowerCase() === 'gabriel.oliveira';
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
@@ -75,6 +77,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
       if (user.toLowerCase() === 'pedro.queiroz' || user.toLowerCase() === 'francisco.edson') {
         setActiveTab('AJUSTE');
+      } else if (user.toLowerCase() === 'fabio.pessoa') {
+        setActiveTab('PENDENTES');
       }
       
       if (role === 'OPERACIONAL' && userCd && cd.toLowerCase() !== userCd.toLowerCase()) {
@@ -373,23 +377,27 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         <div className="flex gap-4 border-b border-transparent">
           {!isAjusteAllowed && (
             <>
-              <button 
-                className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-                onClick={() => setActiveTab('NOVA')}
-              >
-                NOVA SOLICITAÇÃO
-              </button>
-              <button 
-                className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-                onClick={() => setActiveTab('PENDENTES')}
-              >
-                APROVAÇÕES PENDENTES
-                {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                    {movimentacoes.filter(m => m.status === 'PENDENTE').length}
-                  </span>
-                )}
-              </button>
+              {!isFabio && (
+                <button 
+                  className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                  onClick={() => setActiveTab('NOVA')}
+                >
+                  NOVA SOLICITAÇÃO
+                </button>
+              )}
+              {!isGabriel && (
+                <button 
+                  className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                  onClick={() => setActiveTab('PENDENTES')}
+                >
+                  APROVAÇÕES PENDENTES
+                  {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                      {movimentacoes.filter(m => m.status === 'PENDENTE').length}
+                    </span>
+                  )}
+                </button>
+              )}
             </>
           )}
           {isAjusteAllowed && (
@@ -442,7 +450,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               )}
             </div>
 
-            {activeTab === 'NOVA' && (
+            {activeTab === 'NOVA' && !isFabio && (
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 <div className="space-y-4">
                   
@@ -554,7 +562,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               </form>
             )}
 
-            {activeTab === 'PENDENTES' && (
+            {activeTab === 'PENDENTES' && !isGabriel && (
               <div className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-zinc-50/50">
