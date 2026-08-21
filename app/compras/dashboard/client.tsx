@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2 } from "lucide-react";
+import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
@@ -64,6 +64,26 @@ export function DashboardClient({
   const [currentUser, setCurrentUser] = useState("");
   const isAdmin = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
   const isGabriel = currentUser.toLowerCase() === 'gabriel.oliveira';
+
+  // Theme
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    setTheme(isDark ? 'dark' : 'light');
+  }, []);
+
+  const toggleTheme = () => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('pcp_theme', 'dark');
+      setTheme('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('pcp_theme', 'light');
+      setTheme('light');
+    }
+  };
 
   // Tabs
   const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('gerencial');
@@ -298,10 +318,19 @@ export function DashboardClient({
         </div>
         
         {currentUser && (
-          <div className="hidden md:flex items-center bg-zinc-50 px-4 py-2 rounded-lg border border-zinc-200/60 shadow-sm">
-            <span className="text-sm font-semibold text-zinc-700">
-              Bem Vindo(a), <span className="text-purple-700">{currentUser.split('.').map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(' ')}</span>!
-            </span>
+          <div className="hidden md:flex items-center gap-3">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-zinc-50 border border-zinc-200/60 shadow-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+              title="Alternar tema"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <div className="flex items-center bg-zinc-50 px-4 py-2 rounded-lg border border-zinc-200/60 shadow-sm">
+              <span className="text-sm font-semibold text-zinc-700">
+                Bem Vindo(a), <span className="text-purple-700">{currentUser.split('.').map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(' ')}</span>!
+              </span>
+            </div>
           </div>
         )}
       </header>
