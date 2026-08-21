@@ -29,7 +29,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           }}
         />
       </head>
-      <body suppressHydrationWarning className={`${inter.variable} font-sans bg-white text-zinc-900 h-screen overflow-hidden dark:bg-zinc-900 dark:text-zinc-100`}>
+      <body suppressHydrationWarning className={`${inter.variable} font-sans bg-white text-zinc-900 h-screen overflow-hidden`}>
         <AuthProvider>
           {children}
         </AuthProvider>
