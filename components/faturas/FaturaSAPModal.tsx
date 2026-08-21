@@ -660,6 +660,29 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   Fluxo Nexa (Direto)
                 </h3>
                 
+                {/* Dados do Documento */}
+                <div className="space-y-4 p-4 border border-blue-200 bg-white rounded-lg">
+                  <h4 className="font-semibold text-sm text-blue-900">Dados do Documento (NF / Boleto / etc.)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Número do Documento</label>
+                      <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF, Boleto..." />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Data de Emissão</label>
+                      <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Data de Recebimento</label>
+                      <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Data de Vencimento</label>
+                      <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
+                    </div>
+                  </div>
+                </div>
+                
                 {/* Etapa 1: PC Nexa */}
                 <div className="space-y-4 p-4 border border-blue-200 bg-white rounded-lg">
                   <div className="flex items-center gap-3">
