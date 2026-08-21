@@ -32,7 +32,7 @@ export function LoginForm() {
     const isOperationalNewPassword = [
       'fabio.pessoa',
       'gabriel.oliveira',
-      'josiane.ferreira',
+      'raphael.farrao',
       'rafael.soares'
     ].includes(parsedUsername) && password === `${parsedUsername}@2026`;
 
@@ -41,7 +41,7 @@ export function LoginForm() {
 
     const isDefaultAdminOrOldOpPassword = (
       (validUsers.includes(parsedUsername) || parsedUsername === 'debora.mota') &&
-      !['fabio.pessoa', 'gabriel.oliveira', 'josiane.ferreira', 'rafael.soares'].includes(parsedUsername) &&
+      !['fabio.pessoa', 'gabriel.oliveira', 'raphael.farrao', 'rafael.soares'].includes(parsedUsername) &&
       password === '123@456'
     );
 

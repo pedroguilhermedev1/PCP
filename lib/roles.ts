@@ -9,7 +9,7 @@ export const REPORTS_USERS = [
 ];
 
 export const OPERACIONAL_USERS = [
-  'josiane.ferreira',
+  'raphael.farrao',
   'rafael.soares',
   'psd.arco',
   'coc.arco',
@@ -51,7 +51,7 @@ export function formatUserName(username?: string): string {
   if (normalized === 'francisco.edson') return 'Francisco Edson';
   if (normalized === 'ivna.teixeira') return 'Ivna Teixeira';
   
-  if (normalized === 'josiane.ferreira') return 'Josiane Ferreira';
+  if (normalized === 'raphael.farrao') return 'Raphael Farrão';
   if (normalized === 'rafael.soares') return 'Rafael Soares';
   if (normalized === 'fabio.pessoa') return 'Fábio Pessoa';
   if (normalized === 'gabriel.oliveira') return 'Gabriel Oliveira';
@@ -67,7 +67,7 @@ export function getUserCD(username?: string): string | null {
   if (!username) return null;
   const normalized = username.trim().toLowerCase();
   
-  if (['josiane.ferreira', 'jundiai.arco'].includes(normalized)) return 'jundiai';
+  if (['raphael.farrao', 'jundiai.arco'].includes(normalized)) return 'jundiai';
   if (['rafael.soares', 'nse.arco'].includes(normalized)) return 'nse';
   if (['fabio.pessoa', 'gabriel.oliveira', 'fortaleza.arco'].includes(normalized)) return 'fortaleza';
   if (normalized === 'psd.arco') return 'psd';

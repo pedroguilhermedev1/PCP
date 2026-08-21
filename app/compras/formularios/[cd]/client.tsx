@@ -97,7 +97,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const isPrivileged = responsavelOriginal.toLowerCase().startsWith('pedro.queiroz') || responsavelOriginal.toLowerCase().startsWith('francisco.edson');
   let setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
 
-  if (cd.toLowerCase() === 'jundiai' && responsavelOriginal.toLowerCase().startsWith('josiane.ferreira')) {
+  if (cd.toLowerCase() === 'jundiai' && responsavelOriginal.toLowerCase().startsWith('raphael.farrao')) {
     setores = [...setoresBase, "Conferência", "Pedidos", "QG"];
   }
 
