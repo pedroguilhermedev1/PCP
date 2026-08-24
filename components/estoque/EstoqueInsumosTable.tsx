@@ -641,9 +641,7 @@ export function EstoqueInsumosTable({
                       {item.unidade}
                     </td>
                     <td className="px-6 py-4 text-zinc-600">
-                      <Badge variant="outline" className="bg-zinc-50">
-                        {item.categoria || '-'}
-                      </Badge>
+                      {item.categoria || '-'}
                     </td>
                     <td className="px-6 py-4 text-right text-zinc-600">
                       {item.lead_time || '-'}
