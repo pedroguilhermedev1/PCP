@@ -11,6 +11,19 @@ import { useLembretes } from "@/components/lembretes/LembretesContext"
 import { useCronogramaNotification } from "@/components/cronograma/CronogramaNotificationContext"
 import { motion, AnimatePresence } from "motion/react"
 
+const getShortTitle = (title: string) => {
+  const map: Record<string, string> = {
+    'Fortaleza': 'FOR',
+    'Jundiaí': 'JDI',
+    'NSE': 'NSE',
+    'COC': 'COC',
+    'PSD': 'PSD',
+    'Materiais': 'MAT',
+    'Serviços': 'SER'
+  };
+  return map[title] || title.substring(0, 3).toUpperCase();
+};
+
 const sidebarItems = [
   {
     type: 'link',
@@ -393,7 +406,7 @@ export function Sidebar() {
                               )}
                             >
                               <div className="flex items-center gap-2">
-                                {isCollapsed ? <span className="font-bold text-[10px]">{item.title.substring(0,2)}</span> : item.icon}
+                                {isCollapsed ? <span className="font-bold text-[10px]">{getShortTitle(item.title)}</span> : item.icon}
                                 {!isCollapsed && <span className="whitespace-nowrap">{item.title}</span>}
                               </div>
                             </Link>

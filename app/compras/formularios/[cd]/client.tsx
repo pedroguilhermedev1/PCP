@@ -377,14 +377,12 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         <div className="flex gap-4 border-b border-transparent">
           {!isAjusteAllowed && (
             <>
-              {!isFabio && (
-                <button 
-                  className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-                  onClick={() => setActiveTab('NOVA')}
-                >
-                  NOVA SOLICITAÇÃO
-                </button>
-              )}
+              <button 
+                className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                onClick={() => setActiveTab('NOVA')}
+              >
+                NOVA SOLICITAÇÃO
+              </button>
               {!isGabriel && (
                 <button 
                   className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
@@ -450,7 +448,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               )}
             </div>
 
-            {activeTab === 'NOVA' && !isFabio && (
+            {activeTab === 'NOVA' && (
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 <div className="space-y-4">
                   
