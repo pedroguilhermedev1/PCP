@@ -138,7 +138,7 @@ function NovaMovimentacaoModal({
           usuario: responsavel,
           setor: tipo === 'Saída' ? setor : undefined,
           observacoes: tipo === 'Saída' ? `[Solicitante: ${solicitante}] ${justificativa}` : undefined,
-          tipo_envio: tipoEnvio
+          tipo_envio: 'Principal'
         })
       });
 
