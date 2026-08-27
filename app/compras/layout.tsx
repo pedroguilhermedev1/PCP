@@ -11,6 +11,7 @@ import { LembretesProvider } from '@/components/lembretes/LembretesContext';
 import { LembretesNotification } from '@/components/lembretes/LembretesNotification';
 import { CronogramaNotificationProvider } from '@/components/cronograma/CronogramaNotificationContext';
 import { CronogramaNotificationUI } from '@/components/cronograma/CronogramaNotificationUI';
+import { PendenciasNotification } from '@/components/PendenciasNotification';
 
 export default function ComprasLayout({
   children,
@@ -83,6 +84,7 @@ export default function ComprasLayout({
           </main>
         </div>
         <LembretesNotification />
+        <PendenciasNotification />
         <CronogramaNotificationUI />
       </CronogramaNotificationProvider>
     </LembretesProvider>

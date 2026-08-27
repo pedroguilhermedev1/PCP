@@ -573,6 +573,7 @@ export function EstoqueInsumosTable({
               <th className="px-6 py-4 font-semibold bg-zinc-50">Item OP</th>
               <th className="px-6 py-4 font-semibold text-center bg-zinc-50">Unidade</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">Categoria</th>
+              <th className="px-6 py-4 font-semibold text-right bg-zinc-50">CMD</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Lead Time</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Est. Mín</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Est. Real</th>
@@ -584,7 +585,7 @@ export function EstoqueInsumosTable({
           <tbody className="divide-y divide-zinc-200">
             {loading ? (
               <tr>
-                <td colSpan={isAdmin ? 13 : 12} className="px-6 py-12 text-center text-zinc-500">
+                <td colSpan={isAdmin ? 14 : 13} className="px-6 py-12 text-center text-zinc-500">
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <RefreshCw className="w-6 h-6 animate-spin text-purple-600" />
                     <p>Carregando insumos...</p>
@@ -595,7 +596,7 @@ export function EstoqueInsumosTable({
               filteredInsumos.map((item, index) => {
                 const cmd = parseFloat(item.cmd) || 10;
                 const lt = parseFloat(item.lead_time) || 0;
-                const em = cmd * lt;
+                const em = Math.ceil(cmd * lt);
                 
                 const coberturaNum = cmd > 0 ? (item.estoque_real / cmd) : Infinity;
                 const ce = cmd > 0 ? coberturaNum.toFixed(1) : '∞';
@@ -644,9 +645,12 @@ export function EstoqueInsumosTable({
                       {item.categoria || '-'}
                     </td>
                     <td className="px-6 py-4 text-right text-zinc-600">
+                      {item.cmd || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right text-zinc-600">
                       {item.lead_time || '-'}
                     </td>
-                    <td className="px-6 py-4 text-right text-zinc-700" title={`EM: ${em}`}>
+                    <td className="px-6 py-4 text-right text-zinc-700">
                       {em}
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-zinc-900">

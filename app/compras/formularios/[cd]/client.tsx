@@ -25,8 +25,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const { insumos, refetch: refetchInsumos } = useEstoqueInsumos(cd);
   const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd, undefined, 'PENDENTE');
   const { movimentacoes: histAprovadas, refresh: refreshAprovadas } = useInsumosMovimentacoes(cd, undefined, 'Aprovada');
+  const { movimentacoes: movsReprovadas, refresh: refreshReprovadas } = useInsumosMovimentacoes(cd, undefined, 'REPROVADO');
 
-  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'AJUSTE' | 'EXTERNA'>('NOVA');
+  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'REPROVADAS' | 'AJUSTE' | 'EXTERNA'>('NOVA');
+  const [editingReprovadaId, setEditingReprovadaId] = useState<string | null>(null);
 
   const [filterCD, setFilterCD] = useState("TODOS");
 
@@ -135,6 +137,48 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         setErrorMsg(`A quantidade solicitada (${quantidade}) é maior que o saldo em estoque (${selectedInsumo.estoque_real || 0}).`);
         return;
       }
+    }
+
+    // Se estivermos editando uma reprovada, chamamos a API de update
+    if (editingReprovadaId) {
+      setIsSubmitting(true);
+      try {
+        const res = await fetch(`/api/movimentacoes/${editingReprovadaId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quantidade: Number(quantidade),
+            setor: tipo === 'Saída' ? setor : undefined,
+            observacoes: tipo === 'Saída' ? justificativa : undefined,
+            status: 'PENDENTE'
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao re-submeter.');
+
+        setSuccessMsg(`Solicitação corrigida e reenviada com sucesso!`);
+        refreshReprovadas();
+        refresh();
+        setTimeout(() => setSuccessMsg(""), 5000);
+
+        // Limpar
+        setEditingReprovadaId(null);
+        setItem("");
+        setCodigo("");
+        setQuantidade("");
+        setIdentificador("");
+        setSetor("");
+        setSolicitante("");
+        setJustificativa("");
+        setActiveTab('REPROVADAS');
+      } catch (err: any) {
+        console.error(err);
+        setErrorMsg(err.message || 'Erro inesperado ao corrigir.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
 
     setIsSubmitting(true);
@@ -396,6 +440,19 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   )}
                 </button>
               )}
+              {(isPrivileged || userRole === 'OPERACIONAL') && (
+                <button 
+                  className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+                  onClick={() => setActiveTab('REPROVADAS')}
+                >
+                  REPROVADAS
+                  {movsReprovadas.length > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                      {movsReprovadas.length}
+                    </span>
+                  )}
+                </button>
+              )}
             </>
           )}
           {isAjusteAllowed && (
@@ -436,10 +493,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm">
             <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
               <h2 className="text-lg font-bold text-zinc-800">
-                {activeTab === 'NOVA' ? 'NOVA SOLICITAÇÃO' : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' : 'AJUSTE DE ESTOQUE'}
+                {activeTab === 'NOVA' ? (editingReprovadaId ? 'CORRIGIR SOLICITAÇÃO' : 'NOVA SOLICITAÇÃO') : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' : activeTab === 'REPROVADAS' ? 'SOLICITAÇÕES REPROVADAS' : 'AJUSTE DE ESTOQUE'}
               </h2>
               {activeTab === 'NOVA' && (
                 <p className="text-sm text-zinc-500 mt-1">
@@ -574,7 +631,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Qtd</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
-                      {userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase() && <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>}
+                      {(isPrivileged || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase())) && <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -607,27 +664,49 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                             {m.observacoes || '-'}
                           </div>
                         </TableCell>
-                        {userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase() && (
+                        {(isPrivileged || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase())) && (
                           <TableCell className="text-center">
-                            <Button 
-                              size="sm" 
-                              variant="default"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={async () => {
-                                try {
-                                  const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
-                                  const data = await res.json();
-                                  if (!res.ok) throw new Error(data.error);
-                                  setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
-                                  setTimeout(() => setSuccessMsg(""), 5000);
-                                  refresh();
-                                } catch (e: any) {
-                                  setErrorMsg(e.message);
-                                }
-                              }}
-                            >
-                              Aprovar
-                            </Button>
+                            <div className="flex flex-col gap-2 items-center justify-center">
+                              <Button 
+                                size="sm" 
+                                variant="default"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data.error);
+                                    setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
+                                    setTimeout(() => setSuccessMsg(""), 5000);
+                                    refresh();
+                                  } catch (e: any) {
+                                    setErrorMsg(e.message);
+                                  }
+                                }}
+                              >
+                                Aprovar
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-red-600 border-red-200 hover:bg-red-50 w-full"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/movimentacoes/${m.id}/reprovar`, { method: 'POST' });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data.error);
+                                    setSuccessMsg(`Movimentação enviada para correção!`);
+                                    setTimeout(() => setSuccessMsg(""), 5000);
+                                    refresh();
+                                    refreshReprovadas();
+                                  } catch (e: any) {
+                                    setErrorMsg(e.message);
+                                  }
+                                }}
+                              >
+                                Reprovar
+                              </Button>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
@@ -638,6 +717,86 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <CheckCircle2 className="w-8 h-8 text-zinc-300" />
                             <p>Nenhuma solicitação pendente encontrada.</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {activeTab === 'REPROVADAS' && (isPrivileged || userRole === 'OPERACIONAL') && (
+              <div className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-zinc-50/50">
+                    <TableRow className="border-zinc-100 hover:bg-transparent">
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Setor</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Qtd</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movsReprovadas.map(m => (
+                      <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-red-50/50 transition-colors">
+                        <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="font-semibold text-zinc-600">{m.cd.toUpperCase()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
+                            {m.tipo}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="max-w-[200px] text-zinc-900 font-medium" style={{wordBreak: 'break-word'}}>{m.item}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-zinc-600">
+                          {m.setor || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant="secondary" className="font-bold text-sm bg-zinc-100 text-zinc-800">
+                            {m.quantidade}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-zinc-600">{m.usuario}</TableCell>
+                        <TableCell>
+                          <div className="max-w-[200px] text-xs text-zinc-500" style={{wordBreak: 'break-word'}}>
+                            {m.observacoes || '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            onClick={() => {
+                              setEditingReprovadaId(m.id);
+                              setItem(m.item);
+                              setCodigo(m.codigo || "");
+                              setQuantidade(m.quantidade || "");
+                              setSetor(m.setor || "");
+                              setJustificativa(m.observacoes || "");
+                              setActiveTab('NOVA');
+                            }}
+                          >
+                            Corrigir
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {movsReprovadas.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-12 text-zinc-500">
+                          <div className="flex flex-col items-center justify-center space-y-2">
+                            <CheckCircle2 className="w-8 h-8 text-zinc-300" />
+                            <p>Nenhuma solicitação reprovada encontrada.</p>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -694,14 +853,20 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-zinc-700">Motivo do Ajuste *</label>
-                      <Input 
-                        type="text" 
+                      <select
                         required
-                        placeholder="Ex: Contagem física divergente"
                         value={ajusteMotivo}
                         onChange={(e) => setAjusteMotivo(e.target.value)}
-                        className="w-full"
-                      />
+                        className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600"
+                      >
+                        <option value="" disabled>Selecione um motivo...</option>
+                        <option value="Contagem física (Divergência)">Contagem física (Divergência)</option>
+                        <option value="Perda / Avaria">Perda / Avaria</option>
+                        <option value="Vencimento / Validade">Vencimento / Validade</option>
+                        <option value="Ajuste de Sistema (Erro de lançamento)">Ajuste de Sistema (Erro de lançamento)</option>
+                        <option value="Doação / Amostra / Teste">Doação / Amostra / Teste</option>
+                        <option value="Outros">Outros</option>
+                      </select>
                     </div>
                   </div>
 
@@ -764,10 +929,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                             <TableCell className="text-right text-zinc-500">{parsed.estoque_anterior ?? '-'}</TableCell>
                             <TableCell className="text-right font-semibold text-purple-700">{parsed.estoque_posterior ?? '-'}</TableCell>
                             <TableCell>
-                              <span className="text-xs text-zinc-600 block max-w-[120px] truncate" title={parsed.motivo || '-'}>{parsed.motivo || '-'}</span>
+                              <span className="text-xs text-zinc-600 block max-w-[200px]" style={{wordBreak: 'break-word'}}>{parsed.motivo || '-'}</span>
                             </TableCell>
                             <TableCell>
-                              <span className="text-xs text-zinc-500 block max-w-[120px] truncate" title={parsed.obs || '-'}>{parsed.obs || '-'}</span>
+                              <span className="text-xs text-zinc-500 block max-w-[200px]" style={{wordBreak: 'break-word'}}>{parsed.obs || '-'}</span>
                             </TableCell>
                             <TableCell className="text-zinc-600 text-xs">{m.usuario}</TableCell>
                           </TableRow>

@@ -82,6 +82,14 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       const stat = calcularStatus(f);
       if (stat.toLowerCase() !== filterStatus.toLowerCase()) return false;
     }
+    
+    const filterEtapa = searchParams.get('filtro_etapa');
+    if (filterEtapa) {
+      const etapa = calcularEtapa(f);
+      const isFinalizado = (etapa === 'Aguardando pagamento' || etapa === 'Pago');
+      if (filterEtapa === 'aguardando' && !isFinalizado) return false;
+      if (filterEtapa === 'em_aberto' && isFinalizado) return false;
+    }
 
     if (filterResponsavel !== "todos") {
       if ((f.responsavel || '') !== filterResponsavel) return false;
@@ -505,9 +513,49 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                                       <span className="text-[11px] font-bold text-emerald-800 uppercase block mb-1">Doc Subsequente</span>
                                       <span className="text-sm font-medium text-emerald-900">{f.doc_subsequente_criado ? 'Criado' : 'Não criado'}</span>
                                     </div>
+                                    
+                                    {f.doc_subsequente_criado && (
+                                      <div className="mt-4 pt-4 border-t border-dashed border-zinc-200 space-y-3">
+                                        <h5 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Continuação no Nexa</h5>
+                                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                          <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1">Chamado / NF</span>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-blue-900">{f.nexa_chamado || (f.nexa_anexada ? 'Anexada' : 'Pendente')}</span>
+                                            <span className="text-xs text-blue-600">{f.nexa_data_envio?.split('-').reverse().join('/') || '-'}</span>
+                                          </div>
+                                        </div>
+                                        <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                                          <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Lançamento Fiscal</span>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-slate-900">{f.nexa_lancamento_concluido ? 'Concluído' : 'Pendente'}</span>
+                                            <span className="text-xs text-slate-500">{f.nexa_data_conclusao_lancamento?.split('-').reverse().join('/') || '-'}</span>
+                                          </div>
+                                        </div>
+                                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                          <span className="text-[11px] font-bold text-amber-800 uppercase block mb-1">Programação Pgto</span>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-amber-900">{f.nexa_pagamento_programado ? 'Programado' : 'Pendente'}</span>
+                                            <span className="text-xs text-amber-600">{f.nexa_data_prevista_pagamento?.split('-').reverse().join('/') || '-'}</span>
+                                          </div>
+                                        </div>
+                                        <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                                          <span className="text-[11px] font-bold text-green-800 uppercase block mb-1">Pagamento Realizado</span>
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium text-green-900">{f.nexa_pagamento_realizado ? 'Pago' : 'Pendente'}</span>
+                                            <span className="text-xs text-green-600">{f.data_pagamento_real?.split('-').reverse().join('/') || '-'}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="space-y-3">
+                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                      <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1">Ticket Nexa (Chamado)</span>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-purple-900">{f.nexa_chamado || 'Pendente'}</span>
+                                      </div>
+                                    </div>
                                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
                                       <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1">PC Nexa</span>
                                       <div className="flex justify-between items-center">

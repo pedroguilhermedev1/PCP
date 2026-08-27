@@ -19,7 +19,7 @@ export function RelatoriosClient() {
   const [dataFinal, setDataFinal] = useState<string>('');
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userCD, setUserCD] = useState<string | null>(null);
-  
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('Todas');
@@ -38,12 +38,13 @@ export function RelatoriosClient() {
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     if (user) {
+      setCurrentUser(user);
       const role = getUserRole(user);
       setUserRole(role);
       const cd = getUserCD(user);
       setUserCD(cd);
 
-      if (role === 'OPERACIONAL') {
+      if (role === 'OPERACIONAL' && user !== 'rafael.soares') {
         setActiveTab('produtos');
         if (cd) setCdFiltro(cd);
       }
@@ -51,7 +52,7 @@ export function RelatoriosClient() {
   }, []);
 
   const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas-sap'];
-  const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
+  const visibleTabs = (userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares') ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
     if (activeTab !== 'fornecedores' && (!dataInicial || !dataFinal)) {
@@ -69,7 +70,7 @@ export function RelatoriosClient() {
 
       if (!supabase) throw new Error("Supabase não inicializado.");
 
-      const effectiveCdFiltro = userRole === 'OPERACIONAL' && userCD ? userCD : cdFiltro;
+      const effectiveCdFiltro = (userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares') && userCD ? userCD : cdFiltro;
 
       if (activeTab === 'fornecedores') {
         let q = supabase.from('fornecedores').select('*').order('created_at', { ascending: false });
@@ -375,9 +376,9 @@ export function RelatoriosClient() {
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">CD</label>
                   <select 
-                    value={userRole === 'OPERACIONAL' && userCD ? userCD : cdFiltro} 
+                    value={(userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares') && userCD ? userCD : cdFiltro} 
                     onChange={(e) => setCdFiltro(e.target.value)} 
-                    disabled={userRole === 'OPERACIONAL'}
+                    disabled={(userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares')}
                     className="flex h-9 w-[160px] rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:opacity-50"
                   >
                     <option value="Todos">Todos</option>

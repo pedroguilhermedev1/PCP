@@ -92,11 +92,6 @@ const sidebarItems = [
         href: "/compras/insumos/coc",
         icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
-      {
-        title: "PSD",
-        href: "/compras/insumos/psd",
-        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
     ]
   },
   {
@@ -139,11 +134,6 @@ const sidebarItems = [
       {
         title: "COC",
         href: "/compras/formularios/coc",
-        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "PSD",
-        href: "/compras/formularios/psd",
         icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
       },
     ]

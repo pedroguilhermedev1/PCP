@@ -38,7 +38,6 @@ function NovaMovimentacaoModal({
   insumos,
   refetch,
   refreshMovs,
-  tipoEnvio,
   responsavelOriginal
 }: { 
   isOpen: boolean; 
@@ -50,7 +49,6 @@ function NovaMovimentacaoModal({
   insumos: any[];
   refetch: () => void;
   refreshMovs: () => void;
-  tipoEnvio: string;
   responsavelOriginal: string;
 }) {
 
@@ -277,14 +275,13 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTipo, setModalTipo] = useState<'Entrada' | 'Saída'>('Entrada');
   const [editItem, setEditItem] = useState<any | null>(null);
-  const [activeTipoEnvio, setActiveTipoEnvio] = useState<'Principal' | 'Complementar'>('Principal');
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
-  const { movimentacoes, refresh } = useInsumosMovimentacoes(cd, activeTipoEnvio);
+  const { movimentacoes, refresh } = useInsumosMovimentacoes(cd);
   // Movimentacoes are fetched by cd.
   // Actually, we can just filter by insumos list below.
   
-  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd, undefined, activeTipoEnvio);
+  const { insumos, loading, error, refetch } = useEstoqueInsumos(cd);
   
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [currentUserOriginal, setCurrentUserOriginal] = useState<string>('');
@@ -367,7 +364,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
         insumos={insumos}
         refetch={refetch}
         refreshMovs={refresh}
-        tipoEnvio={activeTipoEnvio}
       />
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -431,30 +427,6 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                 </button>
               </>
             )}
-            </div>
-
-            {/* Filtro Tipo de Envio */}
-            <div className="flex bg-zinc-100 p-1 rounded-lg self-start sm:mb-2">
-              <button
-                onClick={() => setActiveTipoEnvio('Principal')}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTipoEnvio === 'Principal' 
-                    ? 'bg-white text-purple-700 shadow-sm' 
-                    : 'text-zinc-500 hover:text-zinc-700'
-                }`}
-              >
-                Principal
-              </button>
-              <button
-                onClick={() => setActiveTipoEnvio('Complementar')}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                  activeTipoEnvio === 'Complementar' 
-                    ? 'bg-white text-purple-700 shadow-sm' 
-                    : 'text-zinc-500 hover:text-zinc-700'
-                }`}
-              >
-                Complementar
-              </button>
             </div>
           </div>
         </div>

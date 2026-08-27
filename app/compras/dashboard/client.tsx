@@ -108,7 +108,6 @@ export function DashboardClient({
   const [insMes, setInsMes] = useState<string>(currentMonth);
   const [insDia, setInsDia] = useState<string>("todos");
   const [insCD, setInsCD] = useState<string>("todos");
-  const [insTipoEnvio, setInsTipoEnvio] = useState<string>("Principal");
 
   // User Dashboard Filters
   const [userCD, setUserCD] = useState<string>("todos");
@@ -158,8 +157,8 @@ export function DashboardClient({
 
       if (fatCategoria !== "Todas" && f.categoria !== fatCategoria) return false;
 
-      // Usando data_emissao para filtro de Faturas, fallback para created_at ou hoje
-      const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
+      // Usando data_vencimento para filtro de Faturas, fallback para data_emissao, created_at ou hoje
+      const dataStr = f.data_vencimento || f.data_emissao || (f as any).created_at || new Date().toISOString();
       const d = new Date(dataStr);
       const m = (d.getMonth() + 1).toString().padStart(2, '0');
       const y = d.getFullYear().toString();
@@ -218,18 +217,14 @@ export function DashboardClient({
   // Filtered Insumos (Snapshots)
   const filteredInsumos = useMemo(() => {
     return insumos.filter(i => {
-      const tipo = i.tipo_envio || 'Principal';
-      if (tipo !== insTipoEnvio) return false;
       if (insCD !== "todos" && i.cd !== insCD) return false;
       return true;
     });
-  }, [insumos, insCD, insTipoEnvio]);
+  }, [insumos, insCD]);
 
   // Filtered Movimentações
   const filteredMovs = useMemo(() => {
     return movimentacoes.filter(m => {
-      const tipo = m.tipo_envio || 'Principal';
-      if (tipo !== insTipoEnvio) return false;
       
       // Filtrar por CD
       if (insCD !== "todos" && m.cd !== insCD) return false;
@@ -250,7 +245,7 @@ export function DashboardClient({
 
       return true;
     });
-  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD, insTipoEnvio]);
+  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD]);
 
 
   // Insumos Stats
@@ -439,16 +434,16 @@ export function DashboardClient({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&filtro_etapa=em_aberto&ano=${fatAno}&mes=${fatMes}`)}>
                       <FaturaCard title="Em Aberto, Em Atraso" value={formatBRL(faturasCards.emAbertoAtraso.val)} count={faturasCards.emAbertoAtraso.count} colorClass="text-red-700" borderClass="border-red-300" bgClass="bg-red-100/50" />
                     </div>
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&filtro_etapa=em_aberto&ano=${fatAno}&mes=${fatMes}`)}>
                       <FaturaCard title="Em Aberto No Prazo" value={formatBRL(faturasCards.emAbertoNoPrazo.val)} count={faturasCards.emAbertoNoPrazo.count} colorClass="text-blue-600" borderClass="border-blue-200" bgClass="bg-blue-50/50" />
                     </div>
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&ano=${fatAno}&mes=${fatMes}`)}>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=Vencido&filtro_etapa=aguardando&ano=${fatAno}&mes=${fatMes}`)}>
                       <FaturaCard title="Aguardando Pgto em Atraso" value={formatBRL(faturasCards.aguardandoAtraso.val)} count={faturasCards.aguardandoAtraso.count} colorClass="text-orange-600" borderClass="border-orange-300" bgClass="bg-orange-100/50" />
                     </div>
-                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&ano=${fatAno}&mes=${fatMes}`)}>
+                    <div className="contents cursor-pointer" onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?status=A_vencer&filtro_etapa=aguardando&ano=${fatAno}&mes=${fatMes}`)}>
                       <FaturaCard title="Aguardando Pgto no Prazo" value={formatBRL(faturasCards.aguardandoNoPrazo.val)} count={faturasCards.aguardandoNoPrazo.count} colorClass="text-emerald-600" borderClass="border-emerald-200" bgClass="bg-emerald-50/50" />
                     </div>
                   </div>
@@ -603,17 +598,6 @@ export function DashboardClient({
                     options={[
                       { value: "todos", label: "Todos" },
                       ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
-                    ]}
-                  />
-                  <div className="w-[1px] h-6 bg-zinc-200 hidden sm:block mx-1"></div>
-                  <SelectFilter 
-                    label="Envio"
-                    value={insTipoEnvio} 
-                    onChange={(e) => setInsTipoEnvio(e.target.value)}
-                    highlight={true}
-                    options={[
-                      { value: "Principal", label: "Principal" },
-                      { value: "Complementar", label: "Complementar" }
                     ]}
                   />
                 </div>
