@@ -34,6 +34,8 @@ export function PendenciasNotification() {
       const user = localStorage.getItem('pcp_user');
       const userNameFormatted = formatUserName(user || '');
 
+      if (!supabase) return;
+
       // Faturas Aguardando Aprovação (status_pagamento = 'Aguardando Aprovação' ou PC Nexa Concluído sem Programação)
       const { count: countAprovacao } = await supabase
         .from('faturas')
