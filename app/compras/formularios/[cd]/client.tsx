@@ -440,7 +440,9 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   )}
                 </button>
               )}
-              {(isPrivileged || userRole === 'OPERACIONAL') && (
+            </>
+          )}
+          {(isPrivileged || userRole === 'OPERACIONAL') && (
                 <button 
                   className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
                   onClick={() => setActiveTab('REPROVADAS')}
@@ -453,8 +455,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   )}
                 </button>
               )}
-            </>
-          )}
           {isAjusteAllowed && (
             <button 
               className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'AJUSTE' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}

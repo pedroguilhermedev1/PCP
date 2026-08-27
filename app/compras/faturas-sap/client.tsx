@@ -31,8 +31,10 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
   const [filterAno, setFilterAno] = useState<string>(qAno);
   const [filterMes, setFilterMes] = useState<string>(qMes);
-  const defaultStatus = searchParams.get('status') || 'todos';
+  const defaultStatus = searchParams.get('status')?.replace('_', ' ') || 'todos';
   const [filterStatus, setFilterStatus] = useState<string>(defaultStatus);
+  const defaultStatusPagamento = searchParams.get('status_pagamento') || 'todos';
+  const [filterStatusPagamento, setFilterStatusPagamento] = useState<string>(defaultStatusPagamento);
   const [filterResponsavel, setFilterResponsavel] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -89,6 +91,16 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       const isFinalizado = (etapa === 'Aguardando pagamento' || etapa === 'Pago');
       if (filterEtapa === 'aguardando' && !isFinalizado) return false;
       if (filterEtapa === 'em_aberto' && isFinalizado) return false;
+    }
+    
+    const etapaExata = searchParams.get('etapa_exata');
+    if (etapaExata) {
+      const etapa = calcularEtapa(f);
+      if (etapaExata === 'programacao' && etapa !== 'Aguardando programação de pagamento') return false;
+    }
+
+    if (filterStatusPagamento !== "todos") {
+      if ((f.status_pagamento || '').toLowerCase() !== filterStatusPagamento.toLowerCase()) return false;
     }
 
     if (filterResponsavel !== "todos") {
