@@ -5,6 +5,7 @@ import { Bell, AlertCircle, FileText, Package } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { getUserRole, getUserCD } from '@/lib/roles';
+import { formatUserName } from '@/lib/utils';
 
 export function PendenciasNotification() {
   const [faturasAprovacao, setFaturasAprovacao] = useState(0);
@@ -30,11 +31,15 @@ export function PendenciasNotification() {
 
   const fetchPendencias = async () => {
     try {
+      const user = localStorage.getItem('pcp_user');
+      const userNameFormatted = formatUserName(user || '');
+
       // Faturas Aguardando Aprovação (status_pagamento = 'Aguardando Aprovação' ou PC Nexa Concluído sem Programação)
       const { count: countAprovacao } = await supabase
         .from('faturas')
         .select('*', { count: 'exact', head: true })
-        .eq('status_pagamento', 'Aguardando Aprovação');
+        .eq('status_pagamento', 'Aguardando Aprovação')
+        .eq('responsavel', userNameFormatted);
 
       // Faturas Aguardando Prog Pgto
       const { count: countPgto } = await supabase
@@ -42,13 +47,15 @@ export function PendenciasNotification() {
         .select('*', { count: 'exact', head: true })
         .eq('is_sap', true)
         .eq('nexa_lancamento_concluido', true)
-        .eq('nexa_pagamento_programado', false);
+        .eq('nexa_pagamento_programado', false)
+        .eq('responsavel', userNameFormatted);
 
       // Insumos Aguardando Aprovação
       const { count: countInsumos } = await supabase
         .from('estoque_movimentacoes')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'PENDENTE');
+        .eq('status', 'PENDENTE')
+        .eq('usuario', userNameFormatted);
 
       setFaturasAprovacao(countAprovacao || 0);
       setFaturasPgto(countPgto || 0);
@@ -63,7 +70,7 @@ export function PendenciasNotification() {
   const total = faturasAprovacao + faturasPgto + solicitacoesInsumos;
 
   return (
-    <div className="fixed top-4 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-50">
       <div className="relative">
         <button 
           onClick={() => setIsOpen(!isOpen)}
@@ -78,7 +85,7 @@ export function PendenciasNotification() {
         </button>
 
         {isOpen && (
-          <div className="absolute top-12 right-0 w-80 bg-white rounded-xl shadow-xl border border-zinc-200 overflow-hidden text-sm">
+          <div className="absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-xl border border-zinc-200 overflow-hidden text-sm">
             <div className="px-4 py-3 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between">
               <span className="font-bold text-zinc-800">Pendências</span>
               <span className="text-xs font-semibold px-2 py-0.5 bg-zinc-200 text-zinc-600 rounded-full">{total}</span>
