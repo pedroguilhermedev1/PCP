@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 html.dark {
-  filter: invert(1) hue-rotate(180deg);
+  /* invert(0.92) torna o branco um cinza escuro suave (#151515) em vez de preto absoluto (#000000) */
+  /* brightness e contrast ajudam a manter as cores nítidas sem pesar nos olhos */
+  filter: invert(0.92) hue-rotate(180deg) brightness(1.05) contrast(0.95);
 }
 
 html.dark img,
 html.dark video,
 html.dark svg:not(.lucide),
 html.dark [data-theme-ignore] {
-  filter: invert(1) hue-rotate(180deg);
+  /* Reverte as imagens e ícones para a cor original */
+  filter: invert(0.92) hue-rotate(180deg) brightness(1.05) contrast(0.95);
 }
 
 html {
