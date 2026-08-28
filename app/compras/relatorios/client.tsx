@@ -55,6 +55,7 @@ export function RelatoriosClient() {
   const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
+    // Para fornecedores e produtos, a data é opcional. Para os demais, é obrigatória.
     if (activeTab !== 'fornecedores' && activeTab !== 'produtos' && (!dataInicial || !dataFinal)) {
       toast.error("Selecione a data inicial e final.");
       return;
@@ -81,15 +82,23 @@ export function RelatoriosClient() {
         let q = supabase.from('estoque_insumos')
           .select('*')
           .order('item', { ascending: true });
-        if (effectiveCdFiltro !== 'Todos') q = q.eq('cd', effectiveCdFiltro);
+        
+        if (dataInicial && dataFinal) {
+          q = q.gte('created_at', start);
+          q = q.lte('created_at', end);
+        }
+        
+        if (effectiveCdFiltro !== 'Todos') q = q.ilike('cd', effectiveCdFiltro);
         query = q;
       } else if (activeTab === 'movimentacoes') {
         let q = supabase.from('estoque_movimentacoes')
           .select('*')
           .order('data_hora', { ascending: false });
-        q = q.gte('data_hora', start);
-        q = q.lte('data_hora', end);
-        if (effectiveCdFiltro !== 'Todos') q = q.eq('cd', effectiveCdFiltro);
+        if (dataInicial && dataFinal) {
+          q = q.gte('data_hora', start);
+          q = q.lte('data_hora', end);
+        }
+        if (effectiveCdFiltro !== 'Todos') q = q.ilike('cd', effectiveCdFiltro);
         query = q;
       } else if (activeTab === 'faturas') {
         let q = supabase.from('faturas')
@@ -199,7 +208,7 @@ export function RelatoriosClient() {
           "Tipo de Envio (Indicadores)": 'Principal',
           "Estoque Atual": d.estoque_real,
           "Estoque Mínimo": d.estoque_minimo,
-          "Data Cadastro": d.data_cadastro ? new Date(d.data_cadastro).toLocaleDateString('pt-BR') : '-'
+          "Data Cadastro": d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '-'
         };
       });
     } else if (activeTab === 'movimentacoes') {
@@ -344,7 +353,7 @@ export function RelatoriosClient() {
 
           <div className="p-6">
             <div className="flex flex-col md:flex-row gap-4 items-end mb-6 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-              {activeTab !== 'fornecedores' && activeTab !== 'produtos' && (
+              {activeTab !== 'fornecedores' && (
                 <>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Inicial</label>
@@ -477,7 +486,7 @@ export function RelatoriosClient() {
                             <TableCell>{d.categoria || 'Geral'}</TableCell>
                             <TableCell className="font-bold">{d.estoque_real}</TableCell>
                             <TableCell>{d.estoque_minimo}</TableCell>
-                            <TableCell>{new Date(d.data_cadastro).toLocaleDateString('pt-BR')}</TableCell>
+                            <TableCell>{d.created_at ? new Date(d.created_at).toLocaleDateString('pt-BR') : '-'}</TableCell>
                           </>
                         )}
                         {activeTab === 'movimentacoes' && (
