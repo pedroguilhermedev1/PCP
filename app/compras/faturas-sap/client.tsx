@@ -360,9 +360,9 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-zinc-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] w-full overflow-hidden">
-        <Table>
-          <TableHeader className="bg-zinc-50/50">
+      <div className="w-full overflow-x-auto">
+        <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
+          <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
             <TableRow className="border-zinc-100 hover:bg-transparent">
               <TableHead className="w-12 text-center text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">#</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Código</TableHead>

@@ -269,7 +269,7 @@ export function Sidebar() {
       </div>
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 border-r border-zinc-200 bg-white flex-shrink-0 flex flex-col transition-all duration-300 md:relative md:translate-x-0 hidden md:flex",
+        "fixed inset-y-0 left-0 z-50 glass-sidebar flex-shrink-0 flex flex-col transition-all duration-300 md:relative md:translate-x-0 hidden md:flex",
         isOpen ? "translate-x-0 !flex w-64" : "-translate-x-full",
         !isOpen && isCollapsed ? "md:w-20" : (!isOpen ? "md:w-64" : "")
       )}>
@@ -314,8 +314,8 @@ export function Sidebar() {
                       "flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all overflow-hidden",
                       isCollapsed ? "justify-center" : "justify-start gap-3",
                       isActive
-                        ? "bg-purple-50 text-purple-700 font-semibold shadow-sm border border-purple-100/50"
-                        : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                        ? "bg-gradient-to-r from-purple-100/80 to-purple-50/40 text-purple-700 font-semibold shadow-sm border border-purple-200/50"
+                        : "text-zinc-500 hover:bg-zinc-50/80 hover:text-zinc-900"
                     )}
                   >
                     <div className="flex items-center gap-3">

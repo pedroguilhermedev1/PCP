@@ -122,14 +122,14 @@ export function CronogramaClient() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-white relative">
+    <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-transparent relative">
       <ConfirmDeleteModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
         onConfirm={handleDelete}
       />
 
-      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <header className="bg-transparent border-b border-zinc-200/50 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex flex-col">
           <h1 className="text-xl font-bold text-zinc-900 leading-tight">Cronograma de Fornecedores</h1>
           <p className="text-sm text-zinc-500">Planejamento e acompanhamento de entregas programadas.</p>
@@ -164,7 +164,7 @@ export function CronogramaClient() {
         </div>
 
         {/* CALENDAR GRID */}
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden max-w-7xl mx-auto">
+        <div className="bg-white/40 backdrop-blur-md rounded-xl shadow-sm border border-zinc-200/50 overflow-hidden max-w-7xl mx-auto">
           <div className="grid grid-cols-7 border-b border-zinc-200 bg-zinc-50/50">
             {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
               <div key={d} className="py-2 text-center text-xs font-semibold text-zinc-500 uppercase tracking-wider border-r border-zinc-200 last:border-r-0">

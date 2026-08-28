@@ -476,8 +476,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         </div>
       </header>
 
-      <div className={`flex-1 p-4 md:p-8 overflow-y-auto w-full flex justify-center items-start`}>
-        <div className={`w-full mt-4 max-w-7xl`}>
+      <div className={`flex-1 p-6 md:p-8 overflow-y-auto w-full flex justify-center items-start bg-transparent`}>
+        <div className={`w-full max-w-[1600px]`}>
           
           {successMsg && (
             <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-3 border border-green-200 shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -493,9 +493,9 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             </div>
           )}
 
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm">
-            <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
-              <h2 className="text-lg font-bold text-zinc-800">
+          <div className="w-full">
+            <div className="pb-4 mb-6 border-b border-zinc-200/60">
+              <h2 className="text-xl font-bold text-zinc-800">
                 {activeTab === 'NOVA' ? (editingReprovadaId ? 'CORRIGIR SOLICITAÇÃO' : 'NOVA SOLICITAÇÃO') : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' : activeTab === 'REPROVADAS' ? 'SOLICITAÇÕES REPROVADAS' : 'AJUSTE DE ESTOQUE'}
               </h2>
               {activeTab === 'NOVA' && (
@@ -506,7 +506,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             </div>
 
             {activeTab === 'NOVA' && (
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
                 <div className="space-y-4">
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -618,9 +618,9 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             )}
 
             {activeTab === 'PENDENTES' && !isGabriel && (
-              <div className="p-0 overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-zinc-50/50">
+              <div className="p-0 overflow-x-auto w-full">
+                <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
+                  <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                     <TableRow className="border-zinc-100 hover:bg-transparent">
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nota Fiscal</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
@@ -727,9 +727,9 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             )}
 
             {activeTab === 'REPROVADAS' && (isPrivileged || userRole === 'OPERACIONAL') && (
-              <div className="p-0 overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-zinc-50/50">
+              <div className="p-0 overflow-x-auto w-full">
+                <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
+                  <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                     <TableRow className="border-zinc-100 hover:bg-transparent">
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>

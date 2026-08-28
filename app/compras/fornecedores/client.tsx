@@ -257,8 +257,8 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
       </header>
 
       <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full">
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden min-h-[400px]">
-          <div className="p-4 border-b border-zinc-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="w-full min-h-[400px]">
+          <div className="pb-4 mb-4 border-b border-zinc-200/50 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <Input 
@@ -280,9 +280,9 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
             </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-zinc-50/50">
+          <div className="overflow-x-auto w-full">
+            <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
+              <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                 <TableRow className="border-zinc-100 hover:bg-transparent">
                   <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Empresa</TableHead>
                   <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Contato</TableHead>

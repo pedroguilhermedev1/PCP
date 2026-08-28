@@ -450,10 +450,10 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
           />
         )}
         {activeTab !== 'insumos' && (
-          <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4">
+          <div className="w-full mt-4">
             <div className="overflow-x-auto w-full">
-              <Table>
-                <TableHeader className="bg-zinc-50/50">
+              <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
+                <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                   <TableRow className="border-zinc-100 hover:bg-transparent">
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">ID Mov.</TableHead>
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data / Hora</TableHead>

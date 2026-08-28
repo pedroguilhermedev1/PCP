@@ -1,10 +1,10 @@
 import type {Metadata} from 'next';
-import { Inter } from 'next/font/google';
+import { Outfit } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { Toaster } from 'sonner';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: 'PCP Hub',
@@ -29,7 +29,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
           }}
         />
       </head>
-      <body suppressHydrationWarning className={`${inter.variable} font-sans bg-white text-zinc-900 h-screen overflow-hidden`}>
+      <body suppressHydrationWarning className={`${outfit.variable} font-sans bg-zinc-50 text-zinc-900 h-screen overflow-hidden antialiased bg-mesh-pattern`}>
         <AuthProvider>
           {children}
         </AuthProvider>

@@ -14,3 +14,38 @@ html.dark [data-theme-ignore] {
 html {
   transition: filter 0.3s ease;
 }
+
+@layer utilities {
+  .bg-mesh-pattern {
+    background-color: #f8fafc;
+    background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,0.02) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,0.03) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,0.03) 0, transparent 50%);
+  }
+
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+  }
+  
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/50 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5;
+  }
+  
+  .glass-sidebar {
+    @apply bg-white/60 backdrop-blur-lg border-r border-white/40;
+  }
+}
+
+/* Scrollbar styling for a cleaner look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

@@ -251,7 +251,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
         </div>
       </div>
 
-      <div className="flex flex-col h-[600px] bg-white rounded-xl shadow-sm border border-zinc-200 w-full max-w-full">
+      <div className="flex flex-col h-[600px] w-full max-w-full">
         {processedFaturas.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 p-8">
             <Info className="w-10 h-10 mb-4 opacity-30" />
@@ -262,8 +262,8 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
           <div className="flex-1 flex flex-col relative overflow-x-auto overflow-y-hidden w-full">
           
           {/* TIMELINE HEADER */}
-          <div className="flex sticky top-0 bg-white z-20 border-b border-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.02)] w-full min-w-[600px]">
-            <div className="w-[160px] shrink-0 border-r border-zinc-200 p-3 font-semibold text-zinc-400 tracking-wider text-[11px] flex flex-col justify-center bg-white sticky left-0 z-30">
+          <div className="flex sticky top-0 bg-transparent z-20 border-b border-zinc-200/50 w-full min-w-[600px] backdrop-blur-md">
+            <div className="w-[160px] shrink-0 border-r border-zinc-200/50 p-3 font-semibold text-zinc-500 tracking-wider text-[11px] flex flex-col justify-center bg-transparent sticky left-0 z-30">
               FATURA
             </div>
             <div className="flex-1 relative min-h-[50px] bg-zinc-50/30">
@@ -294,13 +294,13 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
                 <div 
                   key={pf.fatura.id} 
                   className={cn(
-                    "flex flex-col border-b border-zinc-100 transition-colors relative z-0",
-                    isExpanded ? "bg-zinc-50 border-blue-200 z-10 shadow-sm" : "hover:bg-zinc-50"
+                    "flex flex-col border-b border-zinc-200/30 transition-colors relative z-0",
+                    isExpanded ? "bg-white/40 border-blue-200 z-10 shadow-sm" : "hover:bg-white/30"
                   )}
                 >
                   <div className="flex min-h-[48px] py-1 cursor-pointer" onClick={(e) => toggleAccordion(pf.fatura.id, e)}>
                     {/* Row Label */}
-                    <div className="w-[160px] shrink-0 border-r border-zinc-200 px-2 flex items-center bg-white group-hover:bg-zinc-50 sticky left-0 z-30 gap-1">
+                    <div className="w-[160px] shrink-0 border-r border-zinc-200/30 px-2 flex items-center bg-transparent group-hover:bg-white/10 sticky left-0 z-30 gap-1">
                       <div className="text-zinc-400 hover:text-zinc-600 transition-colors">
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </div>

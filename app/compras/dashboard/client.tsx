@@ -14,9 +14,9 @@ import { getUserRole, getUserCD } from "@/lib/roles";
 // Components
 function FaturaCard({ title, value, count, colorClass, borderClass, bgClass }: { title: string, value: string, count: number, colorClass: string, borderClass: string, bgClass: string }) {
   return (
-    <div className={cn("bg-white rounded-xl shadow-sm border p-6 flex flex-col justify-between h-full hover:shadow-md transition-all", borderClass)}>
+    <div className={cn("glass-card rounded-xl p-6 flex flex-col justify-between h-full", borderClass)}>
       <div className="flex items-center justify-between mb-4">
-        <p className={cn("text-[13px] font-semibold uppercase tracking-wider", colorClass)}>{title}</p>
+        <p className={cn("text-[13px] font-bold uppercase tracking-wider", colorClass)}>{title}</p>
         <div className={cn("w-2 h-2 rounded-full", colorClass.replace('text-', 'bg-'))}></div>
       </div>
       <div>
@@ -31,10 +31,10 @@ function InsumoCard({ title, value, subtitle, icon: Icon, colorClass, borderClas
   return (
     <div 
       onClick={onClick}
-      className={cn("bg-white rounded-xl shadow-sm border p-6 flex flex-col justify-between h-full transition-all hover:scale-[1.01]", borderClass, onClick ? "cursor-pointer hover:shadow-md" : "")}
+      className={cn("glass-card rounded-xl p-6 flex flex-col justify-between h-full", borderClass, onClick ? "cursor-pointer" : "")}
     >
       <div className="flex items-center justify-between mb-4">
-        <p className={cn("text-[13px] font-semibold uppercase tracking-wider", colorClass)}>{title}</p>
+        <p className={cn("text-[13px] font-bold uppercase tracking-wider", colorClass)}>{title}</p>
         <Icon className={cn("w-5 h-5", colorClass)} />
       </div>
       <div>
@@ -300,8 +300,8 @@ export function DashboardClient({
   }, [movimentacoes, userCD]);
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-zinc-50/30">
-      <header className="bg-white border-b border-zinc-200 px-8 py-5 flex items-center justify-between flex-shrink-0 z-10 relative shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-transparent">
+      <header className="glass-panel px-8 py-5 flex items-center justify-between flex-shrink-0 z-10 relative">
         <div className="flex items-center gap-4">
           <div className="bg-purple-50 p-2.5 rounded-lg text-purple-700 border border-purple-100">
             <BarChart2 className="w-6 h-6" strokeWidth={2.5} />
@@ -457,7 +457,7 @@ export function DashboardClient({
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
                     <div 
                       onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
-                      className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
+                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-4">
                         <p className="text-[13px] font-semibold uppercase tracking-wider text-emerald-600">Dentro do prazo</p>
@@ -470,7 +470,7 @@ export function DashboardClient({
                     </div>
                     <div 
                       onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
-                      className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
+                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-4">
                         <p className="text-[13px] font-semibold uppercase tracking-wider text-amber-600">Próximas do limite</p>
@@ -483,7 +483,7 @@ export function DashboardClient({
                     </div>
                     <div 
                       onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
-                      className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 flex flex-col justify-between h-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.01]"
+                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-4">
                         <p className="text-[13px] font-semibold uppercase tracking-wider text-red-600">Atrasadas no Fluxo</p>

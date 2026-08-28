@@ -493,7 +493,7 @@ export function EstoqueInsumosTable({
   }, [insumos, statusFilter]);
 
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden mt-4 relative">
+    <div className="w-full mt-4 relative">
       <NovoInsumoModal 
         isOpen={modalOpen} 
         onClose={() => setModalOpen(false)} 
@@ -526,7 +526,7 @@ export function EstoqueInsumosTable({
         </div>
       )}
       
-      <div className="p-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+      <div className="pb-4 mb-4 border-b border-zinc-200/50 flex items-center justify-between">
         <div className="text-sm text-zinc-600 font-medium">Estoque Base <span className="font-bold text-zinc-900">{cdTarget}</span></div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 mr-2">
@@ -562,9 +562,9 @@ export function EstoqueInsumosTable({
         </div>
       </div>
 
-      <div className="overflow-auto w-full max-h-[calc(100vh-280px)] border-t border-zinc-200 custom-scrollbar">
+      <div className="overflow-auto w-full max-h-[calc(100vh-280px)] custom-scrollbar bg-white/40 backdrop-blur-sm rounded-xl">
         <table className="w-full text-sm text-left relative border-collapse">
-          <thead className="text-xs text-zinc-500 uppercase bg-zinc-50 sticky top-0 z-20 shadow-[0_1px_0_0_#e4e4e7]">
+          <thead className="text-xs text-zinc-500 uppercase bg-zinc-50/80 backdrop-blur-sm sticky top-0 z-20 shadow-[0_1px_0_0_#e4e4e7]">
             <tr>
               <th className="w-12 text-center px-6 py-4 font-semibold bg-zinc-50">ID</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">CD</th>
