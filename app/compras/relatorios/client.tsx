@@ -44,7 +44,7 @@ export function RelatoriosClient() {
       const cd = getUserCD(user);
       setUserCD(cd);
 
-      if (role === 'OPERACIONAL' && user !== 'rafael.soares') {
+      if (role === 'OPERACIONAL') {
         setActiveTab('produtos');
         if (cd) setCdFiltro(cd);
       }
@@ -52,10 +52,10 @@ export function RelatoriosClient() {
   }, []);
 
   const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas-sap'];
-  const visibleTabs = (userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares') ? ['produtos', 'movimentacoes'] : allTabs;
+  const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
-    if (activeTab !== 'fornecedores' && (!dataInicial || !dataFinal)) {
+    if (activeTab !== 'fornecedores' && activeTab !== 'produtos' && (!dataInicial || !dataFinal)) {
       toast.error("Selecione a data inicial e final.");
       return;
     }
@@ -70,7 +70,7 @@ export function RelatoriosClient() {
 
       if (!supabase) throw new Error("Supabase não inicializado.");
 
-      const effectiveCdFiltro = (userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares') && userCD ? userCD : cdFiltro;
+      const effectiveCdFiltro = (userRole === 'OPERACIONAL') && userCD ? userCD : cdFiltro;
 
       if (activeTab === 'fornecedores') {
         let q = supabase.from('fornecedores').select('*').order('created_at', { ascending: false });
@@ -80,9 +80,7 @@ export function RelatoriosClient() {
       } else if (activeTab === 'produtos') {
         let q = supabase.from('estoque_insumos')
           .select('*')
-          .order('created_at', { ascending: false });
-        q = q.gte('created_at', start);
-        q = q.lte('created_at', end);
+          .order('item', { ascending: true });
         if (effectiveCdFiltro !== 'Todos') q = q.eq('cd', effectiveCdFiltro);
         query = q;
       } else if (activeTab === 'movimentacoes') {
@@ -346,7 +344,7 @@ export function RelatoriosClient() {
 
           <div className="p-6">
             <div className="flex flex-col md:flex-row gap-4 items-end mb-6 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-              {activeTab !== 'fornecedores' && (
+              {activeTab !== 'fornecedores' && activeTab !== 'produtos' && (
                 <>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Data Inicial</label>
@@ -376,9 +374,9 @@ export function RelatoriosClient() {
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-600 uppercase tracking-wider">CD</label>
                   <select 
-                    value={(userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares') && userCD ? userCD : cdFiltro} 
+                    value={(userRole === 'OPERACIONAL') && userCD ? userCD : cdFiltro} 
                     onChange={(e) => setCdFiltro(e.target.value)} 
-                    disabled={(userRole === 'OPERACIONAL' && currentUser !== 'rafael.soares')}
+                    disabled={userRole === 'OPERACIONAL'}
                     className="flex h-9 w-[160px] rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:opacity-50"
                   >
                     <option value="Todos">Todos</option>
