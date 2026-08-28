@@ -1,6 +1,6 @@
 import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
 import { Badge } from "@/components/ui/badge";
-import { Box, RefreshCw, AlertCircle, Plus, X } from "lucide-react";
+import { Box, RefreshCw, AlertCircle, Plus, X, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect } from "react";
@@ -443,6 +443,7 @@ export function EstoqueInsumosTable({
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'Todos');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -479,18 +480,31 @@ export function EstoqueInsumosTable({
 
   const filteredInsumos = useMemo(() => {
     return insumos.filter(item => {
-      if (statusFilter === 'Todos') return true;
-      const cmd = parseFloat(item.cmd) || 10;
-      const lt = parseFloat(item.lead_time) || 0;
-      const coberturaNum = cmd > 0 ? (item.estoque_real / cmd) : Infinity;
+      // Filtro por status
+      if (statusFilter !== 'Todos') {
+        const cmd = parseFloat(item.cmd) || 10;
+        const lt = parseFloat(item.lead_time) || 0;
+        const coberturaNum = cmd > 0 ? (item.estoque_real / cmd) : Infinity;
+        
+        let dynamicStatus = 'CONFORTÁVEL';
+        if (coberturaNum <= lt) dynamicStatus = 'CRÍTICO';
+        else if (coberturaNum > lt && coberturaNum <= (lt + 3)) dynamicStatus = 'ALERTA';
+        
+        if (dynamicStatus !== statusFilter) return false;
+      }
+
+      // Filtro por termo de busca
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchItem = item.item?.toLowerCase().includes(term);
+        const matchItemAdm = item.item_adm?.toLowerCase().includes(term);
+        const matchCodigo = item.codigo?.toLowerCase().includes(term);
+        if (!matchItem && !matchItemAdm && !matchCodigo) return false;
+      }
       
-      let dynamicStatus = 'CONFORTÁVEL';
-      if (coberturaNum <= lt) dynamicStatus = 'CRÍTICO';
-      else if (coberturaNum > lt && coberturaNum <= (lt + 3)) dynamicStatus = 'ALERTA';
-      
-      return dynamicStatus === statusFilter;
+      return true;
     });
-  }, [insumos, statusFilter]);
+  }, [insumos, statusFilter, searchTerm]);
 
   return (
     <div className="w-full mt-4 relative">
@@ -526,9 +540,20 @@ export function EstoqueInsumosTable({
         </div>
       )}
       
-      <div className="pb-4 mb-4 border-b border-zinc-200/50 flex items-center justify-between">
-        <div className="text-sm text-zinc-600 font-medium">Estoque Base <span className="font-bold text-zinc-900">{cdTarget}</span></div>
-        <div className="flex items-center gap-3">
+      <div className="pb-4 mb-4 border-b border-zinc-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="text-sm text-zinc-600 font-medium whitespace-nowrap hidden lg:block">Estoque Base <span className="font-bold text-zinc-900">{cdTarget}</span></div>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <Input 
+              placeholder="Buscar insumo, código..." 
+              className="pl-9 h-9 w-full bg-white/60 focus:bg-white transition-colors border-zinc-200 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 mr-2">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status:</label>
             <select 
