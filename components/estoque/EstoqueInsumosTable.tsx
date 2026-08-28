@@ -493,12 +493,12 @@ export function EstoqueInsumosTable({
         if (dynamicStatus !== statusFilter) return false;
       }
 
-      // Filtro por termo de busca
+      // Filtro por termo de busca (apenas no início da palavra)
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        const matchItem = item.item?.toLowerCase().includes(term);
-        const matchItemAdm = item.item_adm?.toLowerCase().includes(term);
-        const matchCodigo = item.codigo?.toLowerCase().includes(term);
+        const matchItem = item.item?.toLowerCase().startsWith(term);
+        const matchItemAdm = item.item_adm?.toLowerCase().startsWith(term);
+        const matchCodigo = item.codigo?.toLowerCase().startsWith(term);
         if (!matchItem && !matchItemAdm && !matchCodigo) return false;
       }
       
