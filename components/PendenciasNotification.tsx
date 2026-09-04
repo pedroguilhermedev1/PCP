@@ -18,7 +18,7 @@ export function PendenciasNotification() {
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
     const role = getUserRole(user || '');
-    const isAdmin = ['pedro.queiroz', 'felipe.castro', 'debora.mota', 'francisco.edson'].some(admin => user?.includes(admin));
+    const isAdmin = ['pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson'].some(admin => user?.includes(admin));
     const isLideranca = role === 'LIDERANCA';
     
     if (isAdmin || isLideranca) {

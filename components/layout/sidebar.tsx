@@ -174,7 +174,7 @@ export function Sidebar() {
   }, []);
 
   const isAdmin = [
-    'pedro.queiroz', 'felipe.castro', 'debora.mota',
+    'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro',
     'francisco.edson'
   ].includes(currentUser || '')
 

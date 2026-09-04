@@ -1,5 +1,5 @@
 export const ADMIN_USERS = [
-  'pedro.queiroz', 'felipe.castro', 'debora.mota',
+  'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro',
   'francisco.edson',
 ];
 
@@ -48,6 +48,7 @@ export function formatUserName(username?: string): string {
   if (normalized === 'pedro.queiroz') return 'Pedro Queiroz';
   if (normalized === 'felipe.castro') return 'Felipe Castro';
   if (normalized === 'debora.mota') return 'Débora Mota';
+  if (normalized === 'raphael.ramiro') return 'Raphael Ramiro';
   if (normalized === 'francisco.edson') return 'Francisco Edson';
   if (normalized === 'ivna.teixeira') return 'Ivna Teixeira';
   

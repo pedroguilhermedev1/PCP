@@ -449,7 +449,7 @@ export function EstoqueInsumosTable({
   
   useEffect(() => {
     const user = localStorage.getItem('pcp_user') || '';
-    const admin = ['pedro.queiroz', 'felipe.castro', 'debora.mota', 'francisco.edson'].some(a => user.startsWith(a));
+    const admin = ['pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson'].some(a => user.startsWith(a));
     setIsAdmin(admin);
   }, []);
 

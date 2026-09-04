@@ -306,7 +306,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
       }
     }
     const admin = [
-      'pedro.queiroz', 'felipe.castro', 'debora.mota',
+      'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro',
       'francisco.edson'
     ].includes(user || '')
     setIsAdmin(admin)
