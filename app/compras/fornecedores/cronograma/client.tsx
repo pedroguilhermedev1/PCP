@@ -34,7 +34,7 @@ export function CronogramaClient() {
     observacao: ""
   });
 
-  const canEditOrDelete = !currentUser || (currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('felipe.castro')) || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota', 'raphael.ramiro');
+  const canEditOrDelete = !currentUser || (currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('felipe.castro')) || currentUser.startsWith('francisco.edson') || (currentUser.startsWith('debora.mota') || currentUser.startsWith('raphael.ramiro'));
 
   const daysInMonth = eachDayOfInterval({
     start: startOfMonth(currentDate),
