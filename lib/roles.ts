@@ -1,6 +1,5 @@
 export const ADMIN_USERS = [
-  'pedro.queiroz',
-  'debora.mota',
+  'pedro.queiroz', 'felipe.castro', 'debora.mota',
   'francisco.edson',
 ];
 
@@ -47,6 +46,7 @@ export function formatUserName(username?: string): string {
   const normalized = username.trim().toLowerCase();
   
   if (normalized === 'pedro.queiroz') return 'Pedro Queiroz';
+  if (normalized === 'felipe.castro') return 'Felipe Castro';
   if (normalized === 'debora.mota') return 'Débora Mota';
   if (normalized === 'francisco.edson') return 'Francisco Edson';
   if (normalized === 'ivna.teixeira') return 'Ivna Teixeira';

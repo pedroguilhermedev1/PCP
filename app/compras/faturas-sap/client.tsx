@@ -32,7 +32,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterAno, setFilterAno] = useState<string>(qAno);
   const [filterMes, setFilterMes] = useState<string>(qMes);
   const defaultStatus = searchParams.get('status')?.replace('_', ' ') || 'todos';
-  const [filterStatus, setFilterStatus] = useState<string>(defaultStatus);
+  const [filterStatus, setFilterStatus] = useState<string[]>([defaultStatus]);
   const defaultStatusPagamento = searchParams.get('status_pagamento') || 'todos';
   const [filterStatusPagamento, setFilterStatusPagamento] = useState<string>(defaultStatusPagamento);
   const [filterResponsavel, setFilterResponsavel] = useState<string>('todos');
@@ -49,7 +49,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
   }, [categoria]);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
+  const canEditOrDelete = !currentUser || (currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('felipe.castro')) || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   const uniqueCDs = Array.from(new Set([
     "Fortaleza", "Jundiaí", "NSE", "COC", "PSD",
@@ -80,9 +80,9 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       if (filterMes !== "todos" && m !== filterMes) return false;
     }
 
-    if (filterStatus !== "todos") {
+    if (!filterStatus.includes("todos")) {
       const stat = calcularStatus(f);
-      if (stat.toLowerCase() !== filterStatus.toLowerCase()) return false;
+      if (!filterStatus.some(s => stat.toLowerCase() === s.toLowerCase())) return false;
     }
     
     const filterEtapa = searchParams.get('filtro_etapa');
@@ -114,7 +114,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       const matchRC = f.rc_sap?.toLowerCase().startsWith(term) || f.heflo?.toLowerCase().startsWith(term);
       const matchPC = f.erp?.toLowerCase().startsWith(term) || f.v360?.toLowerCase().startsWith(term);
       const matchPedidoSAP = f.pedido_sap?.toLowerCase().startsWith(term);
-      const matchCodigoNexa = f.identificador?.toLowerCase().startsWith(term);
+      const matchCodigoNexa = f.identificador?.toLowerCase().startsWith(term) || f.nexa_chamado?.toLowerCase().startsWith(term) || f.numero_pc_nexa?.toLowerCase().startsWith(term);
       
       if (!matchFornecedor && !matchNumero && !matchRC && !matchPC && !matchPedidoSAP && !matchCodigoNexa) {
         return false;
@@ -322,19 +322,39 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <option value="12">Dezembro</option>
             </select>
           </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm relative group cursor-pointer z-[60]">
             <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Status</span>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
-            >
-              <option value="todos">Todos</option>
-              <option value="Pago">Pago</option>
-              <option value="Pago (Vencida)">Pago (Vencida)</option>
-              <option value="A Vencer">A Vencer</option>
-              <option value="Vencido">Vencida</option>
-            </select>
+            <div className="text-sm font-medium text-zinc-800 min-w-[100px]">
+              {filterStatus.length === 0 || filterStatus.includes('todos') ? 'Todos' : filterStatus.length > 1 ? `${filterStatus.length} selecionados` : filterStatus[0]}
+            </div>
+            
+            <div className="absolute top-full left-0 mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg p-2 hidden group-hover:block min-w-[180px]">
+              {['todos', 'Pago', 'Pago (Vencida)', 'A Vencer', 'Vencido'].map(opt => (
+                <label key={opt} className="flex items-center gap-2 p-1.5 hover:bg-zinc-50 rounded cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={filterStatus.includes(opt)}
+                    onChange={(e) => {
+                      if (opt === 'todos') {
+                        setFilterStatus(['todos']);
+                      } else {
+                        const isChecked = e.target.checked;
+                        let newFilter = filterStatus.filter(f => f !== 'todos');
+                        if (isChecked) {
+                          newFilter.push(opt);
+                        } else {
+                          newFilter = newFilter.filter(f => f !== opt);
+                        }
+                        if (newFilter.length === 0) newFilter = ['todos'];
+                        setFilterStatus(newFilter);
+                      }
+                    }}
+                    className="w-4 h-4 text-purple-600 rounded border-zinc-300 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-zinc-700">{opt === 'todos' ? 'Todos' : opt === 'Vencido' ? 'Vencida' : opt}</span>
+                </label>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
             <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Resp.</span>

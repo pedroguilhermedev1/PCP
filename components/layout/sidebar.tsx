@@ -174,8 +174,7 @@ export function Sidebar() {
   }, []);
 
   const isAdmin = [
-    'pedro.queiroz',
-    'debora.mota',
+    'pedro.queiroz', 'felipe.castro', 'debora.mota',
     'francisco.edson'
   ].includes(currentUser || '')
 
@@ -204,7 +203,7 @@ export function Sidebar() {
   const isReportsOnly = currentUser === 'ivna.teixeira';
   const isLideranca = getUserRole(currentUser || '') === 'LIDERANCA';
 
-  const isAjusteEstoqueUser = currentUser === 'pedro.queiroz' || currentUser === 'francisco.edson';
+  const isAjusteEstoqueUser = (currentUser === 'pedro.queiroz' || currentUser === 'felipe.castro') || currentUser === 'francisco.edson';
 
   const visibleItems = (isAdmin
   ? sidebarItems.filter(item => item.title !== 'Solicitações' || isAjusteEstoqueUser)

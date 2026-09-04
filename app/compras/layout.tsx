@@ -32,8 +32,7 @@ export default function ComprasLayout({
     const isLideranca = role === 'LIDERANCA';
 
     const admins = [
-      'pedro.queiroz',
-      'debora.mota',
+      'pedro.queiroz', 'felipe.castro', 'debora.mota',
       'francisco.edson',
     ];
 

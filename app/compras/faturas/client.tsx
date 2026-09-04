@@ -46,7 +46,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
   }, [categoria]);
 
-  const canEditOrDelete = !currentUser || currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
+  const canEditOrDelete = !currentUser || (currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('felipe.castro')) || currentUser.startsWith('francisco.edson') || currentUser.startsWith('debora.mota');
 
   const uniqueCDs = Array.from(new Set([
     "Fortaleza", "Jundiaí", "NSE", "COC", "PSD",
