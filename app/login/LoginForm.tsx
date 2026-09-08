@@ -33,15 +33,17 @@ export function LoginForm() {
       'fabio.pessoa',
       'gabriel.oliveira',
       'raphael.farrao',
-      'rafael.soares'
+      'rafael.soares',
+      'felipe.castro',
+      'raphael.ramiro'
     ].includes(parsedUsername) && password === `${parsedUsername}@2026`;
 
     const isLideranca = (parsedUsername === 'lideranca.arco' || parsedUsername === 'liderança.arco') && 
                         (password === 'lideranca.arco@2026' || password === 'liderança.arco@2026');
 
     const isDefaultAdminOrOldOpPassword = (
-      (validUsers.includes(parsedUsername) || (parsedUsername === 'debora.mota' || parsedUsername === 'raphael.ramiro')) &&
-      !['fabio.pessoa', 'gabriel.oliveira', 'raphael.farrao', 'rafael.soares'].includes(parsedUsername) &&
+      (validUsers.includes(parsedUsername) || (parsedUsername === 'debora.mota')) &&
+      !['fabio.pessoa', 'gabriel.oliveira', 'raphael.farrao', 'rafael.soares', 'felipe.castro', 'raphael.ramiro'].includes(parsedUsername) &&
       password === '123@456'
     );
 
