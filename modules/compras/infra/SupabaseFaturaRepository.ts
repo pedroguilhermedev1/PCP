@@ -8,7 +8,8 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     
     const { data, error } = await supabase
       .from('faturas')
-      .select('*');
+      .select('*')
+      .or('excluido.is.null,excluido.eq.false');
       
     if (error) {
       console.error('Error fetching faturas:', error);
@@ -157,7 +158,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     
     const { error } = await supabase
       .from('faturas')
-      .delete()
+      .update({ excluido: true, excluido_em: new Date().toISOString() })
       .eq('id', id);
       
     if (error) {

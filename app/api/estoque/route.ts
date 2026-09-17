@@ -21,7 +21,11 @@ export async function GET(request: Request) {
   const supabase = getSupabase();
   if (!supabase) return NextResponse.json({ error: 'Supabase credentials missing' }, { status: 500 });
 
-  let query = supabase.from('estoque_insumos').select('*').eq('tipo_envio', tipo_envio).order('item', { ascending: true });
+  let query = supabase.from('estoque_insumos')
+    .select('*')
+    .eq('tipo_envio', tipo_envio)
+    .or('excluido.is.null,excluido.eq.false')
+    .order('item', { ascending: true });
 
   if (cd && cd !== 'todas') {
     query = query.ilike('cd', cd);
@@ -51,14 +55,14 @@ export async function PUT(request: Request) {
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
 
-  // 1. Fetch existing item to get its old codigo and cd for mirroring
-  const { data: existing, error: fetchErr } = await supabase.from('estoque_insumos').select('codigo, cd, empresa').eq('id', id).single();
+  // 1. Fetch existing item to get its old item name and cd for mirroring
+  const { data: existing, error: fetchErr } = await supabase.from('estoque_insumos').select('item, cd, empresa').eq('id', id).single();
   
   if (fetchErr || !existing) return NextResponse.json({ error: 'Item não encontrado' }, { status: 404 });
 
   let updateQuery = supabase.from('estoque_insumos').update({
     cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil
-  }).eq('codigo', existing.codigo).ilike('cd', existing.cd);
+  }).eq('item', existing.item).ilike('cd', existing.cd);
 
   if (existing.empresa) {
     updateQuery = updateQuery.ilike('empresa', existing.empresa);
@@ -191,14 +195,19 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Faltam dados para exclusão' }, { status: 400 });
   }
 
-  let query = supabase.from('estoque_insumos').delete();
-  if (codigo && cd) {
-    query = query.eq('codigo', codigo).eq('cd', cd);
-  } else if (id) {
-    query = query.eq('id', id);
+  let updateQuery = supabase.from('estoque_insumos').update({ excluido: true, excluido_em: new Date().toISOString() });
+  if (id) {
+    const { data: toDelete } = await supabase.from('estoque_insumos').select('item, cd').eq('id', id).single();
+    if (toDelete) {
+      updateQuery = updateQuery.eq('item', toDelete.item).ilike('cd', toDelete.cd);
+    } else {
+      updateQuery = updateQuery.eq('id', id);
+    }
+  } else if (codigo && cd) {
+    updateQuery = updateQuery.eq('codigo', codigo).ilike('cd', cd);
   }
 
-  const result = await query;
+  const result = await updateQuery;
   if (result.error) {
     return NextResponse.json({ error: result.error.message }, { status: 500 });
   }

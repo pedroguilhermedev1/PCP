@@ -3,9 +3,7 @@ export const ADMIN_USERS = [
   'francisco.edson',
 ];
 
-export const REPORTS_USERS = [
-  'ivna.teixeira'
-];
+export const REPORTS_USERS: string[] = [];
 
 export const OPERACIONAL_USERS = [
   'raphael.farrao',
@@ -24,7 +22,14 @@ export const LIDERANCA_USERS = [
 export function getUserRole(username?: string) {
   if (!username) return null;
 
+  if (typeof window !== 'undefined') {
+    const storedRole = localStorage.getItem('pcp_role');
+    if (storedRole) return storedRole;
+  }
+
   const normalized = username.trim().toLowerCase();
+
+  if (normalized === 'pedro.queiroz') return 'SUPERADMIN';
 
   if (ADMIN_USERS.includes(normalized)) {
     return 'ADMIN';
@@ -43,6 +48,12 @@ export function getUserRole(username?: string) {
 
 export function formatUserName(username?: string): string {
   if (!username) return '';
+
+  if (typeof window !== 'undefined') {
+    const storedName = localStorage.getItem('pcp_name');
+    if (storedName) return storedName;
+  }
+
   const normalized = username.trim().toLowerCase();
   
   if (normalized === 'pedro.queiroz') return 'Pedro Queiroz';
@@ -50,7 +61,6 @@ export function formatUserName(username?: string): string {
   if (normalized === 'debora.mota') return 'Débora Mota';
   if (normalized === 'raphael.ramiro') return 'Raphael Ramiro';
   if (normalized === 'francisco.edson') return 'Francisco Edson';
-  if (normalized === 'ivna.teixeira') return 'Ivna Teixeira';
   
   if (normalized === 'raphael.farrao') return 'Raphael Farrão';
   if (normalized === 'rafael.soares') return 'Rafael Soares';
@@ -66,6 +76,12 @@ export function formatUserName(username?: string): string {
 
 export function getUserCD(username?: string): string | null {
   if (!username) return null;
+
+  if (typeof window !== 'undefined') {
+    const storedCd = localStorage.getItem('pcp_cd');
+    if (storedCd) return storedCd;
+  }
+
   const normalized = username.trim().toLowerCase();
   
   if (['raphael.farrao', 'jundiai.arco'].includes(normalized)) return 'jundiai';

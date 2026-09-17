@@ -1,10 +1,11 @@
 import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
 import { Badge } from "@/components/ui/badge";
-import { Box, RefreshCw, AlertCircle, Plus, X, Search } from "lucide-react";
+import { Box, RefreshCw, AlertCircle, Plus, X, Search, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { ImportarInsumosModal } from "./ImportarInsumosModal";
 
 function NovoInsumoModal({ 
   isOpen, 
@@ -20,6 +21,19 @@ function NovoInsumoModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const [categoriasDb, setCategoriasDb] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/configuracoes?type=categorias')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategoriasDb(data.filter((c: any) => c.ativo))
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   const [formData, setFormData] = useState({
     cd: defaultCd,
     codigo: '',
@@ -132,7 +146,17 @@ function NovoInsumoModal({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Categoria <span className="text-red-500">*</span></label>
-              <Input required placeholder="Ex: CAIXA, ETIQUETA" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} />
+              <select
+                required
+                className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-950 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.categoria}
+                onChange={e => setFormData({...formData, categoria: e.target.value})}
+              >
+                <option value="">Selecione...</option>
+                {categoriasDb.map(c => (
+                  <option key={c.id} value={c.nome}>{c.nome}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -334,7 +358,17 @@ function EditarInsumoModal({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-zinc-700">Categoria <span className="text-red-500">*</span></label>
-              <Input required placeholder="Ex: CAIXA, ETIQUETA" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} />
+              <select
+                required
+                className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-950 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.categoria}
+                onChange={e => setFormData({...formData, categoria: e.target.value})}
+              >
+                <option value="">Selecione...</option>
+                {categoriasDb.map(c => (
+                  <option key={c.id} value={c.nome}>{c.nome}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -437,6 +471,7 @@ export function EstoqueInsumosTable({
 }) {
   const cdTarget = cd.toUpperCase();
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<any | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -447,6 +482,19 @@ export function EstoqueInsumosTable({
 
   const [isAdmin, setIsAdmin] = useState(false);
   
+  const [categoriasDb, setCategoriasDb] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/configuracoes?type=categorias')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategoriasDb(data.filter((c: any) => c.ativo))
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   useEffect(() => {
     const user = localStorage.getItem('pcp_user') || '';
     const admin = ['pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson'].some(a => user.startsWith(a));
@@ -520,6 +568,12 @@ export function EstoqueInsumosTable({
         onSuccess={refetch}
         itemData={itemToEdit}
       />
+      <ImportarInsumosModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={refetch}
+        defaultCd={cdTarget}
+      />
       <ExcluirInsumoModal
         isOpen={deleteModalOpen}
         onClose={() => { if(!isDeleting) { setDeleteModalOpen(false); setItemToDelete(null); } }}
@@ -583,6 +637,14 @@ export function EstoqueInsumosTable({
             className="bg-purple-700 hover:bg-purple-800 text-white"
           >
             <Plus className="w-4 h-4 mr-1.5" /> Novo Insumo
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setImportModalOpen(true)}
+            variant="outline"
+            className="border-purple-200 text-purple-700 hover:bg-purple-50"
+          >
+            <Upload className="w-4 h-4 mr-1.5" /> Importar Planilha
           </Button>
         </div>
       </div>

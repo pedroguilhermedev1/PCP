@@ -27,6 +27,11 @@ export function RoleGuard({
 
     const role = getUserRole(user);
 
+    if (role === 'SUPERADMIN') {
+      setIsAllowed(true);
+      return;
+    }
+
     if (allowedRoles && allowedRoles.length > 0) {
       if (!role || !allowedRoles.includes(role)) {
         setIsAllowed(false);

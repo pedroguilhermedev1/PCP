@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle, Package, Handshake, MessageSquare, BarChart2, ShoppingCart, Target } from "lucide-react"
+import { FileText, Briefcase, Box, Menu, X, DollarSign, Database, Bell, ChevronDown, ChevronRight, LayoutDashboard, PanelLeftClose, PanelLeftOpen, LogOut, Calendar, Building, MessageCircle, Package, Handshake, MessageSquare, BarChart2, ShoppingCart, Target, Settings, Users, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getUserRole, getUserCD } from "@/lib/roles"
@@ -71,28 +71,7 @@ const sidebarItems = [
     type: 'group',
     title: "Insumos",
     icon: <Package className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
-    items: [
-      {
-        title: "Fortaleza",
-        href: "/compras/insumos/fortaleza",
-        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "Jundiaí",
-        href: "/compras/insumos/jundiai",
-        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "NSE",
-        href: "/compras/insumos/nse",
-        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "COC",
-        href: "/compras/insumos/coc",
-        icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-    ]
+    items: [] // Will be populated dynamically
   },
   {
     type: 'group',
@@ -115,28 +94,7 @@ const sidebarItems = [
     type: 'group',
     title: "Solicitações",
     icon: <MessageSquare className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
-    items: [
-      {
-        title: "Fortaleza",
-        href: "/compras/formularios/fortaleza",
-        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "Jundiaí",
-        href: "/compras/formularios/jundiai",
-        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "NSE",
-        href: "/compras/formularios/nse",
-        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-      {
-        title: "COC",
-        href: "/compras/formularios/coc",
-        icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />,
-      },
-    ]
+    items: [] // Will be populated dynamically
   },
   {
     type: 'link',
@@ -152,9 +110,27 @@ const sidebarItems = [
   },
   {
     type: 'link',
+    title: "Gestão de Acessos",
+    href: "/compras/usuarios",
+    icon: <Users className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
+  },
+  {
+    type: 'link',
     title: "Lembretes",
     href: "/compras/lembretes",
     icon: <Bell className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
+  },
+  {
+    type: 'link',
+    title: "Lixeira",
+    href: "/compras/lixeira",
+    icon: <Trash2 className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
+  },
+  {
+    type: 'link',
+    title: "Configurações",
+    href: "/compras/configuracoes",
+    icon: <Settings className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />,
   },
 ]
 
@@ -168,15 +144,29 @@ export function Sidebar() {
   const { unseenCount, markAllAsSeen } = useCronogramaNotification()
 
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [dbCds, setDbCds] = useState<any[]>([]);
 
   useEffect(() => {
     setCurrentUser(localStorage.getItem('pcp_user'));
+    
+    // Fetch CDs dynamically from database
+    const fetchCds = async () => {
+      try {
+        const res = await fetch('/api/configuracoes?type=cds');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setDbCds(data.filter((cd: any) => cd.ativo));
+        }
+      } catch (e) {
+        console.error("Erro ao carregar CDs", e);
+      }
+    };
+    fetchCds();
   }, []);
 
-  const isAdmin = [
-    'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro',
-    'francisco.edson'
-  ].includes(currentUser || '')
+  const role = getUserRole(currentUser || '');
+  const isSuperAdmin = role === 'SUPERADMIN';
+  const isAdmin = isSuperAdmin || role === 'ADMIN';
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
   "Faturas 1.0": false,
@@ -205,13 +195,44 @@ export function Sidebar() {
 
   const isAjusteEstoqueUser = (currentUser === 'pedro.queiroz' || currentUser === 'felipe.castro') || currentUser === 'francisco.edson';
 
+  // Injetar CDs dinamicamente nos items
+  const dynamicSidebarItems = sidebarItems.map(item => {
+    if (item.title === 'Insumos') {
+      return {
+        ...item,
+        items: dbCds.map(cd => ({
+          title: cd.nome,
+          href: `/compras/insumos/${cd.slug}`,
+          icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        }))
+      };
+    }
+    if (item.title === 'Solicitações') {
+      return {
+        ...item,
+        items: dbCds.map(cd => ({
+          title: cd.nome,
+          href: `/compras/formularios/${cd.slug}`,
+          icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
+        }))
+      };
+    }
+    return item;
+  });
+
   const visibleItems = (isAdmin
-  ? sidebarItems.filter(item => item.title !== 'Solicitações' || isAjusteEstoqueUser)
+  ? dynamicSidebarItems.filter(item => {
+      // Esconder as telas administrativas de admins comuns
+      if (!isSuperAdmin && (item.title === 'Configurações' || item.title === 'Gestão de Acessos' || item.title === 'Lixeira')) {
+        return false;
+      }
+      return item.title !== 'Solicitações' || isAjusteEstoqueUser;
+    })
   : isReportsOnly 
-    ? sidebarItems.filter(item => item.title === 'Relatórios')
+    ? dynamicSidebarItems.filter(item => item.title === 'Relatórios')
     : isLideranca
-      ? sidebarItems.filter(item => item.title === 'Dashboard' || item.title === 'Cronograma' || item.title === 'Relatórios')
-      : sidebarItems.filter(item =>
+      ? dynamicSidebarItems.filter(item => item.title === 'Dashboard' || item.title === 'Cronograma' || item.title === 'Relatórios')
+      : dynamicSidebarItems.filter(item =>
           item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Cronograma' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
         )).map(item => {
         if (!isAdmin && (item.title === 'Insumos' || item.title === 'Solicitações')) {
