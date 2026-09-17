@@ -218,6 +218,19 @@ function EditarInsumoModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const [categoriasDb, setCategoriasDb] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/configuracoes?type=categorias')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCategoriasDb(data.filter((c: any) => c.ativo))
+        }
+      })
+      .catch(console.error);
+  }, []);
+  
   const [formData, setFormData] = useState({
     id: '',
     cd: '',
