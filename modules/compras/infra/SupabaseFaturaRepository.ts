@@ -88,6 +88,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       conta_contabil: faturaData.conta_contabil || null,
       descricao_contabil: faturaData.descricao_contabil || null,
       is_sap: faturaData.is_sap || false,
+      origem: faturaData.origem || (faturaData.is_sap ? 'SAP' : 'Nexa'),
       insumos: faturaData.insumos || [],
       motivo_desvio: faturaData.motivo_desvio || null,
       acao_corretiva: faturaData.acao_corretiva || null,

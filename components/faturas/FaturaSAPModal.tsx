@@ -133,7 +133,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
   const autoEtapa = calcularEtapa(formData);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pt-10 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 pt-10 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl my-auto flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
         
         <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center z-10 shrink-0 rounded-t-xl">
@@ -188,8 +188,27 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor Total (Previsto / RC)</label>
+                  <label className="text-sm font-medium">Nota Fiscal</label>
+                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF..." />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Valor Total (Previsto / RC / NF)</label>
                   <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Emissão</label>
+                  <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Recebimento</label>
+                  <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Vencimento</label>
+                  <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
                 </div>
               </div>
 
@@ -517,27 +536,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                       Aguardando emissão da Nota Fiscal pelo fornecedor.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 animate-in fade-in">
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Número da Nota Fiscal</label>
-                        <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF..." />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Data de Emissão</label>
-                        <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Data de Recebimento</label>
-                        <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Data de Vencimento</label>
-                        <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Valor da NF (Real)</label>
-                        <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} placeholder="R$ 0,00" />
-                      </div>
+                    <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200 mt-4 animate-in fade-in">
+                      Nota Fiscal informada no início do cadastro.
                     </div>
                   )}
                 </div>
@@ -663,26 +663,10 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 {/* Dados do Documento */}
                 <div className="space-y-4 p-4 border border-blue-200 bg-white rounded-lg">
                   <h4 className="font-semibold text-sm text-blue-900">Dados do Documento (NF / Boleto / etc.)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-4 mt-2">
                     <div className="space-y-2">
                       <label className="text-xs font-medium">Ticket Nexa (Chamado)</label>
                       <Input value={formData.nexa_chamado || ""} onChange={handleInputChange('nexa_chamado')} placeholder="Ex: INC000000" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Nº do Documento</label>
-                      <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF, Boleto..." />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Data de Emissão</label>
-                      <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Data de Receb. </label>
-                      <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium">Data de Vencimento</label>
-                      <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
                     </div>
                   </div>
                 </div>

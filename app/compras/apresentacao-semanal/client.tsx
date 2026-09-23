@@ -14,24 +14,25 @@ import { Check, X, FileText, ChevronRight, Filter, Target, BarChart2 } from "luc
 
 const PRAZO_MINIMO_ADERENCIA = 10;
 
-function getLastFullWeekEnd() {
-  const today = new Date();
-  const day = today.getDay(); // 0 = Sun, 1 = Mon ... 6 = Sat
-  const diffToLastSunday = day === 0 ? 7 : day;
-  const lastSunday = new Date(today);
-  lastSunday.setDate(today.getDate() - diffToLastSunday);
-  lastSunday.setHours(23, 59, 59, 999);
-  return lastSunday;
-}
+function getWeekBoundariesByYearMonthWeek(year: number, month: number, weekIndex: number) {
+  // weekIndex: 1, 2, 3, 4, 5
+  // month: 0-11
+  const firstDayOfMonth = new Date(year, month, 1);
+  const dayOfWeek = firstDayOfMonth.getDay(); // 0-6 (Sun-Sat)
+  
+  // Find first Sunday of the month, or if the month starts on Sunday, it's the 1st
+  let firstSunday = new Date(firstDayOfMonth);
+  if (dayOfWeek !== 0) {
+    firstSunday.setDate(firstDayOfMonth.getDate() + (7 - dayOfWeek));
+  }
 
-function getWeekBoundaries(offsetWeeksAgo: number) {
-  const end = getLastFullWeekEnd();
-  end.setDate(end.getDate() - ((offsetWeeksAgo - 1) * 7));
-
-  const start = new Date(end);
-  start.setDate(start.getDate() - 6);
-  start.setHours(0, 0, 0, 0);
-
+  let start = new Date(firstSunday);
+  start.setDate(firstSunday.getDate() + ((weekIndex - 1) * 7));
+  
+  let end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  
   return { start, end };
 }
 
@@ -62,7 +63,9 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
     }
   }, []);
 
-  const [selectedWeekOffset, setSelectedWeekOffset] = useState<number>(1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState<number>(1);
   const [agrupamento, setAgrupamento] = useState<"CD" | "Fornecedor">("CD");
   const [selectedFatura, setSelectedFatura] = useState<Fatura | null>(null);
 
@@ -74,10 +77,10 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
   const [isSaving, setIsSaving] = useState(false);
   const [expandedFaturaId, setExpandedFaturaId] = useState<string | null>(null);
 
-  // Calculate Weeks
-  const w1 = useMemo(() => getWeekBoundaries(selectedWeekOffset), [selectedWeekOffset]);
+  // Calculate Weeks based on Year/Month/Week
+  const w1 = useMemo(() => getWeekBoundariesByYearMonthWeek(selectedYear, selectedMonth, selectedWeekIndex), [selectedYear, selectedMonth, selectedWeekIndex]);
   
-  // Mapear faturas Planejadas da W-1 (apenas Faturas 2.0 / is_sap === true)
+  // Mapear faturas Planejadas da Semana Selecionada (apenas Faturas 2.0 / is_sap === true)
   const faturas20 = useMemo(() => faturas.filter(f => f.is_sap === true), [faturas]);
 
   const planejadasW1 = faturas20.filter(f => {
@@ -210,27 +213,46 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
         <div>
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-black text-purple-900 tracking-tight uppercase">Performance de Faturas 2.0</h1>
-            <select 
-              value={selectedWeekOffset} 
-              onChange={e => setSelectedWeekOffset(Number(e.target.value))}
-              className="bg-white border border-purple-200 text-purple-700 font-bold py-1.5 px-3 rounded-md text-sm outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer"
-            >
-              <option value={1}>W-1 (Semana Passada)</option>
-              <option value={2}>W-2</option>
-              <option value={3}>W-3</option>
-              <option value={4}>W-4</option>
-              <option value={5}>W-5</option>
-              <option value={6}>W-6</option>
-              <option value={7}>W-7</option>
-              <option value={8}>W-8</option>
-            </select>
+            
+            <div className="flex items-center gap-2">
+              <select 
+                value={selectedYear} 
+                onChange={e => setSelectedYear(Number(e.target.value))}
+                className="bg-white border border-purple-200 text-purple-700 font-bold py-1.5 px-3 rounded-md text-sm outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer"
+              >
+                {Array.from({ length: 6 }).map((_, i) => {
+                  const y = new Date().getFullYear() - 2 + i;
+                  return <option key={y} value={y}>{y}</option>;
+                })}
+              </select>
+
+              <select 
+                value={selectedMonth} 
+                onChange={e => setSelectedMonth(Number(e.target.value))}
+                className="bg-white border border-purple-200 text-purple-700 font-bold py-1.5 px-3 rounded-md text-sm outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer"
+              >
+                {["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"].map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+
+              <select 
+                value={selectedWeekIndex} 
+                onChange={e => setSelectedWeekIndex(Number(e.target.value))}
+                className="bg-white border border-purple-200 text-purple-700 font-bold py-1.5 px-3 rounded-md text-sm outline-none focus:ring-2 focus:ring-purple-500 shadow-sm cursor-pointer"
+              >
+                {[1, 2, 3, 4, 5].map(w => (
+                  <option key={w} value={w}>Semana {w}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <p className="text-zinc-500 font-medium mt-1">Aderência NF & Backlog - Visão W-{selectedWeekOffset} ({format(w1.start, 'dd/MM/yyyy')} a {format(w1.end, 'dd/MM/yyyy')})</p>
+          <p className="text-zinc-500 font-medium mt-1">Aderência NF & Backlog - Visão Semana {selectedWeekIndex} ({format(w1.start, 'dd/MM/yyyy')} a {format(w1.end, 'dd/MM/yyyy')})</p>
         </div>
         
         <div className="flex items-center gap-6">
           <div className="text-right">
-            <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Aderência W-1</p>
+            <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Aderência Semana</p>
             <p className={cn("text-4xl font-black", aderenciaGeral === 100 ? "text-emerald-500" : (aderenciaGeral >= 80 ? "text-amber-500" : "text-red-500"))}>
               {aderenciaGeral.toFixed(1)}%
             </p>

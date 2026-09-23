@@ -60,6 +60,7 @@ export interface Fatura {
   
   // SAP
   is_sap?: boolean;
+  origem?: 'SAP' | 'Nexa'; // Adicionado para rastrear fluxo
   rc_sap?: string;
   data_rc_sap?: string;
   pedido_sap?: string;

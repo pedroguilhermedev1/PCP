@@ -12,13 +12,19 @@ import { saveFaturaAction, deleteFaturaAction } from "./actions";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { formatCNPJ, cn } from "@/lib/utils";
+import { MultiSelectFilter } from "@/components/ui/multi-select-filter";
+import { Copy, Clock, ArrowRightLeft } from "lucide-react";
+import { TransferModal } from "@/components/faturas/TransferModal";
+import { getFaturaPeriodosAction } from "./periodos-actions";
 
 export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' | 'Todas' }) {
   const [faturas, setFaturas] = useState<Fatura[]>(initialFaturas);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [faturaToEdit, setFaturaToEdit] = useState<Fatura | null>(null);
+  const [faturaToTransfer, setFaturaToTransfer] = useState<Fatura | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [expandedFaturaId, setExpandedFaturaId] = useState<string | null>(null);
+  const [faturaPeriodos, setFaturaPeriodos] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState("");
 
   const searchParams = useSearchParams();
@@ -27,15 +33,15 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const qAno = searchParams.get('ano') || 'todos';
   const qMes = searchParams.get('mes') || 'todos';
 
-  const [filterCD, setFilterCD] = useState<string>(defaultCD);
-  const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
-  const [filterAno, setFilterAno] = useState<string>(qAno);
-  const [filterMes, setFilterMes] = useState<string>(qMes);
+  const [filterCD, setFilterCD] = useState<string[]>([defaultCD]);
+  const [filterSLA, setFilterSLA] = useState<string[]>([defaultSLA]);
+  const [filterAno, setFilterAno] = useState<string[]>([qAno]);
+  const [filterMes, setFilterMes] = useState<string[]>([qMes]);
   const defaultStatus = searchParams.get('status')?.replace('_', ' ') || 'todos';
   const [filterStatus, setFilterStatus] = useState<string[]>([defaultStatus]);
   const defaultStatusPagamento = searchParams.get('status_pagamento') || 'todos';
-  const [filterStatusPagamento, setFilterStatusPagamento] = useState<string>(defaultStatusPagamento);
-  const [filterResponsavel, setFilterResponsavel] = useState<string>('todos');
+  const [filterStatusPagamento, setFilterStatusPagamento] = useState<string[]>([defaultStatusPagamento]);
+  const [filterResponsavel, setFilterResponsavel] = useState<string[]>(['todos']);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
@@ -61,24 +67,28 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const faturasAposFiltroCategoria = faturas.filter(f => (categoria === 'Todas' || f.categoria === categoria) && f.is_sap);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {
     const fCD = (f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '').toLowerCase();
-    if (filterCD !== 'todos' && fCD !== filterCD.toLowerCase()) return false;
+    if (!filterCD.includes('todos')) {
+      if (!filterCD.some(cd => fCD === cd.toLowerCase())) return false;
+    }
 
-    if (filterSLA !== 'todos') {
+    if (!filterSLA.includes('todos')) {
       const sla = calcularSLA(f);
-      if (filterSLA === 'No prazo' && sla !== 'Dentro do prazo') return false;
-      if (filterSLA === 'Próximas' && sla !== 'Próximo do vencimento') return false;
-      if (filterSLA === 'Atrasadas' && sla !== 'Atrasado') return false;
+      const matchesSla = filterSLA.some(slaOpt => {
+        if (slaOpt === 'No prazo' && sla === 'Dentro do prazo') return true;
+        if (slaOpt === 'Próximas' && sla === 'Próximo do vencimento') return true;
+        if (slaOpt === 'Atrasadas' && sla === 'Atrasado') return true;
+        return false;
+      });
+      if (!matchesSla) return false;
     }
 
-    if (filterAno !== "todos" || filterMes !== "todos") {
-      const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
-      const d = new Date(dataStr);
-      const m = (d.getMonth() + 1).toString().padStart(2, '0');
-      const y = d.getFullYear().toString();
-      
-      if (filterAno !== "todos" && y !== filterAno) return false;
-      if (filterMes !== "todos" && m !== filterMes) return false;
-    }
+    const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
+    const d = new Date(dataStr);
+    const m = (d.getMonth() + 1).toString().padStart(2, '0');
+    const y = d.getFullYear().toString();
+    
+    if (!filterAno.includes('todos') && !filterAno.includes(y)) return false;
+    if (!filterMes.includes('todos') && !filterMes.includes(m)) return false;
 
     if (!filterStatus.includes("todos")) {
       const stat = calcularStatus(f);
@@ -99,12 +109,12 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       if (etapaExata === 'programacao' && etapa !== 'Aguardando programação de pagamento') return false;
     }
 
-    if (filterStatusPagamento !== "todos") {
-      if ((f.status_pagamento || '').toLowerCase() !== filterStatusPagamento.toLowerCase()) return false;
+    if (!filterStatusPagamento.includes("todos")) {
+      if (!filterStatusPagamento.some(s => (f.status_pagamento || '').toLowerCase() === s.toLowerCase())) return false;
     }
 
-    if (filterResponsavel !== "todos") {
-      if ((f.responsavel || '') !== filterResponsavel) return false;
+    if (!filterResponsavel.includes("todos")) {
+      if (!filterResponsavel.some(r => (f.responsavel || '') === r)) return false;
     }
 
     if (searchTerm.trim() !== "") {
@@ -134,6 +144,36 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     setIsModalOpen(true);
   };
 
+  const handleDuplicate = (fatura: Fatura) => {
+    const { 
+      id, numero_documento, valor, data_emissao, data_recebimento, data_vencimento, data_pagamento_real, 
+      erp, heflo, v360, data_abertura_heflo, data_abertura_v360, data_aprovacao, 
+      is_sap, rc_sap, pedido_sap, data_rc_sap, data_pedido_sap, nexa_chamado, numero_pc_nexa, 
+      ...dadosPermanentes 
+    } = fatura;
+    
+    const faturaDuplicada = {
+      ...dadosPermanentes,
+      id: '',
+      numero_documento: '',
+      valor: 0,
+      data_emissao: '',
+      data_recebimento: '',
+      data_vencimento: '',
+      status_pagamento: 'Em andamento' as any,
+      doc_subsequente_criado: false,
+      nexa_emitiu_nf: false,
+      nexa_anexada: false,
+      nexa_lancamento_concluido: false,
+      nexa_pagamento_programado: false,
+      nexa_pagamento_realizado: false,
+      pc_nexa_concluido: false,
+    };
+    
+    setFaturaToEdit(faturaDuplicada as Fatura);
+    setIsModalOpen(true);
+  };
+
   const handleDelete = async (id: string, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -155,8 +195,19 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedFaturaId(prev => prev === id ? null : id);
+  const toggleExpand = async (id: string) => {
+    if (expandedFaturaId === id) {
+      setExpandedFaturaId(null);
+    } else {
+      setExpandedFaturaId(id);
+      try {
+        const periodos = await getFaturaPeriodosAction(id);
+        setFaturaPeriodos(periodos);
+      } catch (e) {
+        console.error("Erro ao carregar histórico", e);
+        setFaturaPeriodos([]);
+      }
+    }
   };
 
   const handleSave = async (savedFatura: Fatura) => {
@@ -264,110 +315,71 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
-            <select 
-              value={filterCD} 
-              onChange={(e) => setFilterCD(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
-            >
-              <option value="todos">Todos</option>
-              {uniqueCDs.map(cd => <option key={cd as string} value={cd as string}>{(cd as string).toUpperCase()}</option>)}
-            </select>
+            <MultiSelectFilter
+              label="CD"
+              options={[{value: "todos", label: "Todos"}, ...uniqueCDs.map(cd => ({value: cd as string, label: (cd as string).toUpperCase()}))]}
+              selectedValues={filterCD}
+              onChange={setFilterCD}
+            />
+            <MultiSelectFilter
+              label="SLA Operacional"
+              options={[
+                {value: "todos", label: "Todos"},
+                {value: "No prazo", label: "Dentro do prazo"},
+                {value: "Próximas", label: "Próximas do limite"},
+                {value: "Atrasadas", label: "Atrasadas no Fluxo"}
+              ]}
+              selectedValues={filterSLA}
+              onChange={setFilterSLA}
+            />
+            <MultiSelectFilter
+              label="Ano"
+              options={[
+                {value: "todos", label: "Todos"},
+                ...["2023", "2024", "2025", "2026", "2027", "2028"].map(a => ({value: a, label: a}))
+              ]}
+              selectedValues={filterAno}
+              onChange={setFilterAno}
+            />
+            <MultiSelectFilter
+              label="Mês"
+              options={[
+                {value: "todos", label: "Todos"},
+                {value: "01", label: "Janeiro"},
+                {value: "02", label: "Fevereiro"},
+                {value: "03", label: "Março"},
+                {value: "04", label: "Abril"},
+                {value: "05", label: "Maio"},
+                {value: "06", label: "Junho"},
+                {value: "07", label: "Julho"},
+                {value: "08", label: "Agosto"},
+                {value: "09", label: "Setembro"},
+                {value: "10", label: "Outubro"},
+                {value: "11", label: "Novembro"},
+                {value: "12", label: "Dezembro"}
+              ]}
+              selectedValues={filterMes}
+              onChange={setFilterMes}
+            />
+            <MultiSelectFilter
+              label="Status"
+              options={[
+                {value: "todos", label: "Todos"},
+                {value: "Pago", label: "Pago"},
+                {value: "Pago (Vencida)", label: "Pago (Vencida)"},
+                {value: "A Vencer", label: "A Vencer"},
+                {value: "Vencido", label: "Vencida"}
+              ]}
+              selectedValues={filterStatus}
+              onChange={setFilterStatus}
+            />
+            <MultiSelectFilter
+              label="Resp."
+              options={[{value: "todos", label: "Todos"}, ...uniqueResponsaveis.map(r => ({value: r, label: r}))]}
+              selectedValues={filterResponsavel}
+              onChange={setFilterResponsavel}
+            />
           </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">SLA Operacional</span>
-            <select 
-              value={filterSLA} 
-              onChange={(e) => setFilterSLA(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[120px]"
-            >
-              <option value="todos">Todos</option>
-              <option value="No prazo">Dentro do prazo</option>
-              <option value="Próximas">Próximas do limite</option>
-              <option value="Atrasadas">Atrasadas no Fluxo</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
-            <select 
-              value={filterAno} 
-              onChange={(e) => setFilterAno(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[70px]"
-            >
-              <option value="todos">Todos</option>
-              {["2023", "2024", "2025", "2026", "2027", "2028"].map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
-            <select 
-              value={filterMes} 
-              onChange={(e) => setFilterMes(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
-            >
-              <option value="todos">Todos</option>
-              <option value="01">Janeiro</option>
-              <option value="02">Fevereiro</option>
-              <option value="03">Março</option>
-              <option value="04">Abril</option>
-              <option value="05">Maio</option>
-              <option value="06">Junho</option>
-              <option value="07">Julho</option>
-              <option value="08">Agosto</option>
-              <option value="09">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm relative group cursor-pointer z-[60]">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Status</span>
-            <div className="text-sm font-medium text-zinc-800 min-w-[100px]">
-              {filterStatus.length === 0 || filterStatus.includes('todos') ? 'Todos' : filterStatus.length > 1 ? `${filterStatus.length} selecionados` : filterStatus[0]}
-            </div>
-            
-            <div className="absolute top-full left-0 mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg p-2 hidden group-hover:block min-w-[180px]">
-              {['todos', 'Pago', 'Pago (Vencida)', 'A Vencer', 'Vencido'].map(opt => (
-                <label key={opt} className="flex items-center gap-2 p-1.5 hover:bg-zinc-50 rounded cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={filterStatus.includes(opt)}
-                    onChange={(e) => {
-                      if (opt === 'todos') {
-                        setFilterStatus(['todos']);
-                      } else {
-                        const isChecked = e.target.checked;
-                        let newFilter = filterStatus.filter(f => f !== 'todos');
-                        if (isChecked) {
-                          newFilter.push(opt);
-                        } else {
-                          newFilter = newFilter.filter(f => f !== opt);
-                        }
-                        if (newFilter.length === 0) newFilter = ['todos'];
-                        setFilterStatus(newFilter);
-                      }
-                    }}
-                    className="w-4 h-4 text-purple-600 rounded border-zinc-300 focus:ring-purple-500 cursor-pointer"
-                  />
-                  <span className="text-sm text-zinc-700">{opt === 'todos' ? 'Todos' : opt === 'Vencido' ? 'Vencida' : opt}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Resp.</span>
-            <select 
-              value={filterResponsavel} 
-              onChange={(e) => setFilterResponsavel(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
-            >
-              <option value="todos">Todos</option>
-              {uniqueResponsaveis.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
@@ -469,9 +481,27 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                         <div className="flex flex-col lg:flex-row min-h-[400px]">
                           {/* Main Content Area */}
                           <div className="flex-1 p-8 border-r border-zinc-200">
-                            <div className="flex items-center gap-3 mb-6">
-                              <FileText className="w-6 h-6 text-purple-700" />
-                              <h3 className="text-xl font-bold text-zinc-900">Detalhes da Fatura</h3>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                              <div className="flex items-center gap-3">
+                                <FileText className="w-6 h-6 text-purple-700" />
+                                <h3 className="text-xl font-bold text-zinc-900">Detalhes da Fatura</h3>
+                              </div>
+                              {canEditOrDelete && (
+                                <div className="flex gap-2">
+                                  <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleDuplicate(f)}>
+                                    <Copy className="w-4 h-4 mr-2" />
+                                    Duplicar
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setFaturaToTransfer(f)}>
+                                    <ArrowRightLeft className="w-4 h-4 mr-2" />
+                                    Transferir / Devolver
+                                  </Button>
+                                  <Button variant="secondary" size="sm" onClick={() => handleEdit(f)}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Editar
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -642,6 +672,59 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                                 </div>
                               </div>
                             )}
+
+                            {/* Histórico de Tempos e SLAs */}
+                            <div className="mt-8 pt-8 border-t border-zinc-200">
+                              <div className="flex items-center gap-3 mb-6">
+                                <Clock className="w-6 h-6 text-amber-600" />
+                                <h3 className="text-lg font-bold text-zinc-900">Histórico de SLAs e Transferências</h3>
+                              </div>
+                              
+                              {faturaPeriodos.length === 0 ? (
+                                <div className="p-6 bg-zinc-50 rounded-lg text-center text-zinc-500 text-sm">
+                                  Nenhum histórico registrado ainda. Transfira o processo para iniciar a contagem.
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {faturaPeriodos.map((p, idx) => {
+                                    const dInicio = new Date(p.data_inicio);
+                                    const dTermino = p.data_termino ? new Date(p.data_termino) : new Date();
+                                    const diffDias = Math.ceil((dTermino.getTime() - dInicio.getTime()) / (1000 * 3600 * 24));
+                                    const estourouSLA = diffDias > p.sla_dias;
+                                    
+                                    return (
+                                      <div key={p.id} className="relative pl-6 pb-4 border-l-2 border-zinc-200 last:border-0 last:pb-0">
+                                        <div className={cn("absolute -left-1.5 top-0 w-3 h-3 rounded-full border-2 border-white", !p.data_termino ? "bg-amber-500" : (estourouSLA ? "bg-red-500" : "bg-emerald-500"))}></div>
+                                        <div className="bg-white border border-zinc-200 rounded-lg p-4 shadow-sm">
+                                          <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                              <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mb-1">Etapa: {p.etapa_nome}</span>
+                                              <h4 className="text-base font-bold text-zinc-800">Time: {p.time_responsavel}</h4>
+                                            </div>
+                                            <div className="text-right">
+                                              <span className={cn("px-2 py-1 rounded text-[10px] font-bold uppercase", !p.data_termino ? "bg-amber-100 text-amber-700" : (estourouSLA ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"))}>
+                                                SLA: {p.sla_dias} dias | Usado: {diffDias} dias
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="text-sm text-zinc-600 mb-3">
+                                            <p><strong>Início:</strong> {dInicio.toLocaleString('pt-BR')}</p>
+                                            {p.data_termino && <p><strong>Fim:</strong> {new Date(p.data_termino).toLocaleString('pt-BR')}</p>}
+                                          </div>
+                                          {p.motivo_transferencia && (
+                                            <div className="bg-zinc-50 p-3 rounded border border-zinc-100 text-sm">
+                                              <p className="font-semibold text-zinc-800 mb-1">Motivo: {p.motivo_transferencia}</p>
+                                              {p.observacao_transferencia && <p className="text-zinc-600">{p.observacao_transferencia}</p>}
+                                              <p className="text-xs text-zinc-400 mt-2 block">Transferido por: {p.usuario_transferencia || 'Sistema'}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Right Panel Summary */}
@@ -745,6 +828,27 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           onSave={handleSave}
         />
       )}
+
+      <ConfirmDeleteModal 
+        isOpen={itemToDelete !== null}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={() => handleDelete(itemToDelete!)}
+        title="Excluir Fatura"
+        description="Tem certeza que deseja excluir esta fatura? A exclusão também removerá faturas vinculadas aos mesmos itens (mesma NF) caso ela seja do tipo Serviço. Esta ação não pode ser desfeita."
+      />
+
+      <TransferModal 
+        isOpen={!!faturaToTransfer}
+        onClose={() => setFaturaToTransfer(null)}
+        fatura={faturaToTransfer}
+        onSuccess={() => {
+          if (expandedFaturaId === faturaToTransfer?.id) {
+            // refresh data
+            toggleExpand(faturaToTransfer.id);
+            setTimeout(() => toggleExpand(faturaToTransfer.id), 50);
+          }
+        }}
+      />
       </div>
     </div>
   );

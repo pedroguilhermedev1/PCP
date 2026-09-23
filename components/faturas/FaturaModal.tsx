@@ -130,7 +130,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
   const autoEtapa = calcularEtapa(formData);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pt-10 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 pt-10 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl my-auto flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
         
         <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex justify-between items-center z-10 shrink-0 rounded-t-xl">

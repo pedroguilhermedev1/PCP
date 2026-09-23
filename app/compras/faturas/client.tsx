@@ -5,13 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign, Copy } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { FaturaModal } from "@/components/faturas/FaturaModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
 import { formatCNPJ, cn } from "@/lib/utils";
+import { MultiSelectFilter } from "@/components/ui/multi-select-filter";
 
 export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' | 'Todas' }) {
   const [faturas, setFaturas] = useState<Fatura[]>(initialFaturas);
@@ -27,12 +28,12 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const qAno = searchParams.get('ano') || 'todos';
   const qMes = searchParams.get('mes') || 'todos';
 
-  const [filterCD, setFilterCD] = useState<string>(defaultCD);
-  const [filterSLA, setFilterSLA] = useState<string>(defaultSLA);
-  const [filterAno, setFilterAno] = useState<string>(qAno);
-  const [filterMes, setFilterMes] = useState<string>(qMes);
+  const [filterCD, setFilterCD] = useState<string[]>([defaultCD]);
+  const [filterSLA, setFilterSLA] = useState<string[]>([defaultSLA]);
+  const [filterAno, setFilterAno] = useState<string[]>([qAno]);
+  const [filterMes, setFilterMes] = useState<string[]>([qMes]);
   const defaultStatus = searchParams.get('status') || 'todos';
-  const [filterStatus, setFilterStatus] = useState<string>(defaultStatus);
+  const [filterStatus, setFilterStatus] = useState<string[]>([defaultStatus]);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
@@ -56,28 +57,32 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const faturasAposFiltroCategoria = faturas.filter(f => (categoria === 'Todas' || f.categoria === categoria) && !f.is_sap);
   const faturasFiltradas = faturasAposFiltroCategoria.filter(f => {
     const fCD = (f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '').toLowerCase();
-    if (filterCD !== 'todos' && fCD !== filterCD.toLowerCase()) return false;
+    if (!filterCD.includes('todos')) {
+      if (!filterCD.some(cd => fCD === cd.toLowerCase())) return false;
+    }
 
-    if (filterSLA !== 'todos') {
+    if (!filterSLA.includes('todos')) {
       const sla = calcularSLA(f);
-      if (filterSLA === 'No prazo' && sla !== 'Dentro do prazo') return false;
-      if (filterSLA === 'Próximas' && sla !== 'Próximo do vencimento') return false;
-      if (filterSLA === 'Atrasadas' && sla !== 'Atrasado') return false;
+      const matchesSla = filterSLA.some(slaOpt => {
+        if (slaOpt === 'No prazo' && sla === 'Dentro do prazo') return true;
+        if (slaOpt === 'Próximas' && sla === 'Próximo do vencimento') return true;
+        if (slaOpt === 'Atrasadas' && sla === 'Atrasado') return true;
+        return false;
+      });
+      if (!matchesSla) return false;
     }
 
-    if (filterAno !== "todos" || filterMes !== "todos") {
-      const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
-      const d = new Date(dataStr);
-      const m = (d.getMonth() + 1).toString().padStart(2, '0');
-      const y = d.getFullYear().toString();
-      
-      if (filterAno !== "todos" && y !== filterAno) return false;
-      if (filterMes !== "todos" && m !== filterMes) return false;
-    }
+    const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
+    const d = new Date(dataStr);
+    const m = (d.getMonth() + 1).toString().padStart(2, '0');
+    const y = d.getFullYear().toString();
+    
+    if (!filterAno.includes('todos') && !filterAno.includes(y)) return false;
+    if (!filterMes.includes('todos') && !filterMes.includes(m)) return false;
 
-    if (filterStatus !== "todos") {
+    if (!filterStatus.includes('todos')) {
       const stat = calcularStatus(f);
-      if (stat.toLowerCase() !== filterStatus.toLowerCase()) return false;
+      if (!filterStatus.some(s => stat.toLowerCase() === s.toLowerCase())) return false;
     }
 
     if (searchTerm.trim() !== "") {
@@ -104,6 +109,36 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
   const handleEdit = (fatura: Fatura) => {
     setFaturaToEdit(fatura);
+    setIsModalOpen(true);
+  };
+
+  const handleDuplicate = (fatura: Fatura) => {
+    const { 
+      id, numero_documento, valor, data_emissao, data_recebimento, data_vencimento, data_pagamento_real, 
+      erp, heflo, v360, data_abertura_heflo, data_abertura_v360, data_aprovacao, 
+      is_sap, rc_sap, pedido_sap, data_rc_sap, data_pedido_sap, nexa_chamado, numero_pc_nexa, 
+      ...dadosPermanentes 
+    } = fatura;
+    
+    const faturaDuplicada = {
+      ...dadosPermanentes,
+      id: '',
+      numero_documento: '',
+      valor: 0,
+      data_emissao: '',
+      data_recebimento: '',
+      data_vencimento: '',
+      status_pagamento: 'Em andamento' as any,
+      doc_subsequente_criado: false,
+      nexa_emitiu_nf: false,
+      nexa_anexada: false,
+      nexa_lancamento_concluido: false,
+      nexa_pagamento_programado: false,
+      nexa_pagamento_realizado: false,
+      pc_nexa_concluido: false,
+    };
+    
+    setFaturaToEdit(faturaDuplicada as Fatura);
     setIsModalOpen(true);
   };
 
@@ -237,79 +272,65 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">CD</span>
-            <select 
-              value={filterCD} 
-              onChange={(e) => setFilterCD(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[80px]"
-            >
-              <option value="todos">Todos</option>
-              {uniqueCDs.map(cd => <option key={cd as string} value={cd as string}>{(cd as string).toUpperCase()}</option>)}
-            </select>
+            <MultiSelectFilter
+              label="CD"
+              options={[{value: "todos", label: "Todos"}, ...uniqueCDs.map(cd => ({value: cd as string, label: (cd as string).toUpperCase()}))]}
+              selectedValues={filterCD}
+              onChange={setFilterCD}
+            />
+            <MultiSelectFilter
+              label="SLA Operacional"
+              options={[
+                {value: "todos", label: "Todos"},
+                {value: "No prazo", label: "Dentro do prazo"},
+                {value: "Próximas", label: "Próximas do limite"},
+                {value: "Atrasadas", label: "Atrasadas no Fluxo"}
+              ]}
+              selectedValues={filterSLA}
+              onChange={setFilterSLA}
+            />
+            <MultiSelectFilter
+              label="Ano"
+              options={[
+                {value: "todos", label: "Todos"},
+                ...["2023", "2024", "2025", "2026", "2027", "2028"].map(a => ({value: a, label: a}))
+              ]}
+              selectedValues={filterAno}
+              onChange={setFilterAno}
+            />
+            <MultiSelectFilter
+              label="Mês"
+              options={[
+                {value: "todos", label: "Todos"},
+                {value: "01", label: "Janeiro"},
+                {value: "02", label: "Fevereiro"},
+                {value: "03", label: "Março"},
+                {value: "04", label: "Abril"},
+                {value: "05", label: "Maio"},
+                {value: "06", label: "Junho"},
+                {value: "07", label: "Julho"},
+                {value: "08", label: "Agosto"},
+                {value: "09", label: "Setembro"},
+                {value: "10", label: "Outubro"},
+                {value: "11", label: "Novembro"},
+                {value: "12", label: "Dezembro"}
+              ]}
+              selectedValues={filterMes}
+              onChange={setFilterMes}
+            />
+            <MultiSelectFilter
+              label="Status"
+              options={[
+                {value: "todos", label: "Todos"},
+                {value: "Pago", label: "Pago"},
+                {value: "Pago (Vencida)", label: "Pago (Vencida)"},
+                {value: "A Vencer", label: "A Vencer"},
+                {value: "Vencido", label: "Vencida"}
+              ]}
+              selectedValues={filterStatus}
+              onChange={setFilterStatus}
+            />
           </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">SLA Operacional</span>
-            <select 
-              value={filterSLA} 
-              onChange={(e) => setFilterSLA(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[120px]"
-            >
-              <option value="todos">Todos</option>
-              <option value="No prazo">Dentro do prazo</option>
-              <option value="Próximas">Próximas do limite</option>
-              <option value="Atrasadas">Atrasadas no Fluxo</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Ano</span>
-            <select 
-              value={filterAno} 
-              onChange={(e) => setFilterAno(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[70px]"
-            >
-              <option value="todos">Todos</option>
-              {["2023", "2024", "2025", "2026", "2027", "2028"].map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Mês</span>
-            <select 
-              value={filterMes} 
-              onChange={(e) => setFilterMes(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
-            >
-              <option value="todos">Todos</option>
-              <option value="01">Janeiro</option>
-              <option value="02">Fevereiro</option>
-              <option value="03">Março</option>
-              <option value="04">Abril</option>
-              <option value="05">Maio</option>
-              <option value="06">Junho</option>
-              <option value="07">Julho</option>
-              <option value="08">Agosto</option>
-              <option value="09">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-            <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Status</span>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="text-sm font-medium bg-transparent outline-none text-zinc-800 cursor-pointer min-w-[100px]"
-            >
-              <option value="todos">Todos</option>
-              <option value="Pago">Pago</option>
-              <option value="Pago (Vencida)">Pago (Vencida)</option>
-              <option value="A Vencer">A Vencer</option>
-              <option value="Vencido">Vencida</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
@@ -392,10 +413,13 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     {canEditOrDelete && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(f); }}>
+                          <Button variant="ghost" size="icon" title="Duplicar Fatura" onClick={(e) => { e.stopPropagation(); handleDuplicate(f); }}>
+                            <Copy className="w-4 h-4 text-blue-500" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Editar Fatura" onClick={(e) => { e.stopPropagation(); handleEdit(f); }}>
                             <Edit className="w-4 h-4 text-zinc-500" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setItemToDelete(f.id); }}>
+                          <Button variant="ghost" size="icon" title="Excluir Fatura" onClick={(e) => { e.stopPropagation(); setItemToDelete(f.id); }}>
                             <Trash2 className="w-4 h-4 text-red-500" />
                           </Button>
                         </div>
@@ -410,10 +434,16 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                             <h3 className="text-lg font-bold text-purple-900">Detalhes da Fatura</h3>
                             {canEditOrDelete && (
-                              <Button variant="secondary" size="sm" onClick={() => handleEdit(f)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Editar Fatura
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => handleDuplicate(f)}>
+                                  <Copy className="w-4 h-4 mr-2" />
+                                  Duplicar
+                                </Button>
+                                <Button variant="secondary" size="sm" onClick={() => handleEdit(f)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Editar Fatura
+                                </Button>
+                              </div>
                             )}
                           </div>
                           

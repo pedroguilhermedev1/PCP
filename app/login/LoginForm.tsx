@@ -26,7 +26,15 @@ export function LoginForm() {
       if (!res.ok) throw new Error('Erro ao verificar usuários.');
       const usuarios = await res.json();
       
-      const user = usuarios.find((u: any) => u.username === parsedUsername && u.ativo);
+      const dbUserRaw = usuarios.find((u: any) => u.username === parsedUsername);
+      const user = dbUserRaw && dbUserRaw.ativo ? dbUserRaw : null;
+      
+      // Se o usuário está no banco de dados mas inativo, bloqueia imediatamente
+      if (dbUserRaw && dbUserRaw.ativo === false) {
+        setError('Usuário inativo.');
+        setLoading(false);
+        return;
+      }
       
       // Fallbacks para liderança ou legado
       const isLiderancaLegacy = (parsedUsername === 'lideranca.arco' || parsedUsername === 'liderança.arco') && 
@@ -54,8 +62,9 @@ export function LoginForm() {
       }
       
       // Fallback para hardcoded original se não achar no banco e bater a senha
+      // Só entra aqui se dbUserRaw for undefined (ou seja, não está no banco nem ativo nem inativo)
       const validUsers = [...ADMIN_USERS, ...OPERACIONAL_USERS];
-      if (validUsers.includes(parsedUsername) && password === `${parsedUsername}@2026`) {
+      if (!dbUserRaw && validUsers.includes(parsedUsername) && password === `${parsedUsername}@2026`) {
         localStorage.setItem('pcp_user', parsedUsername);
         const fallbackRole = getUserRole(parsedUsername);
         if (fallbackRole) localStorage.setItem('pcp_role', fallbackRole);

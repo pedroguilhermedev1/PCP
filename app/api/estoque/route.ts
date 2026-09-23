@@ -55,13 +55,23 @@ export async function PUT(request: Request) {
   estoque_minimo = parseInt(estoque_minimo) || 0;
   estoque_real = parseInt(estoque_real) || 0;
 
-  // 1. Fetch existing item to get its old item name and cd for mirroring
-  const { data: existing, error: fetchErr } = await supabase.from('estoque_insumos').select('item, cd, empresa').eq('id', id).single();
+  // 1. Fetch existing item to get its old item name, cd, and current estoque_real
+  const { data: existing, error: fetchErr } = await supabase.from('estoque_insumos').select('item, cd, empresa, estoque_real').eq('id', id).single();
   
   if (fetchErr || !existing) return NextResponse.json({ error: 'Item não encontrado' }, { status: 404 });
 
+  // Recalcular o status usando o estoque_real atualizado do banco e o novo cmd/lead_time
+  const currentReal = existing.estoque_real || 0;
+  const currentCmd = parseFloat(cmd) || 10;
+  const currentLt = parseFloat(lead_time) || 0;
+  const cobertura = currentCmd > 0 ? (currentReal / currentCmd) : Infinity;
+
+  let novoStatus = 'CONFORTÁVEL';
+  if (cobertura <= currentLt) novoStatus = 'CRÍTICO';
+  else if (cobertura > currentLt && cobertura <= (currentLt + 3)) novoStatus = 'ALERTA';
+
   let updateQuery = supabase.from('estoque_insumos').update({
-    cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, estoque_real, status, categoria, cmd, conta_contabil, descricao_contabil
+    cd, empresa, codigo, item_adm, item, unidade, lead_time: lead_time || '-', estoque_minimo, status: novoStatus, categoria, cmd, conta_contabil, descricao_contabil
   }).eq('item', existing.item).ilike('cd', existing.cd);
 
   if (existing.empresa) {

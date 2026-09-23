@@ -40,37 +40,56 @@ export default function ComprasLayout({
 
     console.log('É admin?', isAdmin);
 
-    if (!isAdmin) {
-      let allowedRoutes = [
-        '/compras/dashboard',
-        '/compras/cronograma',
-        '/compras/formularios',
-        '/compras/insumos',
-        '/compras/fornecedores/cronograma',
-        '/compras/relatorios'
-      ];
-
-      if (isLideranca) {
-        allowedRoutes = [
+      if (!isAdmin) {
+        let allowedRoutes = [
           '/compras/dashboard',
           '/compras/cronograma',
+          '/compras/formularios',
+          '/compras/insumos',
+          '/compras/fornecedores/cronograma',
           '/compras/relatorios'
         ];
-      } else if (role === 'REPORTS') {
-        allowedRoutes = ['/compras/relatorios'];
+
+        if (isLideranca) {
+          allowedRoutes = [
+            '/compras/dashboard',
+            '/compras/cronograma',
+            '/compras/relatorios'
+          ];
+        } else if (role === 'REPORTS') {
+          allowedRoutes = ['/compras/relatorios'];
+        }
+
+        const hasAccess = allowedRoutes.some((route) =>
+          pathname.startsWith(route)
+        );
+
+        console.log('Tem acesso?', hasAccess);
+
+        if (!hasAccess) {
+          console.log('REDIRECIONANDO...');
+          router.push(isLideranca ? '/compras/dashboard' : '/compras/dashboard');
+        }
       }
 
-      const hasAccess = allowedRoutes.some((route) =>
-        pathname.startsWith(route)
-      );
-
-      console.log('Tem acesso?', hasAccess);
-
-      if (!hasAccess) {
-        console.log('REDIRECIONANDO...');
-        router.push(isLideranca ? '/compras/dashboard' : '/compras/dashboard');
+      // Validação de Inativação
+      if (user) {
+        fetch('/api/usuarios')
+          .then(res => res.json())
+          .then(usuarios => {
+            const dbUser = usuarios.find((u: any) => u.username === user.trim().toLowerCase());
+            // Se o usuário foi encontrado na tabela E está inativo, ou se o usuário estiver inativo
+            if (dbUser && dbUser.ativo === false) {
+              console.log('Usuário inativo detectado! Desconectando...');
+              localStorage.removeItem('pcp_user');
+              localStorage.removeItem('pcp_role');
+              localStorage.removeItem('pcp_name');
+              localStorage.removeItem('pcp_cd');
+              router.push('/login');
+            }
+          })
+          .catch(err => console.error('Erro ao validar usuário', err));
       }
-    }
   }, [pathname, router]);
 
   return (
