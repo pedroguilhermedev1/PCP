@@ -833,8 +833,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         isOpen={itemToDelete !== null}
         onClose={() => setItemToDelete(null)}
         onConfirm={() => handleDelete(itemToDelete!)}
-        title="Excluir Fatura"
-        description="Tem certeza que deseja excluir esta fatura? A exclusão também removerá faturas vinculadas aos mesmos itens (mesma NF) caso ela seja do tipo Serviço. Esta ação não pode ser desfeita."
       />
 
       <TransferModal 
