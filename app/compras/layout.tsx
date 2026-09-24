@@ -5,6 +5,7 @@ console.log('LAYOUT COMPRAS CARREGADO');
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getUserRole } from '@/lib/roles';
+import { supabase } from '@/lib/supabase';
 
 import { Sidebar } from '@/components/layout/sidebar';
 import { LembretesProvider } from '@/components/lembretes/LembretesContext';

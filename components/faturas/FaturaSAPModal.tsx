@@ -468,6 +468,693 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               </section>
             )}
 
+                        {formData.fluxo_iniciado_por === 'SAP' && (
+              <div className="space-y-4 pt-4 border-t border-zinc-200">
+                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Fluxo de Trabalho (SAP)</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-6">
+                  {/* T1 */}
+                  <div className="relative p-4 bg-white rounded-xl border border-purple-200 hover:border-purple-300 transition-all shadow-sm">
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-purple-50 rounded-full border border-purple-300 flex items-center justify-center text-[10px] font-bold text-purple-700">T1</div>
+                    <span className="text-[11px] font-bold text-purple-800 uppercase block mb-3 mt-1">RC SAP</span>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Número RC</label>
+                        <Input className="h-7 text-xs border-zinc-200" value={formData.rc_sap || ""} onChange={handleInputChange('rc_sap')} placeholder="Pendente" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Criação</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_rc_sap || ""} onChange={handleInputChange('data_rc_sap')} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T2 */}
+                  <div className="relative p-4 bg-white rounded-xl border border-indigo-200 hover:border-indigo-300 transition-all shadow-sm">
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-indigo-50 rounded-full border border-indigo-300 flex items-center justify-center text-[10px] font-bold text-indigo-700">T2</div>
+                    <span className="text-[11px] font-bold text-indigo-800 uppercase block mb-3 mt-1">Aprovação RC</span>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data da Aprovação</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_aprovacao || ""} onChange={handleInputChange('data_aprovacao')} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T3 */}
+                  <div className="relative p-4 bg-white rounded-xl border border-blue-200 hover:border-blue-300 transition-all shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-blue-50 rounded-full border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-700">T3</div>
+                      <span className="text-[11px] font-bold text-blue-800 uppercase block mb-3 mt-1">Pedido SAP (PC)</span>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Nº do Pedido</label>
+                          <Input className="h-7 text-xs border-zinc-200" value={formData.pedido_sap || ""} onChange={handleInputChange('pedido_sap')} placeholder="Pendente" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data do Pedido</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pedido_sap || ""} onChange={handleInputChange('data_pedido_sap')} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Doc Sub */}
+                    <div className="mt-4 pt-3 border-t border-zinc-100">
+                      <label className="flex items-center justify-between cursor-pointer group">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-emerald-600 transition-colors">Doc Subsequente Criado?</span>
+                        <input 
+                          type="checkbox" 
+                          className="w-3.5 h-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                          checked={!!formData.doc_subsequente_criado}
+                          onChange={(e) => handleChange('doc_subsequente_criado', e.target.checked)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* T4 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.doc_subsequente_criado ? "border-cyan-200 hover:border-cyan-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T4</div>
+                      <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-3 mt-1">Solicitação Nexa</span>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Chamado / Ticket</label>
+                          <Input className="h-7 text-xs border-zinc-200" value={formData.nexa_chamado || ""} onChange={handleInputChange('nexa_chamado')} placeholder="Pendente" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Envio Nexa</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* T4 Checks */}
+                    <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
+                      <label className="flex items-center justify-between cursor-pointer group">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">NF Emitida?</span>
+                        <input 
+                          type="checkbox" 
+                          className="w-3.5 h-3.5 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
+                          checked={!!formData.nexa_emitiu_nf}
+                          onChange={(e) => handleChange('nexa_emitiu_nf', e.target.checked)}
+                        />
+                      </label>
+                      <label className="flex items-center justify-between cursor-pointer group">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">NF Anexada?</span>
+                        <input 
+                          type="checkbox" 
+                          className="w-3.5 h-3.5 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
+                          checked={!!formData.nexa_anexada}
+                          onChange={(e) => handleChange('nexa_anexada', e.target.checked)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* T5 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.nexa_anexada ? "border-slate-300 hover:border-slate-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T5</div>
+                    <span className="text-[11px] font-bold text-slate-800 uppercase block mb-3 mt-1">Lançamento Fiscal</span>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-zinc-300 text-slate-600 focus:ring-slate-500"
+                          checked={!!formData.nexa_lancamento_concluido}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData(prev => ({
+                              ...prev,
+                              nexa_lancamento_concluido: checked,
+                              nexa_data_conclusao_lancamento: checked ? new Date().toISOString().split('T')[0] : prev.nexa_data_conclusao_lancamento,
+                              usuario_nexa_lancamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_lancamento
+                            }));
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-slate-700 uppercase group-hover:text-slate-900 transition-colors">Concluído?</span>
+                      </label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_conclusao_lancamento || ""} onChange={handleInputChange('nexa_data_conclusao_lancamento')} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T6 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.nexa_lancamento_concluido ? "border-amber-200 hover:border-amber-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-[10px] font-bold text-amber-700">T6</div>
+                    <span className="text-[11px] font-bold text-amber-800 uppercase block mb-3 mt-1">Prog. Pagamento</span>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+                          checked={!!formData.nexa_pagamento_programado}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData(prev => ({
+                              ...prev,
+                              nexa_pagamento_programado: checked,
+                              usuario_nexa_programacao: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_programacao
+                            }));
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-amber-700 uppercase group-hover:text-amber-900 transition-colors">Programado?</span>
+                      </label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Prevista</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_prevista_pagamento || ""} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T7 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_pagamento_programado ? "border-green-300 hover:border-green-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T7</div>
+                      <span className="text-[11px] font-bold text-green-800 uppercase block mb-3 mt-1">Pagamento Realizado</span>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                            checked={!!formData.nexa_pagamento_realizado}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                nexa_pagamento_realizado: checked,
+                                data_pagamento_real: checked ? new Date().toISOString().split('T')[0] : prev.data_pagamento_real,
+                                usuario_nexa_pagamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_pagamento
+                              }));
+                            }}
+                          />
+                          <span className="text-[10px] font-bold text-green-700 uppercase group-hover:text-green-900 transition-colors">Pago?</span>
+                        </label>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Pagamento</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Final */}
+                    <div className="mt-4 pt-3 border-t border-zinc-100">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Valor Pago</label>
+                        <Input className="h-7 text-xs border-green-200" type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.fluxo_iniciado_por === 'Nexa' && (
+              <div className="space-y-4 pt-4 border-t border-zinc-200 mb-6">
+                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Fluxo de Trabalho (Nexa Direto)</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-6">
+                  {/* T1 */}
+                  <div className="relative p-4 bg-white rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T1</div>
+                      <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-3 mt-1">Solicitação Nexa</span>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Chamado / Ticket</label>
+                          <Input className="h-7 text-xs border-zinc-200" value={formData.nexa_chamado || ""} onChange={handleInputChange('nexa_chamado')} placeholder="Pendente" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Envio</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* PC Nexa Info */}
+                    <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
+                      <label className="flex items-center justify-between cursor-pointer group">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">PC Nexa Concluído?</span>
+                        <input 
+                          type="checkbox" 
+                          className="w-3.5 h-3.5 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
+                          checked={!!formData.pc_nexa_concluido}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData(prev => ({
+                              ...prev,
+                              pc_nexa_concluido: checked,
+                              data_pc_nexa: checked ? new Date().toISOString().split('T')[0] : prev.data_pc_nexa,
+                              usuario_pc_nexa: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_pc_nexa
+                            }));
+                          }}
+                        />
+                      </label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Número PC</label>
+                        <Input className="h-7 text-xs border-zinc-200" value={formData.numero_pc_nexa || ""} onChange={handleInputChange('numero_pc_nexa')} placeholder="Pendente" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data PC</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pc_nexa || ""} onChange={handleInputChange('data_pc_nexa')} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário PC</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_pc_nexa || '')} readOnly />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T2 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.pc_nexa_concluido ? "border-slate-200 hover:border-slate-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T2</div>
+                    <span className="text-[11px] font-bold text-slate-800 uppercase block mb-3 mt-1">Lançamento Fiscal</span>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-zinc-300 text-slate-600 focus:ring-slate-500"
+                          checked={!!formData.nexa_lancamento_concluido}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData(prev => ({
+                              ...prev,
+                              nexa_lancamento_concluido: checked,
+                              nexa_data_conclusao_lancamento: checked ? new Date().toISOString().split('T')[0] : prev.nexa_data_conclusao_lancamento,
+                              usuario_nexa_lancamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_lancamento
+                            }));
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-slate-700 uppercase group-hover:text-slate-900 transition-colors">Concluído?</span>
+                      </label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_conclusao_lancamento || ""} onChange={handleInputChange('nexa_data_conclusao_lancamento')} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T3 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.nexa_lancamento_concluido ? "border-amber-200 hover:border-amber-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-[10px] font-bold text-amber-700">T3</div>
+                    <span className="text-[11px] font-bold text-amber-800 uppercase block mb-3 mt-1">Prog. Pagamento</span>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
+                          checked={!!formData.nexa_pagamento_programado}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFormData(prev => ({
+                              ...prev,
+                              nexa_pagamento_programado: checked,
+                              usuario_nexa_programacao: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_programacao
+                            }));
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-amber-700 uppercase group-hover:text-amber-900 transition-colors">Programado?</span>
+                      </label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Prevista</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_prevista_pagamento || ""} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T4 */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_pagamento_programado ? "border-green-300 hover:border-green-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
+                      <span className="text-[11px] font-bold text-green-800 uppercase block mb-3 mt-1">Pagamento Realizado</span>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
+                            checked={!!formData.nexa_pagamento_realizado}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                nexa_pagamento_realizado: checked,
+                                data_pagamento_real: checked ? new Date().toISOString().split('T')[0] : prev.data_pagamento_real,
+                                usuario_nexa_pagamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_pagamento
+                              }));
+                            }}
+                          />
+                          <span className="text-[10px] font-bold text-green-700 uppercase group-hover:text-green-900 transition-colors">Pago?</span>
+                        </label>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Pagamento</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Final */}
+                    <div className="mt-4 pt-3 border-t border-zinc-100">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Valor Pago</label>
+                        <Input className="h-7 text-xs border-green-200" type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium">Fornecedor</label>
+                  <Input list="fornecedores-list" value={formData.fornecedor || ""} onChange={(e) => {
+                    const value = e.target.value;
+                    const fornecedorMatch = fornecedores.find(f => (f.nome_fantasia || f.razao_social) === value);
+                    if (fornecedorMatch) {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        fornecedor: value, 
+                        cnpj: formatCNPJ(fornecedorMatch.cnpj), 
+                        codigo_fornecedor: fornecedorMatch.codigo_fornecedor,
+                        tipo_servico: fornecedorMatch.tipo_servico || prev.tipo_servico
+                      }));
+                    } else {
+                      setFormData(prev => ({ ...prev, fornecedor: value }));
+                    }
+                  }} placeholder="Nome do Fornecedor" />
+                  <datalist id="fornecedores-list">
+                    {fornecedores.map(f => (
+                      <option key={f.id} value={f.nome_fantasia || f.razao_social} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">CNPJ</label>
+                  <Input value={formData.cnpj || ""} onChange={(e) => handleChange('cnpj', formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Cód. Fornecedor</label>
+                  <Input value={formData.codigo_fornecedor || ""} onChange={handleInputChange('codigo_fornecedor')} placeholder="Código do fornecedor" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nota Fiscal</label>
+                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF..." />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Valor Total (Previsto / RC / NF)</label>
+                  <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Emissão</label>
+                  <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Recebimento</label>
+                  <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Vencimento</label>
+                  <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Centro de Custo</label>
+                  <Input value={formData.centro_custo || ""} onChange={handleInputChange('centro_custo')} placeholder="Centro de Custo" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Conta Contábil</label>
+                  <Input value={formData.conta_contabil || ""} onChange={handleInputChange('conta_contabil')} placeholder="Conta Contábil" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Descrição Contábil</label>
+                  <Input value={formData.descricao_contabil || ""} onChange={handleInputChange('descricao_contabil')} placeholder="Descrição da Conta Contábil" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Filial</label>
+                  <Input value={formData.filial || ""} onChange={handleInputChange('filial')} placeholder="Filial" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">CD / Unidade</label>
+                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    value={formData.cd || ""} onChange={handleSelectChange('cd')}>
+                    <option value="" disabled>Selecione um CD</option>
+                    {["Fortaleza", "Jundiaí", "NSE", "COC", "PSD"].map(cd => (
+                      <option key={cd} value={cd}>{cd}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fluxo Iniciado Por</label>
+                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    value={formData.fluxo_iniciado_por || "SAP"} onChange={handleSelectChange('fluxo_iniciado_por')}>
+                    <option value="SAP">SAP</option>
+                    <option value="Nexa">Nexa</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Responsável</label>
+                  <Input value={formatUserName(formData.responsavel)} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Editado Por</label>
+                  <Input value={formatUserName(formData.editado_por)} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Forma de Pagamento</label>
+                  <select className="flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+                    value={formData.forma_pagamento || "Boleto"} onChange={handleSelectChange('forma_pagamento')}>
+                    <option value="Boleto">Boleto</option>
+                    <option value="Pix">Pix</option>
+                    <option value="TED">TED</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Cód. {categoriaAtiva}</label>
+                  <Input value={formData.codigo_servico || ""} onChange={handleInputChange('codigo_servico')} placeholder="Ex: 000100" />
+                </div>
+              </div>
+
+              {categoriaAtiva === 'Serviço' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t border-zinc-100 pt-4">
+                  <div className="space-y-2 relative">
+                    <label className="text-sm font-medium">Conta Protheus</label>
+                    <Input 
+                      value={formData.conta_protheus || ""} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData(prev => ({...prev, conta_protheus: val}));
+                        const match = contasProtheus.find(c => c.conta_protheus === val);
+                        if (match) setFormData(prev => ({...prev, conta_protheus: match.conta_protheus, desc_conta_protheus: match.desc_conta_protheus}));
+                      }}
+                      list="contas-protheus-list"
+                      placeholder="Ex: 102030" 
+                    />
+                    <datalist id="contas-protheus-list">
+                      {contasProtheus.map(c => (
+                        <option key={c.conta_protheus} value={c.conta_protheus}>{c.desc_conta_protheus}</option>
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="space-y-2 relative">
+                    <label className="text-sm font-medium">Descrição Conta Protheus</label>
+                    <Input 
+                      value={formData.desc_conta_protheus || ""} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData(prev => ({...prev, desc_conta_protheus: val}));
+                        const match = contasProtheus.find(c => c.desc_conta_protheus === val);
+                        if (match) setFormData(prev => ({...prev, conta_protheus: match.conta_protheus, desc_conta_protheus: match.desc_conta_protheus}));
+                      }}
+                      list="desc-contas-protheus-list"
+                      placeholder="Descrição da conta" 
+                    />
+                    <datalist id="desc-contas-protheus-list">
+                      {contasProtheus.map(c => (
+                        <option key={c.conta_protheus} value={c.desc_conta_protheus}>{c.conta_protheus}</option>
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {categoriaAtiva === 'Material' && (
+              <section className="space-y-4 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-semibold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
+                    Insumos da Compra
+                  </h3>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const current = formData.insumos || [];
+                    setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1 }]});
+                  }} className="gap-2">
+                    <Plus className="w-4 h-4" /> Adicionar Insumo
+                  </Button>
+                </div>
+
+                {(!formData.insumos || formData.insumos.length === 0) ? (
+                  <div className="text-sm text-zinc-500 text-center py-4 bg-zinc-50 rounded-lg border border-zinc-100">
+                    Nenhum insumo adicionado a esta fatura.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {formData.insumos.map((ins, index) => (
+                      <div key={index} className="flex flex-col gap-4 p-4 bg-zinc-50 rounded-lg border border-zinc-200">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                          <div className="space-y-2 md:col-span-4 relative">
+                            <label className="text-xs font-medium text-zinc-700">Insumo</label>
+                            <Input 
+                              list={`insumos-list-${index}`}
+                              value={ins.item} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const match = availableInsumos.find(a => a.item === val);
+                                const newInsumos = [...(formData.insumos || [])];
+                                newInsumos[index] = { ...ins, item: val, codigo: match ? match.codigo : ins.codigo };
+                                setFormData({ ...formData, insumos: newInsumos });
+                              }} 
+                              placeholder="Selecione o insumo..." 
+                             
+                            />
+                            <datalist id={`insumos-list-${index}`}>
+                              {availableInsumos.map((a, i) => {
+                                const rawCd = a.cd.includes('-') ? a.cd.split('-')[0] : a.cd;
+                                const cdFormatted = rawCd.charAt(0).toUpperCase() + rawCd.slice(1).toLowerCase();
+                                return (
+                                  <option key={`${a.codigo}-${i}`} value={a.item}>{a.codigo} ({cdFormatted})</option>
+                                );
+                              })}
+                            </datalist>
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Código (Auto)</label>
+                            <Input value={ins.codigo} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Qtd</label>
+                            <Input type="number" min="1" value={ins.quantidade} onChange={(e) => {
+                              const newInsumos = [...(formData.insumos || [])];
+                              const qtd = parseFloat(e.target.value) || 0;
+                              const preco = newInsumos[index].preco_unitario || 0;
+                              newInsumos[index].quantidade = qtd;
+                              newInsumos[index].valor_total = parseFloat((qtd * preco).toFixed(2));
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }} />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Preço Unit.</label>
+                            <Input type="number" step="0.01" value={ins.preco_unitario || ""} onChange={(e) => {
+                              const newInsumos = [...(formData.insumos || [])];
+                              const preco = parseFloat(e.target.value) || 0;
+                              const qtd = newInsumos[index].quantidade || 0;
+                              newInsumos[index].preco_unitario = preco;
+                              newInsumos[index].valor_total = parseFloat((qtd * preco).toFixed(2));
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }} placeholder="R$ 0,00" />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-xs font-medium text-zinc-700">Total (Auto)</label>
+                            <Input value={ins.valor_total || ""} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" placeholder="R$ 0,00" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end mt-4">
+                          <div className="space-y-2 md:col-span-5 relative">
+                            <label className="text-xs font-medium text-zinc-700">Conta Protheus</label>
+                            <Input 
+                              value={ins.conta_protheus || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const newInsumos = [...(formData.insumos || [])];
+                                newInsumos[index].conta_protheus = val;
+                                const match = contasProtheus.find(c => c.conta_protheus === val);
+                                if (match) {
+                                  newInsumos[index].conta_protheus = match.conta_protheus;
+                                  newInsumos[index].desc_conta_protheus = match.desc_conta_protheus;
+                                }
+                                setFormData({ ...formData, insumos: newInsumos });
+                              }}
+                              list={`contas-insumo-list-${index}`}
+                              placeholder="Ex: 102030" 
+                            />
+                            <datalist id={`contas-insumo-list-${index}`}>
+                              {contasProtheus.map(c => (
+                                <option key={c.conta_protheus} value={c.conta_protheus}>{c.desc_conta_protheus}</option>
+                              ))}
+                            </datalist>
+                          </div>
+                          <div className="space-y-2 md:col-span-6 relative">
+                            <label className="text-xs font-medium text-zinc-700">Desc. Conta Protheus</label>
+                            <Input 
+                              value={ins.desc_conta_protheus || ""} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const newInsumos = [...(formData.insumos || [])];
+                                newInsumos[index].desc_conta_protheus = val;
+                                const match = contasProtheus.find(c => c.desc_conta_protheus === val);
+                                if (match) {
+                                  newInsumos[index].conta_protheus = match.conta_protheus;
+                                  newInsumos[index].desc_conta_protheus = match.desc_conta_protheus;
+                                }
+                                setFormData({ ...formData, insumos: newInsumos });
+                              }}
+                              list={`desc-contas-insumo-list-${index}`}
+                              placeholder="Descrição..." 
+                            />
+                            <datalist id={`desc-contas-insumo-list-${index}`}>
+                              {contasProtheus.map(c => (
+                                <option key={c.conta_protheus} value={c.desc_conta_protheus}>{c.conta_protheus}</option>
+                              ))}
+                            </datalist>
+                          </div>
+                          <div className="md:col-span-1 pb-1 flex justify-end">
+                            <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                              const newInsumos = formData.insumos!.filter((_, i) => i !== index);
+                              setFormData({ ...formData, insumos: newInsumos });
+                            }}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
             {formData.fluxo_iniciado_por === 'SAP' && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-4">
@@ -480,6 +1167,15 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-purple-900">Data da RC</label>
                   <Input className="border-purple-200 focus-visible:ring-purple-500 bg-white" type="date" value={formData.data_rc_sap || ""} onChange={handleInputChange('data_rc_sap')} />
+                </div>
+              </div>
+
+              
+              <div className="md:col-span-4 space-y-4 p-4 border border-indigo-400 bg-indigo-50 rounded-lg shadow-sm">
+                <h4 className="font-semibold text-sm text-indigo-900">Aprovação RC</h4>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-indigo-900">Data da Aprovação</label>
+                  <Input className="border-indigo-200 focus-visible:ring-indigo-500 bg-white" type="date" value={formData.data_aprovacao || ""} onChange={handleInputChange('data_aprovacao')} />
                 </div>
               </div>
 

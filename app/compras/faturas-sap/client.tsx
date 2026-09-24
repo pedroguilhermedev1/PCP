@@ -15,6 +15,7 @@ import { formatCNPJ, cn } from "@/lib/utils";
 import { MultiSelectFilter } from "@/components/ui/multi-select-filter";
 import { Copy, Clock, ArrowRightLeft } from "lucide-react";
 import { TransferModal } from "@/components/faturas/TransferModal";
+import { TimeDetailsModal } from "@/components/faturas/TimeDetailsModal";
 import { getFaturaPeriodosAction } from "./periodos-actions";
 
 export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' | 'Todas' }) {
@@ -24,6 +25,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [faturaToTransfer, setFaturaToTransfer] = useState<Fatura | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [expandedFaturaId, setExpandedFaturaId] = useState<string | null>(null);
+  const [selectedStage, setSelectedStage] = useState<{fatura: any, stage: string} | null>(null);
   const [faturaPeriodos, setFaturaPeriodos] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState("");
 
@@ -551,96 +553,143 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                                 </div>
                               </div>
 
-                              {/* Fluxo */}
-                              <div className="space-y-5">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest border-b pb-2">Fluxo de Trabalho ({f.fluxo_iniciado_por || 'SAP'})</h4>
+                                                            {/* Fluxo */}
+                              <div className="space-y-5 col-span-1 md:col-span-2 lg:col-span-3 mt-4 pt-4 border-t border-zinc-200">
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-6">Fluxo de Trabalho ({f.fluxo_iniciado_por || 'SAP'})</h4>
                                 
-                                {f.fluxo_iniciado_por !== 'Nexa' ? (
-                                  <div className="space-y-3">
-                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                      <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1">RC SAP</span>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-purple-900">{f.rc_sap || 'Pendente'}</span>
-                                        <span className="text-xs text-purple-600">{f.data_rc_sap?.split('-').reverse().join('/') || '-'}</span>
-                                      </div>
-                                    </div>
-                                    <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                                      <span className="text-[11px] font-bold text-indigo-800 uppercase block mb-1">Pedido SAP</span>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-indigo-900">{f.pedido_sap || 'Pendente'}</span>
-                                        <span className="text-xs text-indigo-600">{f.data_pedido_sap?.split('-').reverse().join('/') || '-'}</span>
-                                      </div>
-                                    </div>
-                                    <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                                      <span className="text-[11px] font-bold text-emerald-800 uppercase block mb-1">Doc Subsequente</span>
-                                      <span className="text-sm font-medium text-emerald-900">{f.doc_subsequente_criado ? 'Criado' : 'Não criado'}</span>
-                                    </div>
-                                    
-                                    {f.doc_subsequente_criado && (
-                                      <div className="mt-4 pt-4 border-t border-dashed border-zinc-200 space-y-3">
-                                        <h5 className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Continuação no Nexa</h5>
-                                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                          <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1">Chamado / NF</span>
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium text-blue-900">{f.nexa_chamado || (f.nexa_anexada ? 'Anexada' : 'Pendente')}</span>
-                                            <span className="text-xs text-blue-600">{f.nexa_data_envio?.split('-').reverse().join('/') || '-'}</span>
-                                          </div>
-                                        </div>
-                                        <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
-                                          <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Lançamento Fiscal</span>
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium text-slate-900">{f.nexa_lancamento_concluido ? 'Concluído' : 'Pendente'}</span>
-                                            <span className="text-xs text-slate-500">{f.nexa_data_conclusao_lancamento?.split('-').reverse().join('/') || '-'}</span>
-                                          </div>
-                                        </div>
-                                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                                          <span className="text-[11px] font-bold text-amber-800 uppercase block mb-1">Programação Pgto</span>
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium text-amber-900">{f.nexa_pagamento_programado ? 'Programado' : 'Pendente'}</span>
-                                            <span className="text-xs text-amber-600">{f.nexa_data_prevista_pagamento?.split('-').reverse().join('/') || '-'}</span>
-                                          </div>
-                                        </div>
-                                        <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                                          <span className="text-[11px] font-bold text-green-800 uppercase block mb-1">Pagamento Realizado</span>
-                                          <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium text-green-900">{f.nexa_pagamento_realizado ? 'Pago' : 'Pendente'}</span>
-                                            <span className="text-xs text-green-600">{f.data_pagamento_real?.split('-').reverse().join('/') || '-'}</span>
-                                          </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                  {f.fluxo_iniciado_por !== 'Nexa' ? (
+                                    <>
+                                      {/* T1 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T1'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-purple-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-purple-50 rounded-full border border-purple-300 flex items-center justify-center text-[10px] font-bold text-purple-700">T1</div>
+                                        <span className="text-[11px] font-bold text-purple-800 uppercase block mb-2 mt-1">RC SAP</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.rc_sap || 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.data_rc_sap?.split('-').reverse().join('/') || 'S/ Data'}</span>
                                         </div>
                                       </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                      <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1">Ticket Nexa (Chamado)</span>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-purple-900">{f.nexa_chamado || 'Pendente'}</span>
+
+                                      {/* T2 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T2'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-indigo-50 rounded-full border border-indigo-300 flex items-center justify-center text-[10px] font-bold text-indigo-700">T2</div>
+                                        <span className="text-[11px] font-bold text-indigo-800 uppercase block mb-2 mt-1">Aprovação RC</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.data_aprovacao ? 'Aprovada' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.data_aprovacao?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                      <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1">PC Nexa</span>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-blue-900">{f.numero_pc_nexa || (f.pc_nexa_concluido ? 'Concluído' : 'Pendente')}</span>
-                                        <span className="text-xs text-blue-600">{f.data_pc_nexa?.split('-').reverse().join('/') || '-'}</span>
+
+                                      {/* T3 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T3'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between">
+                                        <div>
+                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-blue-50 rounded-full border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-700">T3</div>
+                                          <span className="text-[11px] font-bold text-blue-800 uppercase block mb-2 mt-1">Pedido SAP (PC)</span>
+                                          <div className="flex flex-col gap-1">
+                                            <span className="text-sm font-medium text-zinc-900">{f.pedido_sap || 'Pendente'}</span>
+                                            <span className="text-[10px] text-zinc-500">{f.data_pedido_sap?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                          </div>
+                                        </div>
+                                        {/* Doc Sub */}
+                                        <div className="mt-3 pt-2 border-t border-zinc-100 flex justify-between items-center">
+                                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Doc Subsequente</span>
+                                          <span className="text-[10px] font-medium text-emerald-600">{f.doc_subsequente_criado ? 'Criado' : 'Não criado'}</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
-                                      <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Lançamento Fiscal</span>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-slate-900">{f.nexa_lancamento_concluido ? 'Concluído' : 'Pendente'}</span>
-                                        <span className="text-xs text-slate-500">{f.nexa_data_conclusao_lancamento?.split('-').reverse().join('/') || '-'}</span>
+
+                                      {/* T4 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T4'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T4</div>
+                                        <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-2 mt-1">Solicitação Nexa</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_chamado || (f.nexa_anexada ? 'Anexada' : 'Pendente')}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.nexa_data_envio?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                                      <span className="text-[11px] font-bold text-amber-800 uppercase block mb-1">Programação Pgto</span>
-                                      <div className="flex justify-between items-center">
-                                        <span className="text-sm font-medium text-amber-900">{f.nexa_pagamento_programado ? 'Programado' : 'Pendente'}</span>
-                                        <span className="text-xs text-amber-600">{f.nexa_data_prevista_pagamento?.split('-').reverse().join('/') || '-'}</span>
+
+                                      {/* T5 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T5'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T5</div>
+                                        <span className="text-[11px] font-bold text-slate-700 uppercase block mb-2 mt-1">Lançamento Fiscal</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_lancamento_concluido ? 'Concluído' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.nexa_data_conclusao_lancamento?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
                                       </div>
-                                    </div>
-                                  </div>
-                                )}
+
+                                      {/* T6 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T6'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-[10px] font-bold text-amber-700">T6</div>
+                                        <span className="text-[11px] font-bold text-amber-800 uppercase block mb-2 mt-1">Programação Pgto</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_pagamento_programado ? 'Programado' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.nexa_data_prevista_pagamento?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* T7 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T7'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-green-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T7</div>
+                                        <span className="text-[11px] font-bold text-green-800 uppercase block mb-2 mt-1">Efetuar Pagamento</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_pagamento_realizado ? 'Pago' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.data_pagamento_real?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {/* T1 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T1'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between">
+                                        <div>
+                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T1</div>
+                                          <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-2 mt-1">Solicitação Nexa (Ticket)</span>
+                                          <div className="flex flex-col gap-1">
+                                            <span className="text-sm font-medium text-zinc-900">{f.nexa_chamado || 'Pendente'}</span>
+                                            <span className="text-[10px] text-zinc-500">{f.nexa_data_envio?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                          </div>
+                                        </div>
+                                        {/* Sub-item PC Nexa */}
+                                        <div className="mt-3 pt-2 border-t border-zinc-100 flex justify-between items-center">
+                                          <span className="text-[9px] font-bold text-zinc-400 uppercase">PC Vinculado</span>
+                                          <div className="text-right flex flex-col">
+                                            <span className="text-[10px] font-medium text-blue-600">{f.numero_pc_nexa || (f.pc_nexa_concluido ? 'Concluído' : 'Pendente')}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* T2 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T2'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-slate-400 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T2</div>
+                                        <span className="text-[11px] font-bold text-slate-700 uppercase block mb-2 mt-1">Lançamento Fiscal</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_lancamento_concluido ? 'Concluído' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.nexa_data_conclusao_lancamento?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* T3 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T3'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-amber-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-[10px] font-bold text-amber-700">T3</div>
+                                        <span className="text-[11px] font-bold text-amber-800 uppercase block mb-2 mt-1">Programação Pgto</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_pagamento_programado ? 'Programado' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.nexa_data_prevista_pagamento?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* T4 */}
+                                      <div onClick={() => setSelectedStage({fatura: f, stage: 'T4'})} className="relative p-4 bg-white rounded-xl border border-zinc-200 hover:border-green-300 hover:shadow-md transition-all cursor-pointer group">
+                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
+                                        <span className="text-[11px] font-bold text-green-800 uppercase block mb-2 mt-1">Efetuar Pagamento</span>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm font-medium text-zinc-900">{f.nexa_pagamento_realizado ? 'Pago' : 'Pendente'}</span>
+                                          <span className="text-[10px] text-zinc-500">{f.data_pagamento_real?.split('-').reverse().join('/') || 'S/ Data'}</span>
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             

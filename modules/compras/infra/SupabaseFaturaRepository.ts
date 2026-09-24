@@ -111,9 +111,9 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     delete sanitizedData.numero_pc_nexa;
     delete sanitizedData.data_pc_nexa;
     delete sanitizedData.usuario_pc_nexa;
-    delete sanitizedData.usuario_nexa_lancamento;
-    delete sanitizedData.usuario_nexa_programacao;
-    delete sanitizedData.usuario_nexa_pagamento;
+    // delete sanitizedData.usuario_nexa_lancamento;
+    // delete sanitizedData.usuario_nexa_programacao;
+    // delete sanitizedData.usuario_nexa_pagamento;
 
     const { error } = await supabase
       .from('faturas')
@@ -135,9 +135,9 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     if ('data_pc_nexa' in mappedData) { mappedData.nexa_pc_data = mappedData.data_pc_nexa; delete mappedData.data_pc_nexa; }
     if ('usuario_pc_nexa' in mappedData) { mappedData.nexa_pc_usuario = mappedData.usuario_pc_nexa; delete mappedData.usuario_pc_nexa; }
     
-    delete mappedData.usuario_nexa_lancamento;
-    delete mappedData.usuario_nexa_programacao;
-    delete mappedData.usuario_nexa_pagamento;
+    // delete mappedData.usuario_nexa_lancamento;
+    // delete mappedData.usuario_nexa_programacao;
+    // delete mappedData.usuario_nexa_pagamento;
 
     const { error } = await supabase
       .from('faturas')
