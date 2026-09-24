@@ -203,9 +203,7 @@ export function Sidebar() {
         { slug: 'jundiai', nome: 'Jundiaí' },
         { slug: 'nse', nome: 'NSE' }
       ];
-      const validSlugs = ['fortaleza', 'jundiai', 'nse'];
-      const filteredDbCds = dbCds.filter(cd => validSlugs.includes(cd.slug));
-      const cdsToUse = filteredDbCds.length > 0 ? filteredDbCds : fallbackCds;
+      const cdsToUse = dbCds.length > 0 ? dbCds : fallbackCds;
       
       return {
         ...item,
@@ -222,9 +220,7 @@ export function Sidebar() {
         { slug: 'jundiai', nome: 'Jundiaí' },
         { slug: 'nse', nome: 'NSE' }
       ];
-      const validSlugs = ['fortaleza', 'jundiai', 'nse'];
-      const filteredDbCds = dbCds.filter(cd => validSlugs.includes(cd.slug));
-      const cdsToUse = filteredDbCds.length > 0 ? filteredDbCds : fallbackCds;
+      const cdsToUse = dbCds.length > 0 ? dbCds : fallbackCds;
 
       return {
         ...item,
