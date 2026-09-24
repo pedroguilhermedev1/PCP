@@ -198,9 +198,16 @@ export function Sidebar() {
   // Injetar CDs dinamicamente nos items
   const dynamicSidebarItems = sidebarItems.map(item => {
     if (item.title === 'Insumos') {
+      const fallbackCds = [
+        { slug: 'fortaleza', nome: 'Fortaleza' },
+        { slug: 'jundiai', nome: 'Jundiaí' },
+        { slug: 'nse', nome: 'NSE' }
+      ];
+      const cdsToUse = dbCds.length > 0 ? dbCds : fallbackCds;
+      
       return {
         ...item,
-        items: dbCds.map(cd => ({
+        items: cdsToUse.map(cd => ({
           title: cd.nome,
           href: `/compras/insumos/${cd.slug}`,
           icon: <Package className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />
@@ -208,9 +215,16 @@ export function Sidebar() {
       };
     }
     if (item.title === 'Solicitações') {
+      const fallbackCds = [
+        { slug: 'fortaleza', nome: 'Fortaleza' },
+        { slug: 'jundiai', nome: 'Jundiaí' },
+        { slug: 'nse', nome: 'NSE' }
+      ];
+      const cdsToUse = dbCds.length > 0 ? dbCds : fallbackCds;
+
       return {
         ...item,
-        items: dbCds.map(cd => ({
+        items: cdsToUse.map(cd => ({
           title: cd.nome,
           href: `/compras/formularios/${cd.slug}`,
           icon: <MessageSquare className="w-4 h-4 flex-shrink-0" strokeWidth={2.5} />

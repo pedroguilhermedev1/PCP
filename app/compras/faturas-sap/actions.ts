@@ -10,7 +10,13 @@ export async function saveFaturaAction(fatura: Object) {
     const faturaData = fatura as Fatura;
     await faturaRepository.saveFatura(faturaData);
     
-    if (faturaData.categoria === 'Material' && faturaData.insumos && faturaData.insumos.length > 0) {
+    const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
+    const formattedCd = formatCd(faturaData.cd || '');
+    
+    // Processamos insumos no estoque apenas para Fortaleza, Jundiaí e NSE (PSD roda por fora)
+    const validCds = ['fortaleza', 'jundiai', 'nse'];
+
+    if (faturaData.categoria === 'Material' && faturaData.insumos && faturaData.insumos.length > 0 && validCds.includes(formattedCd)) {
       if (supabase) {
         await supabase.from('estoque_movimentacoes')
           .delete()
@@ -23,8 +29,7 @@ export async function saveFaturaAction(fatura: Object) {
           
         const confirmedCodigos = new Set((existingMovs || []).filter(m => m.status === 'CONFIRMADO').map(m => m.codigo));
 
-        const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
-        
+        // 2. Format CD function was moved outside
         // 3. Filter valid insumos, ignoring the ones already confirmed
         const validInsumos = faturaData.insumos
           .filter(ins => !(ins as any)._meta)

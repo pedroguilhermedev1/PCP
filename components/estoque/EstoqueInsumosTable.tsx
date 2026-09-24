@@ -490,7 +490,9 @@ export function EstoqueInsumosTable({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'Todos');
+  const [statusFilter, setStatusFilter] = useState<string[]>(
+    initialStatusFilter && initialStatusFilter !== 'Todos' ? [initialStatusFilter] : []
+  );
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -542,7 +544,7 @@ export function EstoqueInsumosTable({
   const filteredInsumos = useMemo(() => {
     return insumos.filter(item => {
       // Filtro por status
-      if (statusFilter !== 'Todos') {
+      if (statusFilter.length > 0) {
         const cmd = parseFloat(item.cmd) || 10;
         const lt = parseFloat(item.lead_time) || 0;
         const coberturaNum = cmd > 0 ? (item.estoque_real / cmd) : Infinity;
@@ -551,7 +553,7 @@ export function EstoqueInsumosTable({
         if (coberturaNum <= lt) dynamicStatus = 'CRÍTICO';
         else if (coberturaNum > lt && coberturaNum <= (lt + 3)) dynamicStatus = 'ALERTA';
         
-        if (dynamicStatus !== statusFilter) return false;
+        if (!statusFilter.includes(dynamicStatus)) return false;
       }
 
       // Filtro por termo de busca (apenas no início da palavra)
@@ -621,18 +623,31 @@ export function EstoqueInsumosTable({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 mr-2">
-            <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Status:</label>
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-sm border border-zinc-200 rounded-md bg-white text-zinc-700 h-9 px-3 py-1 outline-none focus:ring-2 focus:ring-purple-500"
+          <div className="flex items-center gap-1.5 mr-2 bg-zinc-100 p-1 rounded-lg">
+            <button
+              onClick={() => setStatusFilter([])}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${statusFilter.length === 0 ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50'}`}
             >
-              <option value="Todos">Todos</option>
-              <option value="CONFORTÁVEL">Confortável</option>
-              <option value="ALERTA">Alerta</option>
-              <option value="CRÍTICO">Crítico</option>
-            </select>
+              Todos
+            </button>
+            <button
+              onClick={() => setStatusFilter(prev => prev.includes('CONFORTÁVEL') ? prev.filter(s => s !== 'CONFORTÁVEL') : [...prev, 'CONFORTÁVEL'])}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${statusFilter.includes('CONFORTÁVEL') ? 'bg-emerald-100 text-emerald-800 shadow-sm border border-emerald-200' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50'}`}
+            >
+              Confortável
+            </button>
+            <button
+              onClick={() => setStatusFilter(prev => prev.includes('ALERTA') ? prev.filter(s => s !== 'ALERTA') : [...prev, 'ALERTA'])}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${statusFilter.includes('ALERTA') ? 'bg-orange-100 text-orange-800 shadow-sm border border-orange-200' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50'}`}
+            >
+              Alerta
+            </button>
+            <button
+              onClick={() => setStatusFilter(prev => prev.includes('CRÍTICO') ? prev.filter(s => s !== 'CRÍTICO') : [...prev, 'CRÍTICO'])}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${statusFilter.includes('CRÍTICO') ? 'bg-red-100 text-red-800 shadow-sm border border-red-200' : 'text-zinc-500 hover:text-zinc-700 hover:bg-zinc-200/50'}`}
+            >
+              Crítico
+            </button>
           </div>
           <Button 
             variant="ghost" 
