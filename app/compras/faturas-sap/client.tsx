@@ -868,6 +868,15 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         </Table>
       </div>
       
+      {selectedStage && (
+        <TimeDetailsModal
+          isOpen={!!selectedStage}
+          onClose={() => setSelectedStage(null)}
+          fatura={selectedStage.fatura}
+          stage={selectedStage.stage}
+        />
+      )}
+
       {isModalOpen && (
         <FaturaSAPModal 
           isOpen={isModalOpen} 
