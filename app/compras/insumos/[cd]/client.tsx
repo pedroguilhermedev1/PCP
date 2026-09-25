@@ -490,7 +490,23 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                           {format(new Date(mov.data_hora + (mov.data_hora.includes('Z') || mov.data_hora.includes('+') ? '' : 'Z')), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-zinc-600 font-medium">
-                          {mov.fatura_id ? mov.fatura_id.split('__')[0] : '-'}
+                          {(() => {
+                            if (mov.observacoes && mov.observacoes.includes('Fatura ')) {
+                              const obsParts = mov.observacoes.split('|')[0].trim();
+                              if (obsParts.startsWith('Fatura ') && obsParts !== 'Fatura não informada') {
+                                return obsParts.replace('Fatura ', '').trim();
+                              }
+                              if (obsParts === 'Fatura não informada') {
+                                return '-';
+                              }
+                            }
+                            if (mov.fatura_id && typeof mov.fatura_id === 'string' && mov.fatura_id.includes('__')) {
+                              const prefix = mov.fatura_id.split('__')[0];
+                              if (prefix && prefix !== 'null' && prefix !== 'undefined') return prefix;
+                              return '-';
+                            }
+                            return '-';
+                          })()}
                         </TableCell>
                         <TableCell className="font-mono text-zinc-600">
                           {mov.codigo || '-'}
