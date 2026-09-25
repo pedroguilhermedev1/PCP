@@ -100,6 +100,21 @@ export interface Fatura {
   data_pagamento_real?: string;
   observacoes?: string;
   
+  // Responsaveis T (Cards)
+  responsavel_t1?: string;
+  responsavel_t2?: string;
+  responsavel_t3?: string;
+  responsavel_t4?: string;
+  responsavel_t5?: string;
+  responsavel_t6?: string;
+  responsavel_t7?: string;
+
+  // Datas de Conclusão T (Cards)
+  data_fim_t1?: string;
+  data_fim_t2?: string;
+  data_fim_t3?: string;
+  data_fim_t4?: string;
+
   insumos?: FaturaInsumo[];
 
   possui_encargo: boolean;

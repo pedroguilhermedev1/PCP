@@ -48,7 +48,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       });
       const user = localStorage.getItem('pcp_user') || '';
       if (user && !formData.responsavel) {
-        setFormData(prev => ({ ...prev, responsavel: user }));
+        setFormData(prev => ({ ...prev, responsavel: user, responsavel_t1: prev.responsavel_t1 || user }));
       }
     }
   }, [isOpen]);
@@ -127,6 +127,60 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       ],
     } as Fatura;
     onSave(finalFatura);
+  };
+
+
+  const SLA_DIAS = 3;
+  const RESPONSAVEIS_LIST = ["Heitor Ribeiro", "Raphael Ramiro", "Débora Mota", "Diego Simões", "Rogger Hendler", "Guilherme Teixeira", "Rafael Inácio", "Joana Sá"];
+
+  const MultiSelectResponsavel = ({ value, onChange, options }: { value: string, onChange: (val: string) => void, options: string[] }) => {
+    const selected = value ? value.split(', ') : [];
+    const toggle = (v: string) => {
+      if (selected.includes(v)) onChange(selected.filter(x => x !== v).join(', '));
+      else onChange([...selected, v].join(', '));
+    };
+    return (
+      <div className="flex flex-col gap-1 max-h-32 overflow-y-auto border border-zinc-200 rounded-md p-2 bg-white shadow-sm mt-1 custom-scrollbar">
+        {options.map(opt => (
+          <label key={opt} className="flex items-center gap-2 text-[11px] text-zinc-700 cursor-pointer hover:bg-zinc-50 p-1 rounded">
+            <input type="checkbox" checked={selected.includes(opt)} onChange={() => toggle(opt)} className="rounded border-zinc-300 text-purple-600 focus:ring-purple-500 w-3 h-3" />
+            {opt}
+          </label>
+        ))}
+      </div>
+    );
+  };
+
+  const SlaBadge = ({ startDate, endDate }: { startDate?: string, endDate?: string }) => {
+    if (!startDate) return null;
+    const start = new Date(startDate + 'T00:00:00');
+    const prazoFinal = new Date(start);
+    prazoFinal.setDate(prazoFinal.getDate() + SLA_DIAS);
+    
+    if (endDate) {
+      return <div className="text-[9px] text-green-600 font-bold mt-2 bg-green-50 px-2 py-1 rounded-sm inline-block border border-green-200 w-full">Concluído em: {endDate.split('-').reverse().join('/')}</div>;
+    }
+    
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+    const timeDiff = prazoFinal.getTime() - hoje.getTime();
+    const diasRestantes = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    let colorClass = "text-amber-600 bg-amber-50 border-amber-200";
+    let text = `${diasRestantes} dia(s) restante(s)`;
+    if (diasRestantes < 0) {
+      colorClass = "text-red-600 bg-red-50 border-red-200";
+      text = `Atrasado ${Math.abs(diasRestantes)} dia(s)`;
+    } else if (diasRestantes === 0) {
+      colorClass = "text-orange-600 bg-orange-50 border-orange-200";
+      text = "Vence hoje";
+    }
+
+    return (
+      <div className={`text-[9px] font-bold mt-2 px-2 py-1 rounded-sm inline-block border ${colorClass} w-full`}>
+        SLA (3 dias): {text}
+      </div>
+    );
   };
 
   const autoStatus = calcularStatus(formData);
@@ -487,6 +541,15 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_rc_sap || ""} onChange={handleInputChange('data_rc_sap')} />
                       </div>
                     </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.responsavel_t1 || '')} readOnly />
+                      </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T1</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t1 || ""} onChange={handleInputChange('data_fim_t1')} />
+                      </div>
+                      <SlaBadge startDate={formData.data_rc_sap} endDate={formData.data_fim_t1} />
                   </div>
 
                   {/* T2 */}
@@ -499,6 +562,15 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_aprovacao || ""} onChange={handleInputChange('data_aprovacao')} />
                       </div>
                     </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
+                        <MultiSelectResponsavel value={formData.responsavel_t2 || ""} onChange={(val) => setFormData(prev => ({...prev, responsavel_t2: val}))} options={RESPONSAVEIS_LIST} />
+                      </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T2</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t2 || ""} onChange={handleInputChange('data_fim_t2')} />
+                      </div>
+                      <SlaBadge startDate={formData.data_fim_t1} endDate={formData.data_fim_t2} />
                   </div>
 
                   {/* T3 */}
@@ -516,6 +588,11 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pedido_sap || ""} onChange={handleInputChange('data_pedido_sap')} />
                         </div>
                       </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T3</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t3 || ""} onChange={handleInputChange('data_fim_t3')} />
+                      </div>
+                      <SlaBadge startDate={formData.data_fim_t2} endDate={formData.data_fim_t3} />
                     </div>
                     {/* Doc Sub */}
                     <div className="mt-4 pt-3 border-t border-zinc-100">
@@ -546,6 +623,11 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
                         </div>
                       </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T4</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t4 || ""} onChange={handleInputChange('data_fim_t4')} />
+                      </div>
+                      <SlaBadge startDate={formData.data_fim_t3} endDate={formData.data_fim_t4} />
                     </div>
                     {/* T4 Checks */}
                     <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
@@ -601,6 +683,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
                       </div>
                     </div>
+                      <SlaBadge startDate={formData.data_fim_t4} endDate={formData.nexa_data_conclusao_lancamento} />
                   </div>
 
                   {/* T6 */}
@@ -633,6 +716,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
                       </div>
                     </div>
+                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} />
                   </div>
 
                   {/* T7 */}
@@ -663,6 +747,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
                         </div>
                       </div>
+                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} />
                     </div>
                     {/* Final */}
                     <div className="mt-4 pt-3 border-t border-zinc-100">
@@ -696,6 +781,15 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
                         </div>
                       </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
+                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.responsavel_t1 || '')} readOnly />
+                      </div>
+                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T1</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t1 || ""} onChange={handleInputChange('data_fim_t1')} />
+                      </div>
+                      <SlaBadge startDate={formData.nexa_data_envio} endDate={formData.data_fim_t1} />
                     </div>
                     {/* PC Nexa Info */}
                     <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
@@ -762,6 +856,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
                       </div>
                     </div>
+                      <SlaBadge startDate={formData.data_fim_t1} endDate={formData.nexa_data_conclusao_lancamento} />
                   </div>
 
                   {/* T3 */}
@@ -794,6 +889,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
                       </div>
                     </div>
+                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} />
                   </div>
 
                   {/* T4 */}
@@ -824,6 +920,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
                         </div>
                       </div>
+                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} />
                     </div>
                     {/* Final */}
                     <div className="mt-4 pt-3 border-t border-zinc-100">
