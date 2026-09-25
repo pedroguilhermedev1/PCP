@@ -467,6 +467,54 @@ function ExcluirInsumoModal({
   );
 }
 
+function MultiSelectCategoria({ options, selected, onChange }: { options: string[], selected: string[], onChange: (val: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <div className="relative inline-flex items-center">
+      <button 
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 hover:text-zinc-900 transition-colors focus:outline-none"
+      >
+        <span className="uppercase tracking-wider">
+          Categoria {selected.length > 0 ? `(${selected.length})` : ''}
+        </span>
+        <span className="text-[10px] opacity-70">▼</span>
+      </button>
+      
+      {open && (
+        <div className="absolute top-full left-0 mt-2 w-[200px] bg-white border border-zinc-200 rounded-md shadow-lg z-50 p-2 flex flex-col gap-1 max-h-64 overflow-y-auto font-normal normal-case tracking-normal">
+          {options.length === 0 ? <div className="text-xs text-zinc-500 p-1">Nenhuma categoria</div> : null}
+          {options.map(opt => (
+            <label key={opt} className="flex items-center gap-2 text-xs text-zinc-700 cursor-pointer hover:bg-zinc-50 p-1.5 rounded">
+              <input 
+                type="checkbox" 
+                className="rounded border-zinc-300 text-purple-600 focus:ring-purple-500 w-3.5 h-3.5"
+                checked={selected.includes(opt)}
+                onChange={(e) => {
+                  if (e.target.checked) onChange([...selected, opt]);
+                  else onChange(selected.filter(x => x !== opt));
+                }}
+              />
+              <span className="truncate">{opt}</span>
+            </label>
+          ))}
+          {selected.length > 0 && (
+            <button 
+              onClick={() => onChange([])}
+              className="mt-1 text-[10px] text-red-600 hover:underline text-left px-1"
+            >
+              Limpar seleção
+            </button>
+          )}
+        </div>
+      )}
+      
+      {open && <div className="fixed inset-0 z-40" onClick={() => setOpen(false)}></div>}
+    </div>
+  );
+}
+
 export function EstoqueInsumosTable({ 
   cd, 
   insumos, 
@@ -493,6 +541,7 @@ export function EstoqueInsumosTable({
   const [statusFilter, setStatusFilter] = useState<string[]>(
     initialStatusFilter && initialStatusFilter !== 'Todos' ? [initialStatusFilter] : []
   );
+  const [categoriaFilter, setCategoriaFilter] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -541,6 +590,20 @@ export function EstoqueInsumosTable({
     }
   };
 
+  const availableCategorias = useMemo(() => {
+    const cats = new Set<string>();
+    insumos.forEach(item => {
+      if (item.categoria) {
+        let c = item.categoria.trim();
+        if (c.length > 0) {
+          c = c.charAt(0).toUpperCase() + c.slice(1).toLowerCase();
+          cats.add(c);
+        }
+      }
+    });
+    return Array.from(cats).sort();
+  }, [insumos]);
+
   const filteredInsumos = useMemo(() => {
     return insumos.filter(item => {
       // Filtro por status
@@ -565,9 +628,19 @@ export function EstoqueInsumosTable({
         if (!matchItem && !matchItemAdm && !matchCodigo) return false;
       }
       
+      // Filtro por categoria
+      if (categoriaFilter.length > 0) {
+        if (!item.categoria) return false;
+        let c = item.categoria.trim();
+        if (c.length > 0) {
+          c = c.charAt(0).toUpperCase() + c.slice(1).toLowerCase();
+        }
+        if (!categoriaFilter.includes(c)) return false;
+      }
+      
       return true;
     });
-  }, [insumos, statusFilter, searchTerm]);
+  }, [insumos, statusFilter, searchTerm, categoriaFilter]);
 
   return (
     <div className="w-full mt-4 relative">
@@ -687,7 +760,13 @@ export function EstoqueInsumosTable({
               <th className="px-6 py-4 font-semibold bg-zinc-50">Item ADM</th>
               <th className="px-6 py-4 font-semibold bg-zinc-50">Item OP</th>
               <th className="px-6 py-4 font-semibold text-center bg-zinc-50">Unidade</th>
-              <th className="px-6 py-4 font-semibold bg-zinc-50">Categoria</th>
+              <th className="px-6 py-4 font-semibold bg-zinc-50 overflow-visible">
+                <MultiSelectCategoria 
+                  options={availableCategorias}
+                  selected={categoriaFilter}
+                  onChange={setCategoriaFilter}
+                />
+              </th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">CMD</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Lead Time</th>
               <th className="px-6 py-4 font-semibold text-right bg-zinc-50">Est. Mín</th>

@@ -1,24 +1,55 @@
-const fs = require('fs');
-const file = 'components/faturas/FaturaSAPModal.tsx';
-let content = fs.readFileSync(file, 'utf8');
+const { createClient } = require('@supabase/supabase-js');
 
-const startStr = `<section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Fornecedor</label>`;
+const supabaseUrl = 'https://zwvajnsmylaebxfeypeo.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dmFqbnNteWxhZWJ4ZmV5cGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwODEyNzksImV4cCI6MjA5MzY1NzI3OX0.vl359IIHkx-oE4Z1CzenYAPcvlZWYqgAwoX8xa6mVTw';
 
-const endStr = `<section className="space-y-6 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Observações Gerais</label>`;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-const startIdx = content.indexOf(startStr);
-const endIdx = content.indexOf(endStr, startIdx + 10);
-
-if (startIdx > -1 && endIdx > -1 && startIdx !== endIdx) {
-  content = content.substring(0, startIdx) + content.substring(endIdx);
-  fs.writeFileSync(file, content);
-  console.log("Successfully removed duplicate section!");
-} else {
-  console.log("Could not find markers", startIdx, endIdx);
+async function main() {
+  const { data: items, error } = await supabase
+    .from('estoque_insumos')
+    .select('id, item, codigo, cd, created_at')
+    .order('created_at', { ascending: true });
+    
+  if (error) {
+    console.error('Error fetching', error);
+    return;
+  }
+  
+  const dupesMap = {};
+  items.forEach(i => {
+    // Unique key by item name and CD
+    const key = `${i.item.trim().toLowerCase()}_${i.cd}`;
+    if (!dupesMap[key]) dupesMap[key] = [];
+    dupesMap[key].push(i);
+  });
+  
+  let deletedCount = 0;
+  
+  for (const [key, list] of Object.entries(dupesMap)) {
+    if (list.length > 1) {
+      // Keep the first one (oldest created_at)
+      const toKeep = list[0];
+      const toDelete = list.slice(1);
+      
+      console.log(`\nDuplicate found for: ${key}. Keeping ID: ${toKeep.id}`);
+      for (const item of toDelete) {
+        console.log(`- Deleting duplicate ID: ${item.id}`);
+        const { error: delErr } = await supabase
+          .from('estoque_insumos')
+          .delete()
+          .eq('id', item.id);
+          
+        if (delErr) {
+          console.error(`Failed to delete ${item.id}:`, delErr);
+        } else {
+          deletedCount++;
+        }
+      }
+    }
+  }
+  
+  console.log(`\nDeleted ${deletedCount} duplicate records.`);
 }
+
+main();
