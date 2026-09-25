@@ -150,7 +150,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     const { 
       id, numero_documento, valor, data_emissao, data_recebimento, data_vencimento, data_pagamento_real, 
       erp, heflo, v360, data_abertura_heflo, data_abertura_v360, data_aprovacao, 
-      is_sap, rc_sap, pedido_sap, data_rc_sap, data_pedido_sap, nexa_chamado, numero_pc_nexa, 
+      is_sap, rc_sap, pedido_sap, data_rc_sap, data_pedido_sap, nexa_chamado, numero_pc_nexa, identificador, insumos, created_at, responsavel, codigo_fatura, tipo_documento,
       ...dadosPermanentes 
     } = fatura;
     

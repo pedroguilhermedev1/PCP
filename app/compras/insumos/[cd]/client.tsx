@@ -465,7 +465,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                     )}
                     <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status</TableHead>
                     {activeTab === 'entradas' && (
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Aprovado Por</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Aberto Por</TableHead>
                     )}
                     {activeTab === 'saidas' && (
                       <>
@@ -487,7 +487,7 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
                           {mov.codigo_movimentacao || '-'}
                         </TableCell>
                         <TableCell className="text-zinc-500 whitespace-nowrap">
-                          {format(new Date(mov.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {format(new Date(mov.data_hora + (mov.data_hora.includes('Z') || mov.data_hora.includes('+') ? '' : 'Z')), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </TableCell>
                         <TableCell className="text-zinc-600 font-medium">
                           {mov.fatura_id ? mov.fatura_id.split('__')[0] : '-'}
