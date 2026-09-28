@@ -2,7 +2,7 @@
 
 import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes, calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -180,6 +180,10 @@ export function DashboardClient({
     let slaProximo = 0;
     let slaAtrasado = 0;
 
+    let novoSlaNoPrazo = 0;
+    let novoSlaProximo = 0;
+    let novoSlaAtrasado = 0;
+
     filteredFaturas.forEach(f => {
       const etapa = calcularEtapa(f);
       const v = f.valor || 0;
@@ -208,9 +212,21 @@ export function DashboardClient({
       if (sla === 'Dentro do prazo') slaNoPrazo++;
       else if (sla === 'Próximo do vencimento') slaProximo++;
       else if (sla === 'Atrasado') slaAtrasado++;
+
+      // Novo SLA
+      if (etapa !== 'Aguardando pagamento' && etapa !== 'Pago') {
+        const viabilidade = calcularViabilidadePagamento(f);
+        if (viabilidade.statusViabilidade === 'viavel') novoSlaNoPrazo++;
+        else if (viabilidade.statusViabilidade === 'risco') novoSlaProximo++;
+        else if (viabilidade.statusViabilidade === 'perdido') novoSlaAtrasado++;
+      }
     });
 
-    return { emAbertoAtraso, emAbertoNoPrazo, aguardandoAtraso, aguardandoNoPrazo, slaNoPrazo, slaProximo, slaAtrasado };
+    return { 
+      emAbertoAtraso, emAbertoNoPrazo, aguardandoAtraso, aguardandoNoPrazo, 
+      slaNoPrazo, slaProximo, slaAtrasado,
+      novoSlaNoPrazo, novoSlaProximo, novoSlaAtrasado
+    };
   }, [filteredFaturas]);
 
 
@@ -496,7 +512,55 @@ export function DashboardClient({
                     </div>
                   </div>
 
-                  {/* 3. Gantt Operacional */}
+                  {/* 3. Fluxo de Faturas 2.0 — Tempos e SLA */}
+                  <div className="flex items-center gap-2 mb-6">
+                    <FileText className="w-5 h-5 text-purple-600" />
+                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas 2.0 — Tempos e SLA <span className="text-sm font-normal text-zinc-500">(Novo Motor)</span></h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    <div 
+                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?novo_sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
+                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[13px] font-semibold uppercase tracking-wider text-emerald-600">Dentro do prazo</p>
+                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.novoSlaNoPrazo}</div>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas viáveis</p>
+                      </div>
+                    </div>
+                    <div 
+                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?novo_sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
+                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[13px] font-semibold uppercase tracking-wider text-amber-600">Próximas do limite</p>
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.novoSlaProximo}</div>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas em risco</p>
+                      </div>
+                    </div>
+                    <div 
+                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?novo_sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
+                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[13px] font-semibold uppercase tracking-wider text-red-600">Atrasadas no Fluxo</p>
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.novoSlaAtrasado}</div>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas perdidas</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Gantt Operacional */}
                   <div className="mt-8 mb-8">
                     <FaturasGantt faturas={filteredFaturas} flowType="2.0" />
                   </div>

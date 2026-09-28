@@ -1,8 +1,9 @@
 import React from 'react';
 import { Fatura } from '@/modules/compras/domain/Fatura';
 import { Button } from '@/components/ui/button';
-import { X, Clock, User, Calendar, CheckCircle, Info, Timer } from 'lucide-react';
+import { X, Clock, User, Calendar, CheckCircle, Info, Timer, AlertTriangle } from 'lucide-react';
 import { formatUserName } from '@/lib/roles';
+import { calcularViabilidadePagamento, ProjecaoPagamento } from '@/modules/compras/domain/Fatura';
 
 interface TimeDetailsModalProps {
   isOpen: boolean;
@@ -21,12 +22,20 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
   const renderDate = (d?: string) => d ? d.split('-').reverse().join('/') : 'Pendente';
   const renderUser = (u?: string) => u ? formatUserName(u) : 'Pendente';
 
-  const renderSLA = (startDate?: string, endDate?: string) => {
+  const renderSLA = (startDate?: string, endDate?: string, slaDias: number = 3) => {
     if (!startDate) return <span className="text-zinc-500">Aguardando início</span>;
-    const SLA_DIAS = 3;
+    const SLA_DIAS = slaDias;
     const start = new Date(startDate + 'T00:00:00');
     const prazoFinal = new Date(start);
-    prazoFinal.setDate(prazoFinal.getDate() + SLA_DIAS);
+    
+    let diasAdicionados = 0;
+    while (diasAdicionados < SLA_DIAS) {
+      prazoFinal.setDate(prazoFinal.getDate() + 1);
+      const diaSemana = prazoFinal.getDay();
+      if (diaSemana !== 0 && diaSemana !== 6) {
+        diasAdicionados++;
+      }
+    }
     
     if (endDate) {
       const end = new Date(endDate + 'T00:00:00');
@@ -47,7 +56,7 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
     return <span className="text-amber-600 font-bold">{diasRestantes} dia(s) restante(s)</span>;
   };
 
-  if (fatura.fluxo_iniciado_por !== 'Nexa') {
+  if (fatura.is_sap && fatura.fluxo_iniciado_por !== 'Nexa') {
     // Fluxo SAP
     switch (stage) {
       case 'T1':
@@ -55,10 +64,8 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-purple-700 bg-purple-50 border-purple-200';
         details = [
           { label: 'Número da RC', value: fatura.rc_sap || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Data de Criação', value: renderDate(fatura.data_rc_sap), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Responsável', value: renderUser(fatura.responsavel_t1), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Conclusão', value: renderDate(fatura.data_fim_t1), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.data_rc_sap, fatura.data_fim_t1), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Data de Conclusão (Criação RC)', value: renderDate(fatura.data_rc_sap), icon: <Calendar className="w-4 h-4" /> },
         ];
         break;
       case 'T2':
@@ -66,10 +73,10 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-indigo-700 bg-indigo-50 border-indigo-200';
         details = [
           { label: 'Status da Aprovação', value: fatura.data_aprovacao ? 'Aprovada' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_fim_t1), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data de Início', value: renderDate(fatura.data_rc_sap), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Responsável', value: renderUser(fatura.responsavel_t2), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Aprovação', value: renderDate(fatura.data_fim_t2), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.data_fim_t1, fatura.data_fim_t2), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Data de Aprovação', value: renderDate(fatura.data_aprovacao), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_rc_sap, fatura.data_aprovacao, 1), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T3':
@@ -77,11 +84,11 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-blue-700 bg-blue-50 border-blue-200';
         details = [
           { label: 'Número do Pedido', value: fatura.pedido_sap || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_fim_t2), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data de Início', value: renderDate(fatura.data_aprovacao), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Responsável', value: renderUser(fatura.responsavel_t3), icon: <User className="w-4 h-4" /> },
-          { label: 'Data do Pedido', value: renderDate(fatura.data_fim_t3), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data do Pedido', value: renderDate(fatura.data_pedido_sap), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Doc Subsequente', value: fatura.doc_subsequente_criado ? 'Criado' : 'Não criado', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.data_fim_t2, fatura.data_fim_t3), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_aprovacao, fatura.data_pedido_sap, 1), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T4':
@@ -89,11 +96,11 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-cyan-700 bg-cyan-50 border-cyan-200';
         details = [
           { label: 'Chamado / Ticket', value: fatura.nexa_chamado || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_fim_t3), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável', value: renderUser(fatura.responsavel_t4), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Envio', value: renderDate(fatura.data_fim_t4), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data de Início', value: renderDate(fatura.data_pedido_sap), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Responsável (Quem abriu)', value: renderUser(fatura.responsavel_t4), icon: <User className="w-4 h-4" /> },
+          { label: 'Data de Envio', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
           { label: 'NF Anexada?', value: fatura.nexa_anexada ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.data_fim_t3, fatura.data_fim_t4), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_pedido_sap, fatura.nexa_data_envio, 1), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T5':
@@ -101,10 +108,10 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-slate-700 bg-slate-100 border-slate-300';
         details = [
           { label: 'Status do Lançamento', value: fatura.nexa_lancamento_concluido ? 'Concluído' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_fim_t4), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data de Início', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Usuário Responsável', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
           { label: 'Data de Conclusão', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.data_fim_t4, fatura.nexa_data_conclusao_lancamento), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_envio, fatura.nexa_data_conclusao_lancamento, 3), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T6':
@@ -115,7 +122,7 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
           { label: 'Data de Início', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Usuário Responsável', value: renderUser(fatura.usuario_nexa_programacao), icon: <User className="w-4 h-4" /> },
           { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.nexa_data_conclusao_lancamento, fatura.nexa_data_prevista_pagamento), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_conclusao_lancamento, fatura.nexa_data_prevista_pagamento, 3), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T7':
@@ -126,7 +133,7 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
           { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Data do Pagamento', value: renderDate(fatura.data_pagamento_real), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Valor Pago', value: fatura.valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor) : 'R$ 0,00', icon: <Info className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real, 3), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
     }
@@ -138,10 +145,8 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-cyan-700 bg-cyan-50 border-cyan-200';
         details = [
           { label: 'Chamado / Ticket', value: fatura.nexa_chamado || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Data de Envio', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável', value: renderUser(fatura.responsavel_t1), icon: <User className="w-4 h-4" /> },
-          { label: 'Data Conclusão T1', value: renderDate(fatura.data_fim_t1), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA T1', value: renderSLA(fatura.nexa_data_envio, fatura.data_fim_t1), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Responsável (Quem abriu)', value: renderUser(fatura.responsavel_t1), icon: <User className="w-4 h-4" /> },
+          { label: 'Data de Abertura', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
           { label: 'PC Nexa', value: fatura.numero_pc_nexa || (fatura.pc_nexa_concluido ? 'Concluído' : 'Pendente'), icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Responsável PC', value: renderUser(fatura.usuario_pc_nexa), icon: <User className="w-4 h-4" /> },
           { label: 'Data do PC Nexa', value: renderDate(fatura.data_pc_nexa), icon: <Calendar className="w-4 h-4" /> },
@@ -152,10 +157,10 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         color = 'text-slate-700 bg-slate-100 border-slate-300';
         details = [
           { label: 'Status do Lançamento', value: fatura.nexa_lancamento_concluido ? 'Concluído' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_fim_t1), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Usuário Responsável', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
+          { label: 'Data de Início', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Responsável (Time Fiscal)', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
           { label: 'Data de Conclusão', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.data_fim_t1, fatura.nexa_data_conclusao_lancamento), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.nexa_data_envio, fatura.nexa_data_conclusao_lancamento, 1), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T3':
@@ -164,9 +169,9 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         details = [
           { label: 'Status da Programação', value: fatura.nexa_pagamento_programado ? 'Programado' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Data de Início', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Usuário Responsável', value: renderUser(fatura.usuario_nexa_programacao), icon: <User className="w-4 h-4" /> },
+          { label: 'Responsável (Time de Pagamentos)', value: renderUser(fatura.usuario_nexa_programacao), icon: <User className="w-4 h-4" /> },
           { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.nexa_data_conclusao_lancamento, fatura.nexa_data_prevista_pagamento), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_conclusao_lancamento, fatura.nexa_data_prevista_pagamento, 3), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
       case 'T4':
@@ -175,12 +180,15 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         details = [
           { label: 'Status do Pagamento', value: fatura.nexa_pagamento_realizado ? 'Pago' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Responsável (Contas a Pagar)', value: renderUser(fatura.usuario_nexa_pagamento), icon: <User className="w-4 h-4" /> },
           { label: 'Data do Pagamento', value: renderDate(fatura.data_pagamento_real), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real, 3), icon: <Timer className="w-4 h-4" /> },
         ];
         break;
     }
   }
+
+  const projecao = calcularViabilidadePagamento(fatura);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -205,6 +213,41 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
               <span className="text-sm font-medium text-zinc-900 ml-5">{d.value}</span>
             </div>
           ))}
+          
+          {projecao && Object.keys(projecao).length > 0 && (
+            <div className="mt-4 pt-4 border-t border-zinc-200 space-y-3">
+              <h4 className="text-sm font-bold text-zinc-700 flex items-center gap-2">
+                <Timer className="w-4 h-4"/> Projeção e Viabilidade de Pagamento
+              </h4>
+              
+              {!projecao.possivelSextaAtual && projecao.janelaPerdida && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm font-bold text-red-700 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4" /> Pagamento nesta sexta-feira ({projecao.janelaPerdida}): não será possível
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">{projecao.motivoPerda}</p>
+                  {projecao.consequencia && <p className="text-xs font-bold text-red-700 mt-1">Impacto: {projecao.consequencia}</p>}
+                </div>
+              )}
+              
+              {projecao.proximaSextaNormal && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm font-bold text-blue-700">Próxima janela normal de pagamento: sexta-feira, {projecao.proximaSextaNormal}</p>
+                  {projecao.vencimentoUltrapassado && (
+                     <p className="text-xs font-bold text-red-600 mt-1">Atenção: O vencimento da NF já foi ultrapassado.</p>
+                  )}
+                </div>
+              )}
+
+              {projecao.possivelQuartaExcecao && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                  <p className="text-sm font-bold text-amber-700">Existe uma janela excepcional de pagamento na quarta-feira.</p>
+                  <p className="text-xs text-amber-600 mt-1">{projecao.condicaoQuartaExcecao}</p>
+                  <p className="text-xs font-bold text-amber-700 mt-1">Situação atual: {projecao.situacaoProcesso}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-6 text-center text-xs text-zinc-400">
             Para editar essas informações, utilize o botão <span className="font-semibold text-zinc-600">Editar</span> na fatura principal.

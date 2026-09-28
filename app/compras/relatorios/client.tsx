@@ -10,8 +10,9 @@ import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getUserRole, getUserCD } from "@/lib/roles";
+import { calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
 
-type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas' | 'faturas-sap';
+type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas' | 'faturas-sap' | 'sla';
 
 export function RelatoriosClient() {
   const [activeTab, setActiveTab] = useState<ReportType>('fornecedores');
@@ -51,7 +52,7 @@ export function RelatoriosClient() {
     }
   }, []);
 
-  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas-sap'];
+  const allTabs = ['fornecedores', 'produtos', 'movimentacoes', 'faturas-sap', 'sla'];
   const visibleTabs = userRole === 'OPERACIONAL' ? ['produtos', 'movimentacoes'] : allTabs;
 
   const handleSearch = async () => {
@@ -110,7 +111,7 @@ export function RelatoriosClient() {
         if (categoriaFiltro === 'Materiais') q = q.like('id', '%__CAT__Material%');
         if (categoriaFiltro === 'Serviços') q = q.ilike('id', '%__CAT__Servi_o%');
         query = q;
-      } else if (activeTab === 'faturas-sap') {
+      } else if (activeTab === 'faturas-sap' || activeTab === 'sla') {
         let q = supabase.from('faturas')
           .select('*')
           .order('data_emissao', { ascending: false })
@@ -127,7 +128,7 @@ export function RelatoriosClient() {
         if (error) throw new Error(error.message);
         
         let finalData = result || [];
-        if (activeTab === 'faturas' || activeTab === 'faturas-sap') {
+        if (activeTab === 'faturas' || activeTab === 'faturas-sap' || activeTab === 'sla') {
           finalData = finalData.map(d => ({
             ...d,
             categoria: d.id.includes('__CAT__Material') ? 'Material' : 'Serviço'
@@ -305,6 +306,115 @@ export function RelatoriosClient() {
           });
         }
       });
+    } else if (activeTab === 'sla') {
+      const countBizDays = (startStr, endStr) => {
+        if (!startStr || !endStr) return null;
+        let start = new Date(startStr + 'T00:00:00');
+        let end = new Date(endStr + 'T00:00:00');
+        if (start > end) return 0;
+        let days = 0;
+        let current = new Date(start.getTime());
+        while (current < end) {
+          current.setDate(current.getDate() + 1);
+          const dow = current.getDay();
+          if (dow !== 0 && dow !== 6) days++;
+        }
+        return days;
+      };
+
+      data.forEach(d => {
+        const ehFluxoSap = d.is_sap && d.fluxo_iniciado_por !== 'Nexa';
+        const fluxoNome = ehFluxoSap ? 'SAP → Nexa' : 'Apenas Nexa';
+        const viabilidade = calcularViabilidadePagamento(d);
+
+        let base = {
+          "Código Fatura": d.codigo_fatura || d.tipo_documento || '-',
+          "Número Documento": d.numero_documento || '-',
+          "Série": d.serie || '-',
+          "Data Emissão": d.data_emissao ? new Date(d.data_emissao).toLocaleDateString('pt-BR') : '-',
+          "Data Recebimento (T0)": d.data_recebimento ? new Date(d.data_recebimento).toLocaleDateString('pt-BR') : '-',
+          "Data Vencimento": d.data_vencimento ? new Date(d.data_vencimento).toLocaleDateString('pt-BR') : '-',
+          "Status Atual": d.status_pagamento || '-',
+          "Tipo Fluxo": fluxoNome,
+          "Fornecedor": d.fornecedor || '-',
+          "CNPJ": d.cnpj || '-',
+          "RC SAP": d.rc_sap || '-',
+          "Pedido SAP": d.pedido_sap || '-',
+          "ID Nexa (PC/Chamado)": d.identificador || d.numero_pc_nexa || d.nexa_chamado || '-',
+          "Responsável Atual": d.responsavel || '-'
+        };
+
+        if (d._insumo) {
+          base["Cód. Material"] = d._insumo.codigo || '-';
+          base["Descrição Material"] = d._insumo.item || '-';
+          base["Quantidade"] = d._insumo.quantidade || '-';
+        } else {
+          base["Cód. Material"] = '-';
+          base["Descrição Material"] = '-';
+          base["Quantidade"] = '-';
+        }
+
+        let steps = [];
+        if (ehFluxoSap) {
+          steps = [
+            { t: 'T1', nome: 'Criação da RC', start: d.data_recebimento, end: d.data_rc_sap, sla: 1 },
+            { t: 'T2', nome: 'Aprovação da RC', start: d.data_rc_sap, end: d.data_aprovacao, sla: 1 },
+            { t: 'T3', nome: 'Criação do Pedido', start: d.data_aprovacao, end: d.data_pedido_sap, sla: 1 },
+            { t: 'T4', nome: 'Solicitação no Nexa', start: d.data_pedido_sap, end: d.nexa_data_envio || d.data_abertura_heflo, sla: 3 },
+            { t: 'T5', nome: 'Lançamento Fiscal', start: d.nexa_data_envio || d.data_abertura_heflo, end: d.nexa_data_conclusao_lancamento, sla: 3 },
+            { t: 'T6', nome: 'Programação de Pagto', start: d.nexa_data_conclusao_lancamento, end: d.nexa_data_prevista_pagamento, sla: 3 }
+          ];
+        } else {
+          steps = [
+            { t: 'T1', nome: 'Solicitação no Nexa', start: d.data_recebimento, end: d.nexa_data_envio || d.data_abertura_heflo, sla: 1 },
+            { t: 'T2', nome: 'Lançamento Fiscal', start: d.nexa_data_envio || d.data_abertura_heflo, end: d.nexa_data_conclusao_lancamento, sla: 3 },
+            { t: 'T3', nome: 'Programação de Pagto', start: d.nexa_data_conclusao_lancamento, end: d.nexa_data_prevista_pagamento, sla: 3 }
+          ];
+        }
+
+        let totalNoPrazo = 0;
+        let totalFora = 0;
+        let maiorAtraso = 0;
+        let slaTotalPrevisto = 0;
+        let slaTotalRealizado = 0;
+
+        steps.forEach(s => {
+          base[`[${s.t}] Etapa`] = s.nome;
+          base[`[${s.t}] Início`] = s.start ? new Date(s.start).toLocaleDateString('pt-BR') : '-';
+          base[`[${s.t}] Conclusão`] = s.end ? new Date(s.end).toLocaleDateString('pt-BR') : '-';
+          base[`[${s.t}] SLA Previsto`] = s.sla;
+          
+          slaTotalPrevisto += s.sla;
+
+          const efetivo = countBizDays(s.start, s.end);
+          if (efetivo !== null) {
+            base[`[${s.t}] Efetivo`] = efetivo;
+            const diff = efetivo - s.sla;
+            base[`[${s.t}] Diferença`] = diff;
+            base[`[${s.t}] Status`] = diff > 0 ? 'Atrasado' : 'No Prazo';
+            
+            slaTotalRealizado += efetivo;
+            if (diff > 0) totalFora++; else totalNoPrazo++;
+            if (diff > maiorAtraso) maiorAtraso = diff;
+          } else {
+            base[`[${s.t}] Efetivo`] = '-';
+            base[`[${s.t}] Diferença`] = '-';
+            base[`[${s.t}] Status`] = '-';
+          }
+        });
+
+        base['SLA Total Previsto (dias)'] = slaTotalPrevisto;
+        base['Tempo Total Realizado (dias)'] = slaTotalRealizado > 0 ? slaTotalRealizado : '-';
+        base['Total Etapas No Prazo'] = totalNoPrazo;
+        base['Total Etapas Atrasadas'] = totalFora;
+        base['Maior Atraso em Etapa'] = maiorAtraso;
+        
+        base['Status Viabilidade (Novo Motor)'] = viabilidade.statusViabilidade === 'viavel' ? 'Dentro do prazo' : viabilidade.statusViabilidade === 'risco' ? 'Próximas do limite' : viabilidade.statusViabilidade === 'perdido' ? 'Atrasadas no fluxo' : '-';
+        base['Janela Perdida'] = viabilidade.janelaPerdida || '-';
+        base['Próxima Janela Normal'] = viabilidade.proximaSextaNormal || '-';
+        
+        exportData.push(base);
+      });
     }
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -346,7 +456,7 @@ export function RelatoriosClient() {
                     : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
                 }`}
               >
-                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab === 'faturas' ? 'Faturas 1.0' : tab === 'faturas-sap' ? 'Faturas 2.0' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'movimentacoes' ? 'Movimentações' : tab === 'produtos' ? 'Insumos' : tab === 'faturas' ? 'Faturas 1.0' : tab === 'faturas-sap' ? 'Faturas 2.0' : tab === 'sla' ? 'Relatório de SLA' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -441,7 +551,7 @@ export function RelatoriosClient() {
                         <TableHead>Observações</TableHead>
                       </>
                     )}
-                    {(activeTab === 'faturas' || activeTab === 'faturas-sap') && (
+                    {(activeTab === 'faturas' || activeTab === 'faturas-sap' || activeTab === 'sla') && (
                       <>
                         <TableHead>Nota Fiscal</TableHead>
                         <TableHead>Fornecedor</TableHead>
@@ -503,7 +613,7 @@ export function RelatoriosClient() {
                             <TableCell className="text-zinc-500 text-xs truncate max-w-[150px]">{d.observacoes || '-'}</TableCell>
                           </>
                         )}
-                        {(activeTab === 'faturas' || activeTab === 'faturas-sap') && (
+                        {(activeTab === 'faturas' || activeTab === 'faturas-sap' || activeTab === 'sla') && (
                           <>
                             <TableCell className="font-medium">{d.numero_documento}</TableCell>
                             <TableCell>{d.fornecedor}</TableCell>

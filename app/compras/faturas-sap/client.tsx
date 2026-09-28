@@ -1,6 +1,6 @@
 "use client";
 
-import { Fatura, calcularStatus, calcularEtapa, calcularSLA } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularStatus, calcularEtapa, calcularSLA, calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -33,11 +33,13 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const searchParams = useSearchParams();
   const defaultCD = searchParams.get('cd') || 'todos';
   const defaultSLA = searchParams.get('sla') || 'todos';
+  const defaultNovoSLA = searchParams.get('novo_sla') || 'todos';
   const qAno = searchParams.get('ano') || 'todos';
   const qMes = searchParams.get('mes') || 'todos';
 
   const [filterCD, setFilterCD] = useState<string[]>([defaultCD]);
   const [filterSLA, setFilterSLA] = useState<string[]>([defaultSLA]);
+  const [filterNovoSLA, setFilterNovoSLA] = useState<string[]>([defaultNovoSLA]);
   const [filterAno, setFilterAno] = useState<string[]>([qAno]);
   const [filterMes, setFilterMes] = useState<string[]>([qMes]);
   const defaultStatus = searchParams.get('status')?.replace('_', ' ') || 'todos';
@@ -83,6 +85,20 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         return false;
       });
       if (!matchesSla) return false;
+    }
+
+    if (!filterNovoSLA.includes('todos')) {
+      const isFinalizado = (calcularEtapa(f) === 'Aguardando pagamento' || calcularEtapa(f) === 'Pago');
+      if (isFinalizado) return false;
+
+      const viabilidade = calcularViabilidadePagamento(f);
+      const matchesNovoSla = filterNovoSLA.some(slaOpt => {
+        if (slaOpt === 'No prazo' && viabilidade.statusViabilidade === 'viavel') return true;
+        if (slaOpt === 'Próximas' && viabilidade.statusViabilidade === 'risco') return true;
+        if (slaOpt === 'Atrasadas' && viabilidade.statusViabilidade === 'perdido') return true;
+        return false;
+      });
+      if (!matchesNovoSla) return false;
     }
 
     const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();

@@ -309,3 +309,225 @@ export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
   return 'Dentro do prazo';
 }
 
+export interface ProjecaoPagamento {
+  possivelSextaAtual?: boolean;
+  janelaPerdida?: string;
+  motivoPerda?: string;
+  consequencia?: string;
+  proximaSextaNormal?: string;
+  possivelQuartaExcecao?: boolean;
+  condicaoQuartaExcecao?: string;
+  situacaoProcesso?: string;
+  vencimentoUltrapassado?: boolean;
+  statusViabilidade?: 'viavel' | 'risco' | 'perdido';
+  slasFaltantes?: number;
+  etapasPendentes?: string[];
+  diasSegurancaFaltantes?: number;
+}
+
+export function proximaSextaDisponivel(dataReferencia: Date): Date {
+  const d = new Date(dataReferencia);
+  // se for sábado (6), passa pra próxima sexta (+6)
+  // se for sexta (5), passa pra próxima sexta (+7) se quiser a PRÓXIMA (mas se for a atual disponível, é hoje. Como "dataReferencia" pode ser hoje, se for sexta e for de manhã? A regra diz "próxima sexta").
+  // Vamos simplificar: pega a próxima sexta-feira estritamente.
+  let diff = 5 - d.getDay();
+  if (diff < 0) diff += 7; 
+  if (diff === 0 && d.getHours() > 12) diff = 7; // Se já passou de meio dia de sexta, próxima
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+export function formatarDataBrasileira(d: Date): string {
+  return d.toLocaleDateString('pt-BR', { timeZone: 'UTC' }).substring(0, 5); // dd/mm
+}
+
+export function calcularViabilidadePagamento(fatura: Partial<Fatura>): ProjecaoPagamento {
+  if (!fatura.data_vencimento) {
+    return {
+      statusViabilidade: avaliarSlaDaEtapaAtual(fatura)
+    };
+  }
+
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  
+  const vencimento = new Date(fatura.data_vencimento + 'T00:00:00');
+  vencimento.setHours(0,0,0,0);
+  
+  const vencimentoUltrapassado = hoje > vencimento;
+
+  let slasFaltantes = 0;
+  let etapasPendentes: string[] = [];
+  let processoCompleto = false;
+
+  const ehFluxoNexa = fatura.fluxo_iniciado_por === 'Nexa' || !fatura.is_sap;
+  const ehFluxoSap = fatura.is_sap && fatura.fluxo_iniciado_por !== 'Nexa';
+
+  if (ehFluxoSap) {
+    if (fatura.nexa_pagamento_realizado || fatura.status_pagamento === 'Pago') {
+      processoCompleto = true;
+    } else if (fatura.nexa_pagamento_programado) { // T6
+      slasFaltantes = 3;
+      etapasPendentes = ['Pagamento Realizado'];
+      processoCompleto = true; 
+    } else if (fatura.nexa_lancamento_concluido) { // T5
+      slasFaltantes = 3 + 3;
+      etapasPendentes = ['Programação de Pagamento', 'Pagamento Realizado'];
+    } else if (fatura.nexa_data_envio) { // T4
+      slasFaltantes = 3 + 3 + 3;
+      etapasPendentes = ['Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    } else if (fatura.pedido_sap || fatura.data_pedido_sap) { // T3
+      slasFaltantes = 1 + 3 + 3 + 3;
+      etapasPendentes = ['Solicitação no Nexa', 'Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    } else if (fatura.data_aprovacao) { // T2
+      slasFaltantes = 1 + 1 + 3 + 3 + 3;
+      etapasPendentes = ['Criação do Pedido', 'Solicitação no Nexa', 'Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    } else if (fatura.data_rc_sap || fatura.rc_sap) { // T1
+      slasFaltantes = 1 + 1 + 1 + 3 + 3 + 3;
+      etapasPendentes = ['Aprovação da RC', 'Criação do Pedido', 'Solicitação no Nexa', 'Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    } else {
+      slasFaltantes = 1 + 1 + 1 + 3 + 3 + 3;
+      etapasPendentes = ['Criação da RC', 'Aprovação da RC', 'Criação do Pedido', 'Solicitação no Nexa', 'Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    }
+  } else {
+    // Fluxo Apenas Nexa
+    if (fatura.nexa_pagamento_realizado || fatura.status_pagamento === 'Pago') {
+      processoCompleto = true;
+    } else if (fatura.nexa_pagamento_programado) { // T3
+      slasFaltantes = 3;
+      etapasPendentes = ['Pagamento Realizado'];
+      processoCompleto = true;
+    } else if (fatura.nexa_lancamento_concluido) { // T2
+      slasFaltantes = 3 + 3;
+      etapasPendentes = ['Programação de Pagamento', 'Pagamento Realizado'];
+    } else if (fatura.nexa_data_envio || fatura.nexa_chamado) { // T1
+      slasFaltantes = 1 + 3 + 3;
+      etapasPendentes = ['Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    } else {
+      slasFaltantes = 1 + 3 + 3;
+      etapasPendentes = ['Solicitação no Nexa', 'Lançamento Fiscal', 'Programação de Pagamento', 'Pagamento Realizado'];
+    }
+  }
+
+  const dataPrevisaoTermino = new Date(hoje.getTime());
+  let dAdicionados = 0;
+  while (dAdicionados < slasFaltantes) {
+    dataPrevisaoTermino.setDate(dataPrevisaoTermino.getDate() + 1);
+    const day = dataPrevisaoTermino.getDay();
+    if (day !== 0 && day !== 6) dAdicionados++;
+  }
+
+  let sextaAtual = proximaSextaDisponivel(hoje);
+  let sextaPossivel = proximaSextaDisponivel(dataPrevisaoTermino);
+
+  const perdeuSextaAtual = sextaPossivel > sextaAtual;
+
+  let projecao: ProjecaoPagamento = {
+    vencimentoUltrapassado
+  };
+
+  if (perdeuSextaAtual) {
+    projecao.possivelSextaAtual = false;
+    projecao.janelaPerdida = formatarDataBrasileira(sextaAtual);
+    projecao.motivoPerda = "O processo não estará completo a tempo para utilizar a janela desta sexta-feira.";
+    
+    if (sextaPossivel > vencimento && !vencimentoUltrapassado) {
+      projecao.consequencia = "A próxima janela normal de pagamento será após o vencimento da NF, portanto o pagamento ficará em atraso.";
+    }
+    
+    projecao.proximaSextaNormal = formatarDataBrasileira(sextaPossivel);
+  } else {
+    projecao.possivelSextaAtual = true;
+    projecao.proximaSextaNormal = formatarDataBrasileira(sextaAtual);
+  }
+
+  projecao.possivelQuartaExcecao = true;
+  projecao.condicaoQuartaExcecao = "Para utilizar essa exceção, a solicitação deve ser aberta até segunda-feira e o processo precisa estar completo.";
+  
+  if (processoCompleto) {
+    projecao.situacaoProcesso = "O processo já está completo e a exceção pode ser solicitada.";
+  } else {
+    projecao.situacaoProcesso = `O processo ainda não está completo. Faltam: ${etapasPendentes.join(', ')}.`;
+  }
+
+  let current = new Date(sextaPossivel.getTime());
+  let diasSegurancaFaltantes = 0;
+  
+  if (sextaPossivel > vencimento) {
+    projecao.statusViabilidade = 'perdido';
+  } else {
+    while (current < vencimento) {
+      current.setDate(current.getDate() + 1);
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) diasSegurancaFaltantes++;
+    }
+    projecao.diasSegurancaFaltantes = diasSegurancaFaltantes;
+    
+    if (diasSegurancaFaltantes >= 5) {
+      projecao.statusViabilidade = 'viavel';
+    } else {
+      projecao.statusViabilidade = 'risco';
+    }
+  }
+
+  projecao.slasFaltantes = slasFaltantes;
+  projecao.etapasPendentes = etapasPendentes;
+
+  return projecao;
+}
+
+export function avaliarSlaDaEtapaAtual(fatura: Partial<Fatura>): 'viavel' | 'risco' | 'perdido' {
+  const ehFluxoSap = fatura.is_sap && fatura.fluxo_iniciado_por !== 'Nexa';
+  
+  let startDateStr = '';
+  let limiteDias = 0;
+
+  if (ehFluxoSap) {
+    if (!fatura.data_rc_sap && !fatura.rc_sap) { // T1: Criação RC
+       startDateStr = fatura.data_recebimento || '';
+       limiteDias = 1;
+    } else if (!fatura.data_aprovacao) { // T2: Aprovação RC
+       startDateStr = fatura.data_rc_sap || '';
+       limiteDias = 1;
+    } else if (!fatura.pedido_sap && !fatura.data_pedido_sap) { // T3: Criação Pedido
+       startDateStr = fatura.data_aprovacao || '';
+       limiteDias = 1;
+    } else if (!fatura.nexa_data_envio) { // T4: Solicitação no Nexa
+       startDateStr = fatura.data_pedido_sap || '';
+       limiteDias = 3;
+    } else if (!fatura.nexa_lancamento_concluido) { // T5: Lançamento Fiscal
+       startDateStr = fatura.nexa_data_envio || '';
+       limiteDias = 3;
+    } else if (!fatura.nexa_pagamento_programado) { // T6: Programação
+       startDateStr = fatura.nexa_lancamento_concluido || '';
+       limiteDias = 3;
+    } else {
+       return 'viavel';
+    }
+  } else {
+    // Apenas Nexa
+    if (!fatura.nexa_data_envio && !fatura.nexa_chamado) { // T1
+       startDateStr = fatura.data_recebimento || '';
+       limiteDias = 1;
+    } else if (!fatura.nexa_lancamento_concluido) { // T2
+       startDateStr = fatura.nexa_data_envio || fatura.data_abertura_heflo || '';
+       limiteDias = 3;
+    } else if (!fatura.nexa_pagamento_programado) { // T3
+       startDateStr = fatura.nexa_lancamento_concluido || '';
+       limiteDias = 3;
+    } else {
+       return 'viavel';
+    }
+  }
+
+  if (startDateStr) {
+    const diasPassados = getBusinessDaysDifference(startDateStr);
+    if (diasPassados > limiteDias) return 'perdido';
+    if (diasPassados === limiteDias) return 'risco';
+    return 'viavel';
+  }
+  
+  return 'viavel'; 
+}
+
+

@@ -151,11 +151,19 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
     );
   };
 
-  const SlaBadge = ({ startDate, endDate }: { startDate?: string, endDate?: string }) => {
+  const SlaBadge = ({ startDate, endDate, slaDias = 3 }: { startDate?: string, endDate?: string, slaDias?: number }) => {
     if (!startDate) return null;
     const start = new Date(startDate + 'T00:00:00');
     const prazoFinal = new Date(start);
-    prazoFinal.setDate(prazoFinal.getDate() + SLA_DIAS);
+    
+    let diasAdicionados = 0;
+    while (diasAdicionados < slaDias) {
+      prazoFinal.setDate(prazoFinal.getDate() + 1);
+      const diaSemana = prazoFinal.getDay();
+      if (diaSemana !== 0 && diaSemana !== 6) {
+        diasAdicionados++;
+      }
+    }
     
     if (endDate) {
       return <div className="text-[9px] text-green-600 font-bold mt-2 bg-green-50 px-2 py-1 rounded-sm inline-block border border-green-200 w-full">Concluído em: {endDate.split('-').reverse().join('/')}</div>;
@@ -178,7 +186,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
 
     return (
       <div className={`text-[9px] font-bold mt-2 px-2 py-1 rounded-sm inline-block border ${colorClass} w-full`}>
-        SLA (3 dias): {text}
+        SLA ({slaDias} {slaDias === 1 ? 'dia' : 'dias'}): {text}
       </div>
     );
   };
@@ -545,11 +553,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.responsavel_t1 || '')} readOnly />
                       </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T1</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t1 || ""} onChange={handleInputChange('data_fim_t1')} />
-                      </div>
-                      <SlaBadge startDate={formData.data_rc_sap} endDate={formData.data_fim_t1} />
+
+
                   </div>
 
                   {/* T2 */}
@@ -566,11 +571,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
                         <MultiSelectResponsavel value={formData.responsavel_t2 || ""} onChange={(val) => setFormData(prev => ({...prev, responsavel_t2: val}))} options={RESPONSAVEIS_LIST} />
                       </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T2</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t2 || ""} onChange={handleInputChange('data_fim_t2')} />
-                      </div>
-                      <SlaBadge startDate={formData.data_fim_t1} endDate={formData.data_fim_t2} />
+
+                      <SlaBadge startDate={formData.data_rc_sap} endDate={formData.data_aprovacao} slaDias={1} />
                   </div>
 
                   {/* T3 */}
@@ -588,11 +590,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pedido_sap || ""} onChange={handleInputChange('data_pedido_sap')} />
                         </div>
                       </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T3</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t3 || ""} onChange={handleInputChange('data_fim_t3')} />
-                      </div>
-                      <SlaBadge startDate={formData.data_fim_t2} endDate={formData.data_fim_t3} />
+
+                      <SlaBadge startDate={formData.data_aprovacao} endDate={formData.data_pedido_sap} slaDias={1} />
                     </div>
                     {/* Doc Sub */}
                     <div className="mt-4 pt-3 border-t border-zinc-100">
@@ -623,11 +622,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
                         </div>
                       </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T4</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t4 || ""} onChange={handleInputChange('data_fim_t4')} />
-                      </div>
-                      <SlaBadge startDate={formData.data_fim_t3} endDate={formData.data_fim_t4} />
+
+                      <SlaBadge startDate={formData.data_pedido_sap} endDate={formData.nexa_data_envio} slaDias={1} />
                     </div>
                     {/* T4 Checks */}
                     <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
@@ -683,7 +679,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
                       </div>
                     </div>
-                      <SlaBadge startDate={formData.data_fim_t4} endDate={formData.nexa_data_conclusao_lancamento} />
+                      <SlaBadge startDate={formData.nexa_data_envio} endDate={formData.nexa_data_conclusao_lancamento} slaDias={3} />
                   </div>
 
                   {/* T6 */}
@@ -716,7 +712,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
                       </div>
                     </div>
-                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} />
+                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} slaDias={3} />
                   </div>
 
                   {/* T7 */}
@@ -747,7 +743,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
                         </div>
                       </div>
-                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} />
+                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} slaDias={3} />
                     </div>
                     {/* Final */}
                     <div className="mt-4 pt-3 border-t border-zinc-100">
@@ -785,11 +781,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.responsavel_t1 || '')} readOnly />
                       </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão T1</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_fim_t1 || ""} onChange={handleInputChange('data_fim_t1')} />
-                      </div>
-                      <SlaBadge startDate={formData.nexa_data_envio} endDate={formData.data_fim_t1} />
+
                     </div>
                     {/* PC Nexa Info */}
                     <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
@@ -856,7 +848,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
                       </div>
                     </div>
-                      <SlaBadge startDate={formData.data_fim_t1} endDate={formData.nexa_data_conclusao_lancamento} />
+                      <SlaBadge startDate={formData.nexa_data_envio} endDate={formData.nexa_data_conclusao_lancamento} slaDias={1} />
                   </div>
 
                   {/* T3 */}
@@ -889,7 +881,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
                       </div>
                     </div>
-                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} />
+                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} slaDias={3} />
                   </div>
 
                   {/* T4 */}
@@ -920,7 +912,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
                         </div>
                       </div>
-                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} />
+                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} slaDias={3} />
                     </div>
                     {/* Final */}
                     <div className="mt-4 pt-3 border-t border-zinc-100">

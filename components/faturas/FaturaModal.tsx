@@ -47,7 +47,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
       });
       const user = localStorage.getItem('pcp_user') || '';
       if (user && !formData.responsavel) {
-        setFormData(prev => ({ ...prev, responsavel: user }));
+        setFormData(prev => ({ ...prev, responsavel: user, responsavel_t1: prev.responsavel_t1 || user }));
       }
     }
   }, [isOpen]);
