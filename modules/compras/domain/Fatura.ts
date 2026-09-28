@@ -499,7 +499,7 @@ export function avaliarSlaDaEtapaAtual(fatura: Partial<Fatura>): 'viavel' | 'ris
        startDateStr = fatura.nexa_data_envio || '';
        limiteDias = 3;
     } else if (!fatura.nexa_pagamento_programado) { // T6: Programação
-       startDateStr = fatura.nexa_lancamento_concluido || '';
+       startDateStr = fatura.nexa_data_conclusao_lancamento || '';
        limiteDias = 3;
     } else {
        return 'viavel';
@@ -513,7 +513,7 @@ export function avaliarSlaDaEtapaAtual(fatura: Partial<Fatura>): 'viavel' | 'ris
        startDateStr = fatura.nexa_data_envio || fatura.data_abertura_heflo || '';
        limiteDias = 3;
     } else if (!fatura.nexa_pagamento_programado) { // T3
-       startDateStr = fatura.nexa_lancamento_concluido || '';
+       startDateStr = fatura.nexa_data_conclusao_lancamento || '';
        limiteDias = 3;
     } else {
        return 'viavel';

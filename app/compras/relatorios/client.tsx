@@ -307,7 +307,7 @@ export function RelatoriosClient() {
         }
       });
     } else if (activeTab === 'sla') {
-      const countBizDays = (startStr, endStr) => {
+      const countBizDays = (startStr: any, endStr: any) => {
         if (!startStr || !endStr) return null;
         let start = new Date(startStr + 'T00:00:00');
         let end = new Date(endStr + 'T00:00:00');
@@ -327,7 +327,7 @@ export function RelatoriosClient() {
         const fluxoNome = ehFluxoSap ? 'SAP → Nexa' : 'Apenas Nexa';
         const viabilidade = calcularViabilidadePagamento(d);
 
-        let base = {
+        let base: any = {
           "Código Fatura": d.codigo_fatura || d.tipo_documento || '-',
           "Número Documento": d.numero_documento || '-',
           "Série": d.serie || '-',
