@@ -2,7 +2,7 @@
 export type StatusFatura = 'A vencer' | 'Vencido' | 'Pago';
 // Status do Pagamento: Estágio no fluxo manual
 export type StatusPagamento = 'Em andamento' | 'Aguardando pagamento' | 'Pago' | 'ERP' | 'V360' | 'HEFLO';
-export type Etapa = 'Em andamento' | 'Cadastro da NF' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando emissão de NF' | 'Aguardando lançamento fiscal' | 'Aguardando programação de pagamento' | 'Pagamento programado' | 'Aguardando pagamento' | 'Pago' | 'Aguardando PC Nexa';
+export type Etapa = 'Em andamento' | 'Cadastro do Documento' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando emissão de Documento' | 'Aguardando lançamento fiscal' | 'Aguardando programação de pagamento' | 'Pagamento programado' | 'Aguardando pagamento' | 'Pago' | 'Aguardando PC Nexa';
 
 export interface FaturaInsumo {
   codigo: string;
@@ -14,6 +14,70 @@ export interface FaturaInsumo {
   desc_conta_protheus?: string;
   cd?: string;
   codigo_fornecedor?: string;
+}
+
+
+export interface Ocorrencia {
+  id: string;
+  t_origem: string; // ex: 'T3'
+  t_destino: string; // ex: 'T1'
+  motivo: string;
+  data_envio: string; // data em que foi devolvido
+  
+  t_destino_codigo: string; // ex: 'T1.1'
+  destino_data_inicio?: string;
+  destino_data_fim?: string;
+  destino_responsavel?: string;
+  
+  t_origem_retorno_codigo: string; // ex: 'T3.1'
+  origem_data_inicio?: string;
+  origem_data_fim?: string;
+  origem_responsavel?: string;
+  
+  status: 'Pendente Destino' | 'Pendente Origem' | 'Resolvida';
+}
+
+export interface Pendencia {
+  id: string;
+  etapa_origem: string;
+  etapa_destino: string;
+  data_abertura: string;
+  responsavel: string;
+  motivo: string;
+  justificativa?: string;
+  sla_dias: number;
+  status: 'Aberta' | 'Concluída';
+  data_conclusao?: string;
+}
+
+export interface HistoricoPassagem {
+  data_entrada: string;
+  data_saida?: string;
+}
+
+
+export interface CicloProcesso {
+  id: string;                
+  t_referencia: string;
+  t_destino?: string;
+
+  data_inicio_efetiva: string;
+  data_fim_efetiva?: string;
+
+  data_inicio_registro: string;
+  data_fim_registro?: string;
+
+  sla_aplicavel_dias: number; 
+  resultado_sla?: 'Dentro do SLA' | 'Fora do SLA' | 'Em andamento';
+  
+  documento_vinculado?: boolean;
+  doc_data_recebimento?: string;
+  doc_data_vencimento?: string;
+  status_janela?: 'Dentro da janela' | 'Fora da janela';
+
+  motivo_ocorrencia?: string;
+  motivo_texto?: string; 
+  responsavel?: string;
 }
 
 export interface Fatura {
@@ -74,6 +138,10 @@ export interface Fatura {
   nexa_chamado?: string;
   nexa_data_envio?: string;
   
+  nexa_possui_rc?: boolean;
+  nexa_rc_numero?: string;
+  nexa_rc_data?: string;
+
   pc_nexa_concluido?: boolean;
   numero_pc_nexa?: string;
   data_pc_nexa?: string;
@@ -116,6 +184,36 @@ export interface Fatura {
   data_fim_t4?: string;
 
   insumos?: FaturaInsumo[];
+
+  pendencias?: Pendencia[];
+  ocorrencias?: Ocorrencia[];
+  
+  // NOVOS CAMPOS PARA RASTREABILIDADE
+  rc_data_inicio?: string;
+  rc_data_fim?: string;
+  aprovacao_data_inicio?: string;
+  aprovacao_data_fim?: string;
+  pc_data_inicio?: string;
+  pc_data_fim?: string;
+  
+  nexa_data_inicio?: string;
+  nexa_data_fim?: string;
+  
+  req_nexa_data_inicio?: string;
+  req_nexa_data_fim?: string;
+  
+  fiscal_data_inicio?: string;
+  fiscal_data_fim?: string;
+  
+  prog_data_inicio?: string;
+  prog_data_fim?: string;
+  
+  pagamento_data_inicio?: string;
+  pagamento_data_fim?: string;
+  
+  ciclos_processo?: CicloProcesso[];
+
+  historico_passagens?: Record<string, HistoricoPassagem[]>;
 
   possui_encargo: boolean;
   valor_encargo?: number;
@@ -173,7 +271,7 @@ export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
     }
 
     if (fatura.doc_subsequente_criado) {
-      if (!fatura.nexa_emitiu_nf) return 'Aguardando emissão de NF';
+      if (!fatura.nexa_emitiu_nf) return 'Aguardando emissão de Documento';
       if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
       if (!fatura.nexa_pagamento_programado) return 'Aguardando programação de pagamento';
       if (!fatura.nexa_pagamento_realizado) return 'Aguardando pagamento';
@@ -191,7 +289,7 @@ export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
   if (fatura.v360 && fatura.data_abertura_v360) return 'Inclusão no V360';
   if (fatura.erp && fatura.data_aprovacao) return 'Aprovação';
   if (fatura.heflo && fatura.data_abertura_heflo) return 'Requisição de Compras';
-  return 'Cadastro da NF';
+  return 'Cadastro do Documento';
 }
 
 export type SLAStatus = 'Dentro do prazo' | 'Próximo do vencimento' | 'Atrasado';
@@ -274,7 +372,7 @@ export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
   let limiteDias = 0;
 
   if (fatura.is_sap) {
-    if (etapa === 'Cadastro da NF') {
+    if (etapa === 'Cadastro do Documento') {
       startDateStr = fatura.data_recebimento || '';
       limiteDias = 1;
     } else if (etapa === 'Requisição de Compras') {
@@ -285,7 +383,7 @@ export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
       limiteDias = 2;
     }
   } else {
-    if (etapa === 'Cadastro da NF') {
+    if (etapa === 'Cadastro do Documento') {
       startDateStr = fatura.data_recebimento || '';
       limiteDias = 1;
     } else if (etapa === 'Requisição de Compras') {
@@ -531,3 +629,35 @@ export function avaliarSlaDaEtapaAtual(fatura: Partial<Fatura>): 'viavel' | 'ris
 }
 
 
+
+
+export function calcularSlaDinamico(
+  fatura: Partial<Fatura>,
+  standardSla: number
+): number {
+  if (!fatura.data_recebimento || !fatura.data_vencimento) {
+    return standardSla;
+  }
+
+  const isNexa = fatura.fluxo_iniciado_por === 'Nexa';
+  const totalSla = isNexa ? 9 : 10; // Total de dias úteis padrão do fluxo
+
+  const rec = new Date(fatura.data_recebimento + 'T00:00:00');
+  const ven = new Date(fatura.data_vencimento + 'T00:00:00');
+  
+  // Calcular dias úteis entre recebimento e vencimento
+  let diasUteis = 0;
+  let cur = new Date(rec);
+  while (cur < ven) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) diasUteis++;
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // Se os dias úteis disponíveis forem menores que o total necessário
+  if (diasUteis < totalSla && diasUteis > 0) {
+     return Math.max(1, Math.round(standardSla * (diasUteis / totalSla)));
+  }
+
+  return standardSla;
+}

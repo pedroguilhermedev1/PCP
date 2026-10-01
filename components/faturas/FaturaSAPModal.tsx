@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Fatura, calcularStatus, calcularEtapa } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularStatus, calcularEtapa, calcularSlaDinamico } from "@/modules/compras/domain/Fatura";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, X } from "lucide-react";
 import { cn, formatCNPJ } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
@@ -38,6 +38,19 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
   });
 
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPendenciaModal, setShowPendenciaModal] = useState(false);
+  const [ocorrenciaModal, setOcorrenciaModal] = useState<{isOpen: boolean, t_origem?: string, novoDestino?: string, novoMotivo?: string}>({isOpen: false});
+  const MOTIVOS_OCORRENCIA = ['Falta de Anexo', 'Divergência de Valor', 'Dados Incorretos', 'Falta de Aprovação', 'Erro no Lançamento', 'Outros'];
+  const [novaPendencia, setNovaPendencia] = useState({
+    etapa_origem: '',
+    etapa_destino: '',
+    data_abertura: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19),
+    responsavel: localStorage.getItem('pcp_user') || '',
+    motivo: '',
+    justificativa: '',
+    sla_dias: 1,
+    status: 'Aberta' as const
+  });
   const [contasProtheus, setContasProtheus] = useState<{conta_protheus: string, desc_conta_protheus: string}[]>([]);
   const [availableInsumos, setAvailableInsumos] = useState<any[]>([]);
 
@@ -151,7 +164,9 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
     );
   };
 
-  const SlaBadge = ({ startDate, endDate, slaDias = 3 }: { startDate?: string, endDate?: string, slaDias?: number }) => {
+  const SlaBadge = ({ startDate, endDate, slaDias = 3, forceSla }: { startDate?: string, endDate?: string, slaDias?: number, forceSla?: number }) => {
+    const dynamicSla = forceSla ?? calcularSlaDinamico(formData as any, slaDias);
+    slaDias = dynamicSla;
     if (!startDate) return null;
     const start = new Date(startDate + 'T00:00:00');
     const prazoFinal = new Date(start);
@@ -166,7 +181,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
     }
     
     if (endDate) {
-      return <div className="text-[9px] text-green-600 font-bold mt-2 bg-green-50 px-2 py-1 rounded-sm inline-block border border-green-200 w-full">Concluído em: {endDate.split('-').reverse().join('/')}</div>;
+      return <div className="text-[9px] text-green-600 font-bold mt-2 bg-green-50 px-2 py-1 rounded-sm inline-block border border-green-200 w-full">Concluído em: {endDate.includes('T') ? (endDate.split('T')[1].startsWith('00:00:00') ? endDate.split('T')[0].split('-').reverse().join('/') : endDate.split('T')[0].split('-').reverse().join('/') + ' ' + endDate.split('T')[1].substring(0, 5)) : endDate.split('-').reverse().join('/')}</div>;
     }
     
     const hoje = new Date();
@@ -189,6 +204,35 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
         SLA ({slaDias} {slaDias === 1 ? 'dia' : 'dias'}): {text}
       </div>
     );
+  };
+
+  
+  const handleAddPendencia = () => {
+    if (!novaPendencia.etapa_origem || !novaPendencia.etapa_destino || !novaPendencia.motivo) {
+      alert("Preencha origem, destino e motivo.");
+      return;
+    }
+    const newP = { ...novaPendencia, id: Math.random().toString(36).substring(7) };
+    setFormData(prev => ({
+      ...prev,
+      pendencias: [...(prev.pendencias || []), newP]
+    }));
+    setShowPendenciaModal(false);
+    setNovaPendencia({
+      ...novaPendencia,
+      motivo: '',
+      justificativa: '',
+      data_abertura: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19)
+    });
+  };
+
+  const handleConcluirPendencia = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      pendencias: prev.pendencias?.map(p => 
+        p.id === id ? { ...p, status: 'Concluída', data_conclusao: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) } : p
+      )
+    }));
   };
 
   const autoStatus = calcularStatus(formData);
@@ -251,10 +295,10 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Nota Fiscal</label>
-                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="NF..." />
+                  <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} placeholder="Documento..." />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Valor Total (Previsto / RC / NF)</label>
+                  <label className="text-sm font-medium">Valor Total (Previsto / RC / Documento)</label>
                   <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
                 </div>
               </div>
@@ -262,15 +306,15 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Data de Emissão</label>
-                  <Input type="date" value={formData.data_emissao || ""} onChange={handleInputChange('data_emissao')} />
+                  <Input type="date" value={(formData.data_emissao || "").substring(0, 10)} onChange={handleInputChange('data_emissao')} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Data de Recebimento</label>
-                  <Input type="date" value={formData.data_recebimento || ""} onChange={handleInputChange('data_recebimento')} />
+                  <Input type="date" value={(formData.data_recebimento || "").substring(0, 10)} onChange={handleInputChange('data_recebimento')} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Data de Vencimento</label>
-                  <Input type="date" value={formData.data_vencimento || ""} onChange={handleInputChange('data_vencimento')} />
+                  <Input type="date" value={(formData.data_vencimento || "").substring(0, 10)} onChange={handleInputChange('data_vencimento')} />
                 </div>
               </div>
 
@@ -530,105 +574,172 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               </section>
             )}
 
-                        {formData.fluxo_iniciado_por === 'SAP' && (
+                                    {formData.fluxo_iniciado_por === 'SAP' && (
               <div className="space-y-4 pt-4 border-t border-zinc-200">
                 <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Fluxo de Trabalho (SAP)</h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-6">
-                  {/* T1 */}
+                  {/* T1 - SAP */}
                   <div className="relative p-4 bg-white rounded-xl border border-purple-200 hover:border-purple-300 transition-all shadow-sm">
                     <div className="absolute -top-3 left-4 w-6 h-6 bg-purple-50 rounded-full border border-purple-300 flex items-center justify-center text-[10px] font-bold text-purple-700">T1</div>
-                    <span className="text-[11px] font-bold text-purple-800 uppercase block mb-3 mt-1">RC SAP</span>
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Número RC</label>
-                        <Input className="h-7 text-xs border-zinc-200" value={formData.rc_sap || ""} onChange={handleInputChange('rc_sap')} placeholder="Pendente" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Criação</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_rc_sap || ""} onChange={handleInputChange('data_rc_sap')} />
-                      </div>
-                    </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.responsavel_t1 || '')} readOnly />
-                      </div>
-
-
-                  </div>
-
-                  {/* T2 */}
-                  <div className="relative p-4 bg-white rounded-xl border border-indigo-200 hover:border-indigo-300 transition-all shadow-sm">
-                    <div className="absolute -top-3 left-4 w-6 h-6 bg-indigo-50 rounded-full border border-indigo-300 flex items-center justify-center text-[10px] font-bold text-indigo-700">T2</div>
-                    <span className="text-[11px] font-bold text-indigo-800 uppercase block mb-3 mt-1">Aprovação RC</span>
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data da Aprovação</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_aprovacao || ""} onChange={handleInputChange('data_aprovacao')} />
-                      </div>
-                    </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
-                        <MultiSelectResponsavel value={formData.responsavel_t2 || ""} onChange={(val) => setFormData(prev => ({...prev, responsavel_t2: val}))} options={RESPONSAVEIS_LIST} />
-                      </div>
-
-                      <SlaBadge startDate={formData.data_rc_sap} endDate={formData.data_aprovacao} slaDias={1} />
-                  </div>
-
-                  {/* T3 */}
-                  <div className="relative p-4 bg-white rounded-xl border border-blue-200 hover:border-blue-300 transition-all shadow-sm flex flex-col justify-between">
-                    <div>
-                      <div className="absolute -top-3 left-4 w-6 h-6 bg-blue-50 rounded-full border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-700">T3</div>
-                      <span className="text-[11px] font-bold text-blue-800 uppercase block mb-3 mt-1">Pedido SAP (PC)</span>
-                      <div className="space-y-3">
+                    <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1 mt-1">SAP (RC, Aprovação, PC)</span>
+                    <div className="mb-3"><SlaBadge startDate={formData.data_recebimento} endDate={formData.data_pedido_sap} slaDias={3} /></div>
+                    <div className="space-y-4">
+                      {/* RC Block */}
+                      <div className="space-y-3 pb-3 border-b border-purple-100">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Nº do Pedido</label>
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (RC)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.rc_data_inicio || "").substring(0, 16)} onChange={handleInputChange('rc_data_inicio')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase flex justify-between w-full"><span>Número RC</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.rc_data_inicio} endDate={formData.rc_data_fim} slaDias={1} /></span></label>
+                          <Input className="h-7 text-xs border-zinc-200" value={formData.rc_sap || ""} onChange={handleInputChange('rc_sap')} placeholder="Pendente" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (RC)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.rc_data_fim || "").substring(0, 16)} onChange={handleInputChange('rc_data_fim')} />
+                        </div>
+                      </div>
+                      
+                      {/* Aprovação Block */}
+                      <div className="space-y-3 pb-3 border-b border-purple-100 pt-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Aprovação)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.aprovacao_data_inicio || "").substring(0, 16)} onChange={handleInputChange('aprovacao_data_inicio')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase flex justify-between w-full"><span>Aprovadores</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.aprovacao_data_inicio} endDate={formData.aprovacao_data_fim} slaDias={1} /></span></label>
+                          <MultiSelectResponsavel value={formData.responsavel_t2 || ""} onChange={(val) => setFormData(prev => ({...prev, responsavel_t2: val}))} options={RESPONSAVEIS_LIST} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Aprovação)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.aprovacao_data_fim || "").substring(0, 16)} onChange={handleInputChange('aprovacao_data_fim')} />
+                        </div>
+                      </div>
+
+                      {/* PC Block */}
+                      <div className="space-y-3 pt-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (PC)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.pc_data_inicio || "").substring(0, 16)} onChange={handleInputChange('pc_data_inicio')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase flex justify-between w-full"><span>Nº do Pedido (PC)</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.pc_data_inicio} endDate={formData.pc_data_fim} slaDias={1} /></span></label>
                           <Input className="h-7 text-xs border-zinc-200" value={formData.pedido_sap || ""} onChange={handleInputChange('pedido_sap')} placeholder="Pendente" />
                         </div>
+                        <label className="flex items-center justify-between cursor-pointer group mt-2">
+                          <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-emerald-600 transition-colors">Doc Subsequente?</span>
+                          <input 
+                            type="checkbox" 
+                            className="w-3.5 h-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                            checked={!!formData.doc_subsequente_criado}
+                            onChange={(e) => handleChange('doc_subsequente_criado', e.target.checked)}
+                          />
+                        </label>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data do Pedido</label>
-                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pedido_sap || ""} onChange={handleInputChange('data_pedido_sap')} />
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (PC)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.pc_data_fim || "").substring(0, 16)} onChange={handleInputChange('pc_data_fim')} />
                         </div>
                       </div>
 
-                      <SlaBadge startDate={formData.data_aprovacao} endDate={formData.data_pedido_sap} slaDias={1} />
-                    </div>
-                    {/* Doc Sub */}
-                    <div className="mt-4 pt-3 border-t border-zinc-100">
-                      <label className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-emerald-600 transition-colors">Doc Subsequente Criado?</span>
-                        <input 
-                          type="checkbox" 
-                          className="w-3.5 h-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-                          checked={!!formData.doc_subsequente_criado}
-                          onChange={(e) => handleChange('doc_subsequente_criado', e.target.checked)}
-                        />
-                      </label>
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T1' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T1' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-purple-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T1'})}>⚠️ Nova Ocorrência</Button>
+                      </div>
+
                     </div>
                   </div>
 
-                  {/* T4 */}
+                  {/* T2 - Nexa */}
                   <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.doc_subsequente_criado ? "border-cyan-200 hover:border-cyan-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
                     <div>
-                      <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T4</div>
-                      <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-3 mt-1">Solicitação Nexa</span>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T2</div>
+                      <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-3 mt-1">Nexa</span>
                       <div className="space-y-3">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Chamado / Ticket</label>
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Nexa)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.nexa_data_inicio || "").substring(0, 16)} onChange={handleInputChange('nexa_data_inicio')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase flex justify-between w-full"><span>Chamado / Ticket</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.nexa_data_inicio} endDate={formData.nexa_data_fim} slaDias={1} /></span></label>
                           <Input className="h-7 text-xs border-zinc-200" value={formData.nexa_chamado || ""} onChange={handleInputChange('nexa_chamado')} placeholder="Pendente" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Envio Nexa</label>
-                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Nexa)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.nexa_data_fim || "").substring(0, 16)} onChange={handleInputChange('nexa_data_fim')} />
                         </div>
                       </div>
-
-                      <SlaBadge startDate={formData.data_pedido_sap} endDate={formData.nexa_data_envio} slaDias={1} />
                     </div>
-                    {/* T4 Checks */}
+                    {/* T2 Checks */}
                     <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
                       <label className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">NF Emitida?</span>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">Documento Emitido?</span>
                         <input 
                           type="checkbox" 
                           className="w-3.5 h-3.5 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
@@ -637,7 +748,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         />
                       </label>
                       <label className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">NF Anexada?</span>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">Documento Anexado?</span>
                         <input 
                           type="checkbox" 
                           className="w-3.5 h-3.5 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
@@ -646,82 +757,220 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         />
                       </label>
                     </div>
+
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T2' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T2' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-cyan-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T2'})}>⚠️ Nova Ocorrência</Button>
+                      </div>
+
                   </div>
 
-                  {/* T5 */}
-                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.nexa_anexada ? "border-slate-300 hover:border-slate-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
-                    <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T5</div>
-                    <span className="text-[11px] font-bold text-slate-800 uppercase block mb-3 mt-1">Lançamento Fiscal</span>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-zinc-300 text-slate-600 focus:ring-slate-500"
-                          checked={!!formData.nexa_lancamento_concluido}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              nexa_lancamento_concluido: checked,
-                              nexa_data_conclusao_lancamento: checked ? new Date().toISOString().split('T')[0] : prev.nexa_data_conclusao_lancamento,
-                              usuario_nexa_lancamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_lancamento
-                            }));
-                          }}
-                        />
-                        <span className="text-[10px] font-bold text-slate-700 uppercase group-hover:text-slate-900 transition-colors">Concluído?</span>
-                      </label>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_conclusao_lancamento || ""} onChange={handleInputChange('nexa_data_conclusao_lancamento')} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
-                      </div>
-                    </div>
-                      <SlaBadge startDate={formData.nexa_data_envio} endDate={formData.nexa_data_conclusao_lancamento} slaDias={3} />
-                  </div>
-
-                  {/* T6 */}
-                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.nexa_lancamento_concluido ? "border-amber-200 hover:border-amber-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
-                    <div className="absolute -top-3 left-4 w-6 h-6 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-[10px] font-bold text-amber-700">T6</div>
-                    <span className="text-[11px] font-bold text-amber-800 uppercase block mb-3 mt-1">Prog. Pagamento</span>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-                          checked={!!formData.nexa_pagamento_programado}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              nexa_pagamento_programado: checked,
-                              usuario_nexa_programacao: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_programacao
-                            }));
-                          }}
-                        />
-                        <span className="text-[10px] font-bold text-amber-700 uppercase group-hover:text-amber-900 transition-colors">Programado?</span>
-                      </label>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Prevista</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_prevista_pagamento || ""} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
-                      </div>
-                    </div>
-                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} slaDias={3} />
-                  </div>
-
-                  {/* T7 */}
-                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_pagamento_programado ? "border-green-300 hover:border-green-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                  {/* T3 - Fiscal */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_anexada ? "border-slate-300 hover:border-slate-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
                     <div>
-                      <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T7</div>
-                      <span className="text-[11px] font-bold text-green-800 uppercase block mb-3 mt-1">Pagamento Realizado</span>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T3</div>
+                      <span className="text-[11px] font-bold text-slate-800 uppercase block mb-3 mt-1">Fiscal</span>
                       <div className="space-y-3">
-                        <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Fiscal)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.fiscal_data_inicio || "").substring(0, 16)} onChange={handleInputChange('fiscal_data_inicio')} />
+                        </div>
+                        <label className="flex items-center justify-between cursor-pointer group pb-1 pt-1 border-b border-zinc-100">
+                          <span className="text-[10px] font-bold text-slate-700 uppercase group-hover:text-slate-900 transition-colors">Lançamento Concluído?</span>
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-zinc-300 text-slate-600 focus:ring-slate-500"
+                            checked={!!formData.nexa_lancamento_concluido}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                nexa_lancamento_concluido: checked,
+                                fiscal_data_fim: checked ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.fiscal_data_fim,
+                                usuario_nexa_lancamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_lancamento
+                              }));
+                            }}
+                          />
+                        </label>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Fiscal)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.fiscal_data_fim || "").substring(0, 16)} onChange={handleInputChange('fiscal_data_fim')} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <SlaBadge startDate={formData.fiscal_data_inicio} endDate={formData.fiscal_data_fim} slaDias={3} />
+                    </div>
+
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T3' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T3' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T3'})}>⚠️ Nova Ocorrência</Button>
+                      </div>
+
+                  </div>
+
+                  {/* T4 - Pagamento */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_lancamento_concluido ? "border-green-300 hover:border-green-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                    <div>
+                      <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
+                      <span className="text-[11px] font-bold text-green-800 uppercase block mb-3 mt-1">Pagamento (Prog + Real)</span>
+                      
+                      {/* Programação Block */}
+                      <div className="space-y-3 pb-3 border-b border-green-100">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Prog)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.prog_data_inicio || "").substring(0, 16)} onChange={handleInputChange('prog_data_inicio')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase flex justify-between w-full"><span>Data Prevista</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.prog_data_inicio} endDate={formData.prog_data_fim} slaDias={3} /></span></label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.nexa_data_prevista_pagamento || "").substring(0, 10)} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Prog)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.prog_data_fim || "").substring(0, 16)} onChange={handleInputChange('prog_data_fim')} />
+                        </div>
+                      </div>
+
+                      {/* Pagamento Block */}
+                      <div className="space-y-3 pt-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Pagto)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.pagamento_data_inicio || "").substring(0, 16)} onChange={handleInputChange('pagamento_data_inicio')} />
+                        </div>
+                        <label className="flex items-center justify-between cursor-pointer group">
+                          <span className="text-[10px] font-bold text-green-700 uppercase group-hover:text-green-900 transition-colors">Pago?</span>
                           <input 
                             type="checkbox" 
                             className="w-4 h-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
@@ -731,98 +980,362 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               setFormData(prev => ({
                                 ...prev,
                                 nexa_pagamento_realizado: checked,
-                                data_pagamento_real: checked ? new Date().toISOString().split('T')[0] : prev.data_pagamento_real,
+                                data_pagamento_real: checked ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.data_pagamento_real,
+                                pagamento_data_fim: checked ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.pagamento_data_fim,
                                 usuario_nexa_pagamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_pagamento
                               }));
                             }}
                           />
-                          <span className="text-[10px] font-bold text-green-700 uppercase group-hover:text-green-900 transition-colors">Pago?</span>
                         </label>
+                        {formData.nexa_pagamento_realizado && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Real Pgto</label>
+                            <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.data_pagamento_real || "").substring(0, 10)} onChange={handleInputChange('data_pagamento_real')} />
+                          </div>
+                        )}
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Pagamento</label>
-                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Pagto)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.pagamento_data_fim || "").substring(0, 16)} onChange={handleInputChange('pagamento_data_fim')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Valor Pago</label>
+                          <Input className="h-7 text-xs border-green-200" type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
                         </div>
                       </div>
-                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} slaDias={3} />
                     </div>
-                    {/* Final */}
-                    <div className="mt-4 pt-3 border-t border-zinc-100">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Valor Pago</label>
-                        <Input className="h-7 text-xs border-green-200" type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T4' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T4' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-green-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T4'})}>⚠️ Nova Ocorrência</Button>
                       </div>
-                    </div>
+
                   </div>
                 </div>
               </div>
             )}
 
-            {formData.fluxo_iniciado_por === 'Nexa' && (
+                        {formData.fluxo_iniciado_por === 'Nexa' && (
               <div className="space-y-4 pt-4 border-t border-zinc-200 mb-6">
                 <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Fluxo de Trabalho (Nexa Direto)</h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-6">
-                  {/* T1 */}
+                  {/* T1 - Nexa */}
                   <div className="relative p-4 bg-white rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T1</div>
-                      <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-3 mt-1">Solicitação Nexa</span>
+                      <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-1 mt-1">Nexa / Solicitação</span>
+                      <div className="mb-3"><SlaBadge startDate={formData.nexa_data_inicio} endDate={formData.nexa_data_fim} slaDias={1} /></div>
                       <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Nexa)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.nexa_data_inicio || "").substring(0, 16)} onChange={handleInputChange('nexa_data_inicio')} />
+                        </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-semibold text-zinc-500 uppercase">Chamado / Ticket</label>
                           <Input className="h-7 text-xs border-zinc-200" value={formData.nexa_chamado || ""} onChange={handleInputChange('nexa_chamado')} placeholder="Pendente" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Envio</label>
-                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_envio || ""} onChange={handleInputChange('nexa_data_envio')} />
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Nexa)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.nexa_data_fim || "").substring(0, 16)} onChange={handleInputChange('nexa_data_fim')} />
                         </div>
                       </div>
-                      <div className="space-y-1 mt-3 border-t border-zinc-100 pt-3">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Responsável</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.responsavel_t1 || '')} readOnly />
+                    </div>
+
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T1' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T1' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-cyan-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T1'})}>⚠️ Nova Ocorrência</Button>
                       </div>
 
-                    </div>
-                    {/* PC Nexa Info */}
-                    <div className="mt-4 pt-3 border-t border-zinc-100 space-y-2">
-                      <label className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase group-hover:text-cyan-600 transition-colors">PC Nexa Concluído?</span>
-                        <input 
-                          type="checkbox" 
-                          className="w-3.5 h-3.5 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
-                          checked={!!formData.pc_nexa_concluido}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              pc_nexa_concluido: checked,
-                              data_pc_nexa: checked ? new Date().toISOString().split('T')[0] : prev.data_pc_nexa,
-                              usuario_pc_nexa: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_pc_nexa
-                            }));
-                          }}
-                        />
-                      </label>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Número PC</label>
-                        <Input className="h-7 text-xs border-zinc-200" value={formData.numero_pc_nexa || ""} onChange={handleInputChange('numero_pc_nexa')} placeholder="Pendente" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data PC</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pc_nexa || ""} onChange={handleInputChange('data_pc_nexa')} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário PC</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_pc_nexa || '')} readOnly />
-                      </div>
-                    </div>
                   </div>
 
-                  {/* T2 */}
-                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.pc_nexa_concluido ? "border-slate-200 hover:border-slate-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
-                    <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T2</div>
-                    <span className="text-[11px] font-bold text-slate-800 uppercase block mb-3 mt-1">Lançamento Fiscal</span>
+                  {/* T2 - Requisicao / Pedido */}
+                  <div className="relative p-4 bg-white rounded-xl border border-blue-200 hover:border-blue-300 transition-all shadow-sm">
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-blue-50 rounded-full border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-700">T2</div>
+                    <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1 mt-1">Requisição / Pedido (Nexa)</span>
+                    <div className="mb-3"><SlaBadge startDate={formData.req_nexa_data_inicio} endDate={formData.req_nexa_data_fim} slaDias={2} /></div>
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Req/PC)</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.req_nexa_data_inicio || "").substring(0, 16)} onChange={handleInputChange('req_nexa_data_inicio')} />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                            checked={!!formData.nexa_possui_rc}
+                            onChange={(e) => handleChange('nexa_possui_rc', e.target.checked)}
+                          />
+                          <span className="text-[10px] font-bold text-blue-700 uppercase">Possui RC?</span>
+                        </label>
+                        {formData.nexa_possui_rc && (
+                          <div className="pl-6 space-y-2 border-l-2 border-blue-100 ml-1">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase">Número RC</label>
+                              <Input className="h-7 text-xs border-zinc-200" value={formData.nexa_rc_numero || formData.rc_sap || ""} onChange={handleInputChange('nexa_rc_numero')} />
+                            </div>
+                            <div className="space-y-1 hidden">
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data RC</label>
+                              <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.nexa_rc_data || formData.data_rc_sap || "").substring(0, 10)} onChange={handleInputChange('nexa_rc_data')} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-zinc-100">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                            checked={!!formData.pc_nexa_concluido}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                pc_nexa_concluido: checked,
+                                data_pc_nexa: checked && !prev.data_pc_nexa ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.data_pc_nexa,
+                                usuario_pc_nexa: checked && !prev.usuario_pc_nexa ? (localStorage.getItem('pcp_user') || '') : prev.usuario_pc_nexa
+                              }));
+                            }}
+                          />
+                          <span className="text-[10px] font-bold text-emerald-700 uppercase">Possui PC?</span>
+                        </label>
+                        {formData.pc_nexa_concluido && (
+                          <div className="pl-6 space-y-2 border-l-2 border-emerald-100 ml-1">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase">Número PC</label>
+                              <Input className="h-7 text-xs border-zinc-200" value={formData.numero_pc_nexa || ""} onChange={handleInputChange('numero_pc_nexa')} />
+                            </div>
+                            <div className="space-y-1 hidden">
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data PC</label>
+                              <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.data_pc_nexa || "").substring(0, 10)} onChange={handleInputChange('data_pc_nexa')} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Req/PC)</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.req_nexa_data_fim || "").substring(0, 16)} onChange={handleInputChange('req_nexa_data_fim')} />
+                      </div>
+                    </div>
+
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T2' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T2' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-blue-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T2'})}>⚠️ Nova Ocorrência</Button>
+                      </div>
+
+                  </div>
+
+                  {/* T3 - Fiscal */}
+                  <div className="relative p-4 bg-white rounded-xl border border-slate-200 hover:border-slate-300 transition-all shadow-sm">
+                    <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T3</div>
+                    <span className="text-[11px] font-bold text-slate-800 uppercase block mb-3 mt-1 flex justify-between w-full"><span>Lançamento Fiscal</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.fiscal_data_inicio} endDate={formData.fiscal_data_fim} slaDias={1} /></span></span>
                     <div className="space-y-3">
-                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Fiscal)</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.fiscal_data_inicio || "").substring(0, 16)} onChange={handleInputChange('fiscal_data_inicio')} />
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer group pb-1 pt-1 border-b border-zinc-100">
                         <input 
                           type="checkbox" 
                           className="w-4 h-4 rounded border-zinc-300 text-slate-600 focus:ring-slate-500"
@@ -832,7 +1345,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                             setFormData(prev => ({
                               ...prev,
                               nexa_lancamento_concluido: checked,
-                              nexa_data_conclusao_lancamento: checked ? new Date().toISOString().split('T')[0] : prev.nexa_data_conclusao_lancamento,
+                              fiscal_data_fim: checked ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.fiscal_data_fim,
                               usuario_nexa_lancamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_lancamento
                             }));
                           }}
@@ -840,57 +1353,41 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <span className="text-[10px] font-bold text-slate-700 uppercase group-hover:text-slate-900 transition-colors">Concluído?</span>
                       </label>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Conclusão</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_conclusao_lancamento || ""} onChange={handleInputChange('nexa_data_conclusao_lancamento')} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_lancamento || '')} readOnly />
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Fiscal)</label>
+                        <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.fiscal_data_fim || "").substring(0, 16)} onChange={handleInputChange('fiscal_data_fim')} />
                       </div>
                     </div>
-                      <SlaBadge startDate={formData.nexa_data_envio} endDate={formData.nexa_data_conclusao_lancamento} slaDias={1} />
                   </div>
 
-                  {/* T3 */}
-                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm", formData.nexa_lancamento_concluido ? "border-amber-200 hover:border-amber-300" : "border-zinc-200 opacity-60 pointer-events-none")}>
-                    <div className="absolute -top-3 left-4 w-6 h-6 bg-amber-50 rounded-full border border-amber-300 flex items-center justify-center text-[10px] font-bold text-amber-700">T3</div>
-                    <span className="text-[11px] font-bold text-amber-800 uppercase block mb-3 mt-1">Prog. Pagamento</span>
-                    <div className="space-y-3">
-                      <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-                          checked={!!formData.nexa_pagamento_programado}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              nexa_pagamento_programado: checked,
-                              usuario_nexa_programacao: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_programacao
-                            }));
-                          }}
-                        />
-                        <span className="text-[10px] font-bold text-amber-700 uppercase group-hover:text-amber-900 transition-colors">Programado?</span>
-                      </label>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Prevista</label>
-                        <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.nexa_data_prevista_pagamento || ""} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Usuário</label>
-                        <Input className="h-7 text-xs border-zinc-200 bg-zinc-50" value={formatUserName(formData.usuario_nexa_programacao || '')} readOnly />
-                      </div>
-                    </div>
-                      <SlaBadge startDate={formData.nexa_data_conclusao_lancamento} endDate={formData.nexa_data_prevista_pagamento} slaDias={3} />
-                  </div>
-
-                  {/* T4 */}
-                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_pagamento_programado ? "border-green-300 hover:border-green-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
+                  {/* T4 - Pagamento */}
+                  <div className={cn("relative p-4 bg-white rounded-xl border transition-all shadow-sm flex flex-col justify-between", formData.nexa_lancamento_concluido ? "border-green-300 hover:border-green-400" : "border-zinc-200 opacity-60 pointer-events-none")}>
                     <div>
                       <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
-                      <span className="text-[11px] font-bold text-green-800 uppercase block mb-3 mt-1">Pagamento Realizado</span>
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-2 cursor-pointer group pb-1 border-b border-zinc-100">
+                      <span className="text-[11px] font-bold text-green-800 uppercase block mb-3 mt-1">Pagamento (Prog + Real)</span>
+                      
+                      {/* Programação */}
+                      <div className="space-y-3 pb-3 border-b border-green-100">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Prog)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.prog_data_inicio || "").substring(0, 16)} onChange={handleInputChange('prog_data_inicio')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase flex justify-between w-full"><span>Data Prevista</span> <span className="ml-2 scale-75 origin-right"><SlaBadge startDate={formData.prog_data_inicio} endDate={formData.prog_data_fim} slaDias={3} /></span></label>
+                          <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.nexa_data_prevista_pagamento || "").substring(0, 10)} onChange={handleInputChange('nexa_data_prevista_pagamento')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Prog)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.prog_data_fim || "").substring(0, 16)} onChange={handleInputChange('prog_data_fim')} />
+                        </div>
+                      </div>
+
+                      {/* Pagamento */}
+                      <div className="space-y-3 pt-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Início (Pagto)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.pagamento_data_inicio || "").substring(0, 16)} onChange={handleInputChange('pagamento_data_inicio')} />
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer group">
                           <input 
                             type="checkbox" 
                             className="w-4 h-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
@@ -900,27 +1397,102 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               setFormData(prev => ({
                                 ...prev,
                                 nexa_pagamento_realizado: checked,
-                                data_pagamento_real: checked ? new Date().toISOString().split('T')[0] : prev.data_pagamento_real,
+                                data_pagamento_real: checked ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.data_pagamento_real,
+                                pagamento_data_fim: checked ? new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 19) : prev.pagamento_data_fim,
                                 usuario_nexa_pagamento: checked ? (localStorage.getItem('pcp_user') || '') : prev.usuario_nexa_pagamento
                               }));
                             }}
                           />
                           <span className="text-[10px] font-bold text-green-700 uppercase group-hover:text-green-900 transition-colors">Pago?</span>
                         </label>
+                        {formData.nexa_pagamento_realizado && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Real Pgto</label>
+                            <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.data_pagamento_real || "").substring(0, 10)} onChange={handleInputChange('data_pagamento_real')} />
+                          </div>
+                        )}
                         <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data Pagamento</label>
-                          <Input className="h-7 text-xs border-zinc-200" type="date" value={formData.data_pagamento_real || ""} onChange={handleInputChange('data_pagamento_real')} />
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Fim (Pagto)</label>
+                          <Input className="h-7 text-xs border-zinc-200" type="datetime-local" value={(formData.pagamento_data_fim || "").substring(0, 16)} onChange={handleInputChange('pagamento_data_fim')} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-zinc-500 uppercase">Valor Pago</label>
+                          <Input className="h-7 text-xs border-green-200" type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
                         </div>
                       </div>
-                        <SlaBadge startDate={formData.nexa_data_prevista_pagamento} endDate={formData.data_pagamento_real} slaDias={3} />
                     </div>
-                    {/* Final */}
-                    <div className="mt-4 pt-3 border-t border-zinc-100">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Valor Pago</label>
-                        <Input className="h-7 text-xs border-green-200" type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
+
+                      {/* Ocorrencias T1 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T4' && oc.status === 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Pendente Origem';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Devolver para {oc.t_origem}</Button>
+                        </div>
+                      ))}
+                      {/* Ocorrencias T1 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T4' && oc.status === 'Pendente Origem').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
+                              const newOc = [...formData.ocorrencias];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...formData.ocorrencias];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T1 */}
+                      <div className="mt-4 pt-3 border-t border-green-100 flex justify-end">
+                        <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T4'})}>⚠️ Nova Ocorrência</Button>
                       </div>
-                    </div>
+
                   </div>
                 </div>
               </div>
@@ -1055,7 +1627,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                 </div>
 
                 <div className={cn("p-3 rounded-md border space-y-1 transition-colors",
-                  autoEtapa === 'Cadastro da NF' ? 'bg-red-500 border-red-600' :
+                  autoEtapa === 'Cadastro do Documento' ? 'bg-red-500 border-red-600' :
                   autoEtapa === 'Requisição de Compras' ? 'bg-blue-500 border-blue-600' :
                   autoEtapa === 'Aprovação' ? 'bg-zinc-500 border-zinc-600' :
                   autoEtapa === 'Inclusão no V360' ? 'bg-orange-500 border-orange-600' :
@@ -1076,7 +1648,110 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               </div>
             </section>
             
-          </form>
+          
+            {/* Secao de Pendencias */}
+            <section className="space-y-4 p-6 bg-white border border-red-200 rounded-xl shadow-sm">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-semibold text-red-800 uppercase tracking-wider flex items-center gap-2">
+                  Pendências e Retornos (Nexa / Fiscal)
+                </h3>
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowPendenciaModal(true)} className="gap-2 border-red-200 text-red-700 hover:bg-red-50">
+                  <Plus className="w-4 h-4" /> Registrar Retorno
+                </Button>
+              </div>
+
+              {formData.pendencias && formData.pendencias.length > 0 ? (
+                <div className="space-y-3">
+                  {formData.pendencias.map(p => (
+                    <div key={p.id} className={cn("p-3 border rounded-lg flex justify-between items-center", p.status === 'Concluída' ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", p.status === 'Concluída' ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800")}>
+                            {p.status}
+                          </span>
+                          <span className="text-xs font-bold text-zinc-800">{p.etapa_origem} ➔ {p.etapa_destino}</span>
+                          <span className="text-xs text-zinc-500">| Data: {p.data_abertura}</span>
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-700">
+                          <strong>Motivo:</strong> {p.motivo} {p.motivo === 'Outros' && p.justificativa ? `(${p.justificativa})` : ''}
+                        </div>
+                        <div className="mt-1 text-[10px] text-zinc-500">
+                          Responsável: {formatUserName(p.responsavel)} | SLA: {p.sla_dias} dia(s) {p.data_conclusao ? `| Concluída em: ${p.data_conclusao}` : ''}
+                        </div>
+                      </div>
+                      {p.status === 'Aberta' && (
+                        <Button type="button" size="sm" onClick={() => handleConcluirPendencia(p.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 text-xs">
+                          Concluir
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-zinc-500 text-center py-4 bg-zinc-50 rounded-lg border border-zinc-100">
+                  Nenhum retorno ou pendência registrada.
+                </div>
+              )}
+            </section>
+
+      {/* Modal de Ocorrência */}
+      {ocorrenciaModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-zinc-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-red-600">Registrar Ocorrência</h3>
+              <Button variant="ghost" size="icon" onClick={() => setOcorrenciaModal({isOpen: false})} className="h-8 w-8"><X className="w-4 h-4" /></Button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-700">T de Destino</label>
+                <select 
+                  className="w-full h-9 rounded-md border border-zinc-200 text-sm px-3"
+                  value={ocorrenciaModal.novoDestino || ''}
+                  onChange={(e) => setOcorrenciaModal(prev => ({...prev, novoDestino: e.target.value}))}
+                >
+                  <option value="">Selecione...</option>
+                  <option value="T1">T1 (SAP/Nexa)</option>
+                  <option value="T2">T2 (Nexa/PC)</option>
+                  <option value="T3">T3 (Fiscal)</option>
+                  <option value="T4">T4 (Pagamento)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-700">Motivo</label>
+                <select 
+                  className="w-full h-9 rounded-md border border-zinc-200 text-sm px-3"
+                  value={ocorrenciaModal.novoMotivo || ''}
+                  onChange={(e) => setOcorrenciaModal(prev => ({...prev, novoMotivo: e.target.value}))}
+                >
+                  <option value="">Selecione...</option>
+                  {MOTIVOS_OCORRENCIA.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setOcorrenciaModal({isOpen: false})}>Cancelar</Button>
+              <Button variant="default" size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => {
+                if (!ocorrenciaModal.novoDestino || !ocorrenciaModal.novoMotivo) return;
+                const newOcorrencia = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  t_origem: ocorrenciaModal.t_origem || '',
+                  t_destino: ocorrenciaModal.novoDestino,
+                  motivo: ocorrenciaModal.novoMotivo,
+                  data_envio: new Date().toISOString(),
+                  t_destino_codigo: ocorrenciaModal.novoDestino + '.1',
+                  t_origem_retorno_codigo: (ocorrenciaModal.t_origem || '') + '.1',
+                  status: 'Pendente Destino'
+                };
+                setFormData(prev => ({...prev, ocorrencias: [...(prev.ocorrencias || []), newOcorrencia]}));
+                setOcorrenciaModal({isOpen: false});
+              }}>Enviar Ocorrência</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            </form>
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-zinc-200 py-4 px-6 flex justify-end gap-2 shrink-0 rounded-b-xl">

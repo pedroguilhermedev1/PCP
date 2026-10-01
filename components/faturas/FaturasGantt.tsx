@@ -6,6 +6,17 @@ import { cn } from '@/lib/utils';
 import { Info, ChevronDown, ChevronRight, Calendar, Activity, CheckCircle, Clock } from 'lucide-react';
 import { SelectFilter } from '@/components/ui/select-filter';
 
+const formatDateDisplay = (dateStr?: string) => {
+  if (!dateStr) return 'S/ Data';
+  const parts = dateStr.split('T');
+  const d = parts[0].split('-').reverse().join('/');
+  if (parts[1] && !parts[1].startsWith('00:00:00')) {
+    return d + ' ' + parts[1].substring(0, 5);
+  }
+  return d;
+};
+
+
 interface FaturasGanttProps {
   faturas: Fatura[];
   flowType?: '1.0' | '2.0';
@@ -86,7 +97,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
         let endInt, startReq, endReq, startApr, endApr, startV360, endV360;
 
         if (flowType === '2.0') {
-          endInt = f.data_rc_sap || (etapaAtual === 'Cadastro da NF' && !isAguardandoOuPago ? todayStr : startInt);
+          endInt = f.data_rc_sap || (etapaAtual === 'Cadastro do Documento' && !isAguardandoOuPago ? todayStr : startInt);
           
           startReq = f.data_rc_sap;
           endReq = f.data_pedido_sap || (etapaAtual === 'Requisição de Compras' && startReq && !isAguardandoOuPago ? todayStr : startReq);
@@ -98,7 +109,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
           endV360 = null;
         } else {
           // Flow 1.0
-          endInt = f.data_abertura_heflo || (etapaAtual === 'Cadastro da NF' && !isAguardandoOuPago ? todayStr : startInt);
+          endInt = f.data_abertura_heflo || (etapaAtual === 'Cadastro do Documento' && !isAguardandoOuPago ? todayStr : startInt);
           
           startReq = f.data_abertura_heflo;
           endReq = f.data_aprovacao || (etapaAtual === 'Requisição de Compras' && startReq && !isAguardandoOuPago ? todayStr : startReq);
@@ -406,7 +417,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
                           <div className="flex flex-col gap-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-indigo-700/70 font-medium">Vencimento Original:</span>
-                              <span className="font-bold text-indigo-900">{pf.fatura.data_vencimento?.split('-').reverse().join('/')}</span>
+                              <span className="font-bold text-indigo-900">{formatDateDisplay(pf.fatura.data_vencimento)}</span>
                             </div>
                             <div className="flex justify-between items-center mt-1">
                               <span className="text-indigo-700/70 font-medium">Dias até o Vencimento:</span>
@@ -429,7 +440,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
                             </div>
                             <div className="flex-1 bg-zinc-50 border border-zinc-200 p-3 rounded-lg flex flex-col justify-center items-center">
                               <span className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Meta Operacional</span>
-                              <span className="text-sm font-bold text-zinc-800">{pf.metaDate?.split('-').reverse().join('/')}</span>
+                              <span className="text-sm font-bold text-zinc-800">{formatDateDisplay(pf.metaDate)}</span>
                             </div>
                             <div className={cn("flex-1 p-3 rounded-lg border flex flex-col justify-center items-center", 
                               pf.diasRestantesMeta < 0 ? "bg-red-50 border-red-200" :
@@ -455,7 +466,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
                           <div className="flex flex-col gap-1">
                             {/* Breakdown */}
                             <div className="flex items-center text-xs gap-3">
-                              <span className="w-[140px] text-zinc-500 flex items-center gap-1"><div className="w-2 h-2 rounded bg-red-400"></div> Cadastro da NF</span>
+                              <span className="w-[140px] text-zinc-500 flex items-center gap-1"><div className="w-2 h-2 rounded bg-red-400"></div> Cadastro do Documento</span>
                               <div className="flex-1 h-1.5 bg-zinc-100 rounded overflow-hidden flex">
                                 <div className="bg-red-400 h-full" style={{ width: `${(Math.max(0, (pf.stages.cadastro.relEnd || 0) - (pf.stages.cadastro.relStart || 0)) / Math.max(1, pf.prazoTotalOperacional)) * 100}%` }}></div>
                               </div>

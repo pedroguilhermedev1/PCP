@@ -36,7 +36,12 @@ export class SupabaseFaturaRepository implements FaturaRepository {
         nexa_pc_numero: undefined,
         nexa_pc_data: undefined,
         nexa_pc_usuario: undefined,
-        is_backlog: !!d.motivo_desvio || !!d.acao_corretiva
+        is_backlog: !!d.motivo_desvio || !!d.acao_corretiva,
+        pendencias: typeof d.pendencias === 'string' ? JSON.parse(d.pendencias) : (d.pendencias || []),
+        historico_passagens: typeof d.historico_passagens === 'string' ? JSON.parse(d.historico_passagens) : (d.historico_passagens || {}),
+        nexa_possui_rc: d.nexa_possui_rc || false,
+        nexa_rc_numero: d.nexa_rc_numero || null,
+        nexa_rc_data: d.nexa_rc_data || null
       };
     }) as Fatura[];
   }
@@ -103,7 +108,12 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       nexa_data_conclusao_lancamento: faturaData.nexa_data_conclusao_lancamento || null,
       nexa_pagamento_programado: faturaData.nexa_pagamento_programado || false,
       nexa_data_prevista_pagamento: faturaData.nexa_data_prevista_pagamento || null,
-      nexa_pagamento_realizado: faturaData.nexa_pagamento_realizado || false
+      nexa_pagamento_realizado: faturaData.nexa_pagamento_realizado || false,
+      pendencias: faturaData.pendencias || [],
+      historico_passagens: faturaData.historico_passagens || {},
+      nexa_possui_rc: faturaData.nexa_possui_rc || false,
+      nexa_rc_numero: faturaData.nexa_rc_numero || null,
+      nexa_rc_data: faturaData.nexa_rc_data || null
     };
     
     // Convert undefined to null or omit, as supabase expects certain formats

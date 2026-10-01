@@ -549,7 +549,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                 </div>
 
                 <div className={cn("p-3 rounded-md border space-y-1 transition-colors",
-                  autoEtapa === 'Cadastro da NF' ? 'bg-red-500 border-red-600' :
+                  autoEtapa === 'Cadastro do Documento' ? 'bg-red-500 border-red-600' :
                   autoEtapa === 'Requisição de Compras' ? 'bg-blue-500 border-blue-600' :
                   autoEtapa === 'Aprovação' ? 'bg-zinc-500 border-zinc-600' :
                   autoEtapa === 'Inclusão no V360' ? 'bg-orange-500 border-orange-600' :

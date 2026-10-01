@@ -1,9 +1,20 @@
 import React from 'react';
-import { Fatura } from '@/modules/compras/domain/Fatura';
+import { Fatura, calcularSlaDinamico } from '@/modules/compras/domain/Fatura';
 import { Button } from '@/components/ui/button';
 import { X, Clock, User, Calendar, CheckCircle, Info, Timer, AlertTriangle } from 'lucide-react';
 import { formatUserName } from '@/lib/roles';
 import { calcularViabilidadePagamento, ProjecaoPagamento } from '@/modules/compras/domain/Fatura';
+
+const formatDateDisplay = (dateStr?: string) => {
+  if (!dateStr) return 'S/ Data';
+  const parts = dateStr.split('T');
+  const d = parts[0].split('-').reverse().join('/');
+  if (parts[1] && !parts[1].startsWith('00:00:00')) {
+    return d + ' ' + parts[1].substring(0, 5);
+  }
+  return d;
+};
+
 
 interface TimeDetailsModalProps {
   isOpen: boolean;
@@ -19,12 +30,12 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
   let color = 'bg-slate-500';
   let details: { label: string; value: React.ReactNode; icon: React.ReactNode }[] = [];
 
-  const renderDate = (d?: string) => d ? d.split('-').reverse().join('/') : 'Pendente';
+  const renderDate = (d?: string) => d ? formatDateDisplay(d) : 'Pendente';
   const renderUser = (u?: string) => u ? formatUserName(u) : 'Pendente';
 
   const renderSLA = (startDate?: string, endDate?: string, slaDias: number = 3) => {
     if (!startDate) return <span className="text-zinc-500">Aguardando início</span>;
-    const SLA_DIAS = slaDias;
+    const SLA_DIAS = calcularSlaDinamico(fatura, slaDias);
     const start = new Date(startDate + 'T00:00:00');
     const prazoFinal = new Date(start);
     
@@ -60,80 +71,50 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
     // Fluxo SAP
     switch (stage) {
       case 'T1':
-        title = 'T1 - RC SAP';
+        title = 'T1 - SAP (RC, Aprovação, PC)';
         color = 'text-purple-700 bg-purple-50 border-purple-200';
         details = [
           { label: 'Número da RC', value: fatura.rc_sap || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Responsável', value: renderUser(fatura.responsavel_t1), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Conclusão (Criação RC)', value: renderDate(fatura.data_rc_sap), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data de Conclusão RC', value: renderDate(fatura.data_rc_sap), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Aprovação RC', value: fatura.data_aprovacao ? 'Aprovada' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Número do Pedido (PC)', value: fatura.pedido_sap || 'Pendente', icon: <Info className="w-4 h-4" /> },
+          { label: 'Data do Pedido', value: renderDate(fatura.data_pedido_sap), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Doc Subsequente', value: fatura.doc_subsequente_criado ? 'Criado' : 'Não criado', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia - RC/Aprovação)', value: renderSLA(fatura.data_rc_sap, fatura.data_aprovacao, 1), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia - Pedido)', value: renderSLA(fatura.data_aprovacao, fatura.data_pedido_sap, 1), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
       case 'T2':
-        title = 'T2 - Aprovação RC';
-        color = 'text-indigo-700 bg-indigo-50 border-indigo-200';
-        details = [
-          { label: 'Status da Aprovação', value: fatura.data_aprovacao ? 'Aprovada' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_rc_sap), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável', value: renderUser(fatura.responsavel_t2), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Aprovação', value: renderDate(fatura.data_aprovacao), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_rc_sap, fatura.data_aprovacao, 1), icon: <Timer className="w-4 h-4" /> },
-        ];
-        break;
-      case 'T3':
-        title = 'T3 - Pedido SAP (PC)';
-        color = 'text-blue-700 bg-blue-50 border-blue-200';
-        details = [
-          { label: 'Número do Pedido', value: fatura.pedido_sap || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_aprovacao), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável', value: renderUser(fatura.responsavel_t3), icon: <User className="w-4 h-4" /> },
-          { label: 'Data do Pedido', value: renderDate(fatura.data_pedido_sap), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Doc Subsequente', value: fatura.doc_subsequente_criado ? 'Criado' : 'Não criado', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_aprovacao, fatura.data_pedido_sap, 1), icon: <Timer className="w-4 h-4" /> },
-        ];
-        break;
-      case 'T4':
-        title = 'T4 - Solicitação Nexa';
+        title = 'T2 - Nexa';
         color = 'text-cyan-700 bg-cyan-50 border-cyan-200';
         details = [
           { label: 'Chamado / Ticket', value: fatura.nexa_chamado || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.data_pedido_sap), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável (Quem abriu)', value: renderUser(fatura.responsavel_t4), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Envio', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data Abertura Nexa', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'NF Emitida?', value: fatura.nexa_emitiu_nf ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'NF Anexada?', value: fatura.nexa_anexada ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_pedido_sap, fatura.nexa_data_envio, 1), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_pedido_sap, fatura.nexa_data_envio, 1), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
-      case 'T5':
-        title = 'T5 - Lançamento Fiscal';
+      case 'T3':
+        title = 'T3 - Fiscal';
         color = 'text-slate-700 bg-slate-100 border-slate-300';
         details = [
-          { label: 'Status do Lançamento', value: fatura.nexa_lancamento_concluido ? 'Concluído' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Usuário Responsável', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
+          { label: 'Lançamento Concluído?', value: fatura.nexa_lancamento_concluido ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Data de Conclusão', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_envio, fatura.nexa_data_conclusao_lancamento, 3), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Usuário', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_envio, fatura.nexa_data_conclusao_lancamento, 3), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
-      case 'T6':
-        title = 'T6 - Programação de Pagamento';
-        color = 'text-amber-700 bg-amber-50 border-amber-200';
-        details = [
-          { label: 'Status da Programação', value: fatura.nexa_pagamento_programado ? 'Programado' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Usuário Responsável', value: renderUser(fatura.usuario_nexa_programacao), icon: <User className="w-4 h-4" /> },
-          { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_conclusao_lancamento, fatura.nexa_data_prevista_pagamento, 3), icon: <Timer className="w-4 h-4" /> },
-        ];
-        break;
-      case 'T7':
-        title = 'T7 - Efetuar Pagamento';
+      case 'T4':
+        title = 'T4 - Pagamento';
         color = 'text-green-700 bg-green-50 border-green-200';
         details = [
-          { label: 'Status do Pagamento', value: fatura.nexa_pagamento_realizado ? 'Pago' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Pagamento Programado?', value: fatura.nexa_pagamento_programado ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Data do Pagamento', value: renderDate(fatura.data_pagamento_real), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Pagamento Realizado?', value: fatura.nexa_pagamento_realizado ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Data Pagamento Real', value: renderDate(fatura.data_pagamento_real), icon: <Calendar className="w-4 h-4" /> },
           { label: 'Valor Pago', value: fatura.valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor) : 'R$ 0,00', icon: <Info className="w-4 h-4" /> },
-          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real, 3), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real, 3), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
     }
@@ -141,48 +122,46 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
     // Fluxo Nexa
     switch (stage) {
       case 'T1':
-        title = 'T1 - Solicitação Nexa (Ticket)';
+        title = 'T1 - Nexa / Solicitação';
         color = 'text-cyan-700 bg-cyan-50 border-cyan-200';
         details = [
           { label: 'Chamado / Ticket', value: fatura.nexa_chamado || 'Pendente', icon: <Info className="w-4 h-4" /> },
-          { label: 'Responsável (Quem abriu)', value: renderUser(fatura.responsavel_t1), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Abertura', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'PC Nexa', value: fatura.numero_pc_nexa || (fatura.pc_nexa_concluido ? 'Concluído' : 'Pendente'), icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Responsável PC', value: renderUser(fatura.usuario_pc_nexa), icon: <User className="w-4 h-4" /> },
-          { label: 'Data do PC Nexa', value: renderDate(fatura.data_pc_nexa), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Data Abertura', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Responsável', value: renderUser(fatura.responsavel_t1), icon: <User className="w-4 h-4" /> }
         ];
         break;
       case 'T2':
-        title = 'T2 - Lançamento Fiscal';
-        color = 'text-slate-700 bg-slate-100 border-slate-300';
+        title = 'T2 - Requisição / Pedido (Nexa)';
+        color = 'text-blue-700 bg-blue-50 border-blue-200';
         details = [
-          { label: 'Status do Lançamento', value: fatura.nexa_lancamento_concluido ? 'Concluído' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável (Time Fiscal)', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
-          { label: 'Data de Conclusão', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.nexa_data_envio, fatura.nexa_data_conclusao_lancamento, 1), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Possui RC?', value: fatura.nexa_possui_rc ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Número RC', value: fatura.nexa_rc_numero || 'Pendente', icon: <Info className="w-4 h-4" /> },
+          { label: 'Data RC', value: renderDate(fatura.nexa_rc_data), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Possui PC?', value: fatura.pc_nexa_concluido ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Número PC', value: fatura.numero_pc_nexa || 'Pendente', icon: <Info className="w-4 h-4" /> },
+          { label: 'Data PC', value: renderDate(fatura.data_pc_nexa), icon: <Calendar className="w-4 h-4" /> }
         ];
         break;
       case 'T3':
-        title = 'T3 - Programação de Pagamento';
-        color = 'text-amber-700 bg-amber-50 border-amber-200';
+        title = 'T3 - Lançamento Fiscal';
+        color = 'text-slate-700 bg-slate-100 border-slate-300';
         details = [
-          { label: 'Status da Programação', value: fatura.nexa_pagamento_programado ? 'Programado' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Data de Início', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável (Time de Pagamentos)', value: renderUser(fatura.usuario_nexa_programacao), icon: <User className="w-4 h-4" /> },
-          { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_conclusao_lancamento, fatura.nexa_data_prevista_pagamento, 3), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Lançamento Concluído?', value: fatura.nexa_lancamento_concluido ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Data de Conclusão', value: renderDate(fatura.nexa_data_conclusao_lancamento), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Usuário', value: renderUser(fatura.usuario_nexa_lancamento), icon: <User className="w-4 h-4" /> },
+          { label: 'Status SLA (1 dia)', value: renderSLA(fatura.nexa_data_envio, fatura.nexa_data_conclusao_lancamento, 1), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
       case 'T4':
-        title = 'T4 - Efetuar Pagamento';
+        title = 'T4 - Pagamento (Prog + Real)';
         color = 'text-green-700 bg-green-50 border-green-200';
         details = [
-          { label: 'Status do Pagamento', value: fatura.nexa_pagamento_realizado ? 'Pago' : 'Pendente', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Programado?', value: fatura.nexa_pagamento_programado ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Data Prevista', value: renderDate(fatura.nexa_data_prevista_pagamento), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Responsável (Contas a Pagar)', value: renderUser(fatura.usuario_nexa_pagamento), icon: <User className="w-4 h-4" /> },
-          { label: 'Data do Pagamento', value: renderDate(fatura.data_pagamento_real), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real, 3), icon: <Timer className="w-4 h-4" /> },
+          { label: 'Pago?', value: fatura.nexa_pagamento_realizado ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Data Pagamento Real', value: renderDate(fatura.data_pagamento_real), icon: <Calendar className="w-4 h-4" /> },
+          { label: 'Valor Pago', value: fatura.valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor) : 'R$ 0,00', icon: <Info className="w-4 h-4" /> },
+          { label: 'Status SLA (3 dias)', value: renderSLA(fatura.nexa_data_prevista_pagamento, fatura.data_pagamento_real, 3), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
     }
