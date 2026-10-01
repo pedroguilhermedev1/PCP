@@ -652,7 +652,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -661,14 +661,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -685,7 +685,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -694,14 +694,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -768,7 +768,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -777,14 +777,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -801,7 +801,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -810,14 +810,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -878,7 +878,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -887,14 +887,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -911,7 +911,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -920,14 +920,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1014,7 +1014,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1023,14 +1023,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1047,7 +1047,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1056,14 +1056,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1117,7 +1117,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1126,14 +1126,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1150,7 +1150,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1159,14 +1159,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1263,7 +1263,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1272,14 +1272,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1296,7 +1296,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1305,14 +1305,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1432,7 +1432,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1441,14 +1441,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
                             <Input className="h-7 text-xs border-red-200" type="datetime-local" value={(oc.destino_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Pendente Origem';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1465,7 +1465,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_inicio || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
@@ -1474,14 +1474,14 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
                             <Input className="h-7 text-xs border-orange-200" type="datetime-local" value={(oc.origem_data_fim || '').substring(0, 16)} onChange={(e) => {
-                              const newOc = [...formData.ocorrencias];
+                              const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
                               setFormData({...formData, ocorrencias: newOc});
                             }} />
                           </div>
                           <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
-                            const newOc = [...formData.ocorrencias];
+                            const newOc = [...(formData.ocorrencias || [])];
                             const idx = newOc.findIndex(x => x.id === oc.id);
                             newOc[idx].status = 'Resolvida';
                             setFormData({...formData, ocorrencias: newOc});
@@ -1741,7 +1741,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   data_envio: new Date().toISOString(),
                   t_destino_codigo: ocorrenciaModal.novoDestino + '.1',
                   t_origem_retorno_codigo: (ocorrenciaModal.t_origem || '') + '.1',
-                  status: 'Pendente Destino'
+                  status: 'Pendente Destino' as 'Pendente Destino'
                 };
                 setFormData(prev => ({...prev, ocorrencias: [...(prev.ocorrencias || []), newOcorrencia]}));
                 setOcorrenciaModal({isOpen: false});
