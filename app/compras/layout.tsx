@@ -103,7 +103,7 @@ export default function ComprasLayout({
           </main>
         </div>
         <LembretesNotification />
-        <PendenciasNotification />
+        
         <CronogramaNotificationUI />
       </CronogramaNotificationProvider>
     </LembretesProvider>

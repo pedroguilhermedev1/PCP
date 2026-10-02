@@ -1,12 +1,13 @@
 "use client";
 
-import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun, Eye } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes, calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 import { FaturasGantt } from "@/components/faturas/FaturasGantt";
+import { FaturaDetailsModal } from "@/components/faturas/FaturaDetailsModal";
 import { SelectFilter } from "@/components/ui/select-filter";
 import ApresentacaoSemanalClient from "@/app/compras/apresentacao-semanal/client";
 import { getUserRole, getUserCD } from "@/lib/roles";
@@ -88,6 +89,13 @@ export function DashboardClient({
   // Tabs
   const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('gerencial');
   const [activeTab, setActiveTab] = useState<'faturas2' | 'insumos' | 'movimentacoes' | 'performance'>('faturas2');
+  const [selectedViewFatura, setSelectedViewFatura] = useState<any | null>(null);
+  const [faturaPeriodos, setFaturaPeriodos] = useState<any[]>([]);
+  const [listFiltroResp, setListFiltroResp] = useState('todos');
+  const [listFiltroCD, setListFiltroCD] = useState('todos');
+  const [listFiltroMes, setListFiltroMes] = useState('todos');
+  const [listFiltroAno, setListFiltroAno] = useState('todos');
+  const formatUserName = (n) => !n ? '-' : n.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
 
   const handleMainTabChange = (tab: 'gerencial' | 'operacional') => {
     setMainTab(tab);
@@ -133,7 +141,17 @@ export function DashboardClient({
   }, []);
 
   // Options
-  const anos = ["2023", "2024", "2025", "2026", "2027", "2028"];
+  const anos = Array.from(new Set(faturas.map(f => {
+    const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || f.data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
+    let d = new Date(dataStr);
+    if (isNaN(d.getTime()) && typeof dataStr === 'string' && dataStr.includes('/')) {
+      const parts = dataStr.split('/');
+      if (parts.length === 3) d = new Date(parts[2], parseInt(parts[1])-1, parts[0]);
+    }
+    if (isNaN(d.getTime())) d = new Date();
+    return d.getFullYear().toString();
+  }))).sort();
+  const normalizeString = (str: string) => typeof str === 'string' ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : '';
   const meses = [
     { value: "01", label: "Janeiro" }, { value: "02", label: "Fevereiro" },
     { value: "03", label: "Março" }, { value: "04", label: "Abril" },
@@ -144,7 +162,7 @@ export function DashboardClient({
   ];
   const dias = Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0'));
   
-  const uniqueCDs = Array.from(new Set(insumos.map(i => i.cd).filter(Boolean)))
+  const uniqueCDs = Array.from(new Set(insumos.map(i => typeof i.cd === 'string' ? i.cd.toUpperCase().trim() : null).filter(Boolean)))
     .filter(cd => !['raizes', 'curitiba'].includes((cd as string).toLowerCase()));
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -186,25 +204,28 @@ export function DashboardClient({
 
     filteredFaturas.forEach(f => {
       const etapa = calcularEtapa(f);
+      const stat = calcularStatus(f);
       const v = f.valor || 0;
 
       const isFinalizado = (etapa === 'Aguardando pagamento');
       const isEmAberto = (etapa !== 'Aguardando pagamento' && etapa !== 'Pago');
-      const diasRestantes = calcularDiasRestantes(f.data_vencimento || '');
-      // Considera atrasado apenas se data_vencimento existir e dias < 0
-      const isAtrasado = !!f.data_vencimento && diasRestantes < 0;
+      
+      const isPaid = stat.startsWith('Pago');
+      const isAtrasado = stat === 'Vencido';
 
-      if (isEmAberto) {
-        if (isAtrasado) {
-          emAbertoAtraso.count++; emAbertoAtraso.val += v;
-        } else {
-          emAbertoNoPrazo.count++; emAbertoNoPrazo.val += v;
-        }
-      } else if (isFinalizado) {
-        if (isAtrasado) {
-          aguardandoAtraso.count++; aguardandoAtraso.val += v;
-        } else {
-          aguardandoNoPrazo.count++; aguardandoNoPrazo.val += v;
+      if (!isPaid) {
+        if (isEmAberto) {
+          if (isAtrasado) {
+            emAbertoAtraso.count++; emAbertoAtraso.val += v;
+          } else {
+            emAbertoNoPrazo.count++; emAbertoNoPrazo.val += v;
+          }
+        } else if (isFinalizado) {
+          if (isAtrasado) {
+            aguardandoAtraso.count++; aguardandoAtraso.val += v;
+          } else {
+            aguardandoNoPrazo.count++; aguardandoNoPrazo.val += v;
+          }
         }
       }
 
@@ -214,7 +235,7 @@ export function DashboardClient({
       else if (sla === 'Atrasado') slaAtrasado++;
 
       // Novo SLA
-      if (etapa !== 'Aguardando pagamento' && etapa !== 'Pago') {
+      if (etapa !== 'Aguardando pagamento' && !isPaid) {
         const viabilidade = calcularViabilidadePagamento(f);
         if (viabilidade.statusViabilidade === 'viavel') novoSlaNoPrazo++;
         else if (viabilidade.statusViabilidade === 'risco') novoSlaProximo++;
@@ -464,54 +485,6 @@ export function DashboardClient({
                     </div>
                   </div>
 
-                  {/* 2. Fluxo de Faturas 2.0 */}
-                  <div className="flex items-center gap-2 mb-6">
-                    <FileText className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas 2.0 <span className="text-sm font-normal text-zinc-500">(Nexa / SAP)</span></h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                    <div 
-                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=No%20prazo&ano=${fatAno}&mes=${fatMes}`)}
-                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[13px] font-semibold uppercase tracking-wider text-emerald-600">Dentro do prazo</p>
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.slaNoPrazo}</div>
-                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas no prazo</p>
-                      </div>
-                    </div>
-                    <div 
-                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=Pr%C3%B3ximas&ano=${fatAno}&mes=${fatMes}`)}
-                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[13px] font-semibold uppercase tracking-wider text-amber-600">Próximas do limite</p>
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.slaProximo}</div>
-                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas em alerta</p>
-                      </div>
-                    </div>
-                    <div 
-                      onClick={() => router.push(`/compras/faturas-sap/${fatCategoria === 'Serviço' ? 'servicos' : fatCategoria === 'Material' ? 'materiais' : 'todas'}?sla=Atrasadas&ano=${fatAno}&mes=${fatMes}`)}
-                      className="glass-card rounded-xl border border-zinc-200/50 p-6 flex flex-col justify-between h-full cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[13px] font-semibold uppercase tracking-wider text-red-600">Atrasadas no Fluxo</p>
-                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold text-zinc-900">{faturasCards.slaAtrasado}</div>
-                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas atrasadas</p>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* 3. Fluxo de Faturas 2.0 — Tempos e SLA */}
                   <div className="flex items-center gap-2 mb-6">
                     <FileText className="w-5 h-5 text-purple-600" />
@@ -529,7 +502,7 @@ export function DashboardClient({
                       </div>
                       <div>
                         <div className="text-3xl font-bold text-zinc-900">{faturasCards.novoSlaNoPrazo}</div>
-                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas viáveis</p>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas no prazo</p>
                       </div>
                     </div>
                     <div 
@@ -542,7 +515,7 @@ export function DashboardClient({
                       </div>
                       <div>
                         <div className="text-3xl font-bold text-zinc-900">{faturasCards.novoSlaProximo}</div>
-                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas em risco</p>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas em alerta</p>
                       </div>
                     </div>
                     <div 
@@ -555,15 +528,146 @@ export function DashboardClient({
                       </div>
                       <div>
                         <div className="text-3xl font-bold text-zinc-900">{faturasCards.novoSlaAtrasado}</div>
-                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas perdidas</p>
+                        <p className="text-sm mt-2 font-medium text-zinc-500">faturas atrasadas</p>
                       </div>
                     </div>
                   </div>
 
                   {/* 4. Gantt Operacional */}
-                  <div className="mt-8 mb-8">
-                    <FaturasGantt faturas={filteredFaturas} flowType="2.0" />
-                  </div>
+                    <div className="mt-8 mb-8">
+                      <div className="hidden">
+                        <FaturasGantt faturas={filteredFaturas} flowType="2.0" />
+                      </div>
+                    </div>
+
+                    {/* Lista de Faturas em vez do Gantt */}
+                    <div className="mt-8 mb-8 bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
+                      <div className="p-4 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-zinc-800 uppercase">Lista de Faturas</h3>
+                        <span className="text-xs font-medium text-zinc-500">{filteredFaturas.filter(f => {
+                              
+                                
+                                  const cdRaw = f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '';
+                                  const cd = normalizeString(cdRaw as string);
+                                  const filterCd = normalizeString(listFiltroCD);
+                                  if (listFiltroCD !== 'todos' && cd !== filterCd) return false;
+                                  
+                                  const respRaw = f.responsavel || '';
+                                  const resp = normalizeString(respRaw);
+                                  const filterResp = normalizeString(listFiltroResp);
+                                  if (listFiltroResp !== 'todos' && resp !== filterResp) return false;
+                                  
+                                  const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || f.data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
+                                  let d = new Date(dataStr);
+                                  if (isNaN(d.getTime()) && typeof dataStr === 'string' && dataStr.includes('/')) {
+                                    const parts = dataStr.split('/');
+                                    if (parts.length === 3) d = new Date(parts[2], parseInt(parts[1])-1, parts[0]);
+                                  }
+                                  if (isNaN(d.getTime())) d = new Date();
+                                  const m = (d.getMonth() + 1).toString().padStart(2, '0');
+                                  const y = d.getFullYear().toString();
+                                  
+                                  if (listFiltroMes !== 'todos' && m !== listFiltroMes) return false;
+                                  if (listFiltroAno !== 'todos' && y !== listFiltroAno) return false;
+                                  
+                                  return true;
+
+                            }).length} faturas encontradas</span>
+                      </div>
+
+                      <div className="p-4 border-b border-zinc-100 flex flex-wrap gap-4 items-end bg-white">
+                        <SelectFilter label="CD" value={listFiltroCD} onChange={(e) => setListFiltroCD(e.target.value)} options={[{value: 'todos', label: 'Todos'}, ...uniqueCDs.map(cd => ({value: cd, label: cd}))]} />
+                        <SelectFilter label="Responsável" value={listFiltroResp} onChange={(e) => setListFiltroResp(e.target.value)} options={[{value: 'todos', label: 'Todos'}, ...Array.from(new Set(faturas.map(f => f.responsavel).filter(Boolean))).map(r => ({value: r, label: formatUserName(r)}))]} />
+                        <SelectFilter label="Mês" value={listFiltroMes} onChange={(e) => setListFiltroMes(e.target.value)} options={[{value: 'todos', label: 'Todos'}, {value: '01', label: 'Janeiro'}, {value: '02', label: 'Fevereiro'}, {value: '03', label: 'Março'}, {value: '04', label: 'Abril'}, {value: '05', label: 'Maio'}, {value: '06', label: 'Junho'}, {value: '07', label: 'Julho'}, {value: '08', label: 'Agosto'}, {value: '09', label: 'Setembro'}, {value: '10', label: 'Outubro'}, {value: '11', label: 'Novembro'}, {value: '12', label: 'Dezembro'}]} />
+                        <SelectFilter label="Ano" value={listFiltroAno} onChange={(e) => setListFiltroAno(e.target.value)} options={[{value: 'todos', label: 'Todos'}, ...anos.map(a => ({value: a, label: a}))]} />
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-zinc-50 text-xs text-zinc-500 uppercase border-b border-zinc-200">
+                            <tr>
+                              <th className="px-4 py-3">Documento</th>
+                              <th className="px-4 py-3">Fornecedor</th>
+                              <th className="px-4 py-3">Responsável</th>
+                              <th className="px-4 py-3">Etapa Atual</th>
+                              <th className="px-4 py-3">Status</th>
+                              <th className="px-4 py-3 text-right">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-100">
+                            {filteredFaturas.filter(f => {
+                              
+                                
+                                  const cdRaw = f.cd || f.insumos?.find(i => (i as any)._meta)?.cd || f.insumos?.[0]?.cd || '';
+                                  const cd = normalizeString(cdRaw as string);
+                                  const filterCd = normalizeString(listFiltroCD);
+                                  if (listFiltroCD !== 'todos' && cd !== filterCd) return false;
+                                  
+                                  const respRaw = f.responsavel || '';
+                                  const resp = normalizeString(respRaw);
+                                  const filterResp = normalizeString(listFiltroResp);
+                                  if (listFiltroResp !== 'todos' && resp !== filterResp) return false;
+                                  
+                                  const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || f.data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
+                                  let d = new Date(dataStr);
+                                  if (isNaN(d.getTime()) && typeof dataStr === 'string' && dataStr.includes('/')) {
+                                    const parts = dataStr.split('/');
+                                    if (parts.length === 3) d = new Date(parts[2], parseInt(parts[1])-1, parts[0]);
+                                  }
+                                  if (isNaN(d.getTime())) d = new Date();
+                                  const m = (d.getMonth() + 1).toString().padStart(2, '0');
+                                  const y = d.getFullYear().toString();
+                                  
+                                  if (listFiltroMes !== 'todos' && m !== listFiltroMes) return false;
+                                  if (listFiltroAno !== 'todos' && y !== listFiltroAno) return false;
+                                  
+                                  return true;
+
+                            }).map(f => {
+                              const s = calcularStatus(f);
+                              return (
+                              <React.Fragment key={f.id}>
+<tr className="hover:bg-zinc-50 transition-colors">
+                                <td className="px-4 py-3 font-medium text-zinc-900">{f.numero_documento || '-'}</td>
+                                <td className="px-4 py-3 text-zinc-600">{f.fornecedor}</td>
+                                <td className="px-4 py-3 text-zinc-600">{formatUserName(f.responsavel)}</td>
+                                <td className="px-4 py-3"><span className="px-2 py-1 bg-zinc-100 rounded text-xs text-zinc-700 font-medium">{f.etapa || 'Pendente'}</span></td>
+                                <td className="px-4 py-3">
+                                  <span className={cn("px-2 py-1 rounded text-[10px] font-bold uppercase", 
+                                    s.includes('Pago') ? "bg-emerald-100 text-emerald-800" :
+                                    s === 'Vencido' ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"
+                                  )}>
+                                    {s}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button 
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      setSelectedViewFatura(f);
+                                      try {
+                                        const periodos = await getFaturaPeriodosAction(f.id);
+                                        setFaturaPeriodos(periodos);
+                                      } catch (err) {
+                                        setFaturaPeriodos([]);
+                                      }
+                                    }} 
+                                    className="p-1.5 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                    title="Visualizar"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+
+                            
+</React.Fragment>
+)})}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
                 </div>
               )}
             </>
@@ -684,8 +788,28 @@ export function DashboardClient({
               <ApresentacaoSemanalClient faturas={faturas} />
             </div>
           )}
-        </div>
+        
+        
+      
+        {selectedViewFatura && (
+          <FaturaDetailsModal
+            isOpen={!!selectedViewFatura}
+            onClose={() => { setSelectedViewFatura(null); setFaturaPeriodos([]); }}
+            fatura={selectedViewFatura}
+            faturaPeriodos={faturaPeriodos}
+            canEditOrDelete={false}
+            handleDuplicate={() => {}}
+            setFaturaToTransfer={() => {}}
+            handleEdit={() => {}}
+            setSelectedStage={() => {}}
+            getStatusColor={(s) => 'gray'}
+            getEtapaColor={(e) => 'gray'}
+            getEtapaLabel={(e) => e}
+          />
+        )}
+
       </div>
     </div>
+  </div>
   );
 }

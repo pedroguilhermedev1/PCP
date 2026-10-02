@@ -72,7 +72,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       if (!matchesSla) return false;
     }
 
-    const dataStr = f.data_emissao || (f as any).created_at || new Date().toISOString();
+    const dataStr = f.data_vencimento || f.data_emissao || (f as any).created_at || new Date().toISOString();
     const d = new Date(dataStr);
     const m = (d.getMonth() + 1).toString().padStart(2, '0');
     const y = d.getFullYear().toString();

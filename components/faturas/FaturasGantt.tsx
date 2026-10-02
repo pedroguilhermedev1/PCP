@@ -9,11 +9,7 @@ import { SelectFilter } from '@/components/ui/select-filter';
 const formatDateDisplay = (dateStr?: string) => {
   if (!dateStr) return 'S/ Data';
   const parts = dateStr.split('T');
-  const d = parts[0].split('-').reverse().join('/');
-  if (parts[1] && !parts[1].startsWith('00:00:00')) {
-    return d + ' ' + parts[1].substring(0, 5);
-  }
-  return d;
+  return parts[0].split('-').reverse().join('/');
 };
 
 
