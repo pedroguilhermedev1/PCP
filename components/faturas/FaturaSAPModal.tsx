@@ -40,7 +40,16 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
   const [formError, setFormError] = useState<string | null>(null);
   const [showPendenciaModal, setShowPendenciaModal] = useState(false);
   const [ocorrenciaModal, setOcorrenciaModal] = useState<{isOpen: boolean, t_origem?: string, novoDestino?: string, novoMotivo?: string}>({isOpen: false});
-  const MOTIVOS_OCORRENCIA = ['Falta de Anexo', 'Divergência de Valor', 'Dados Incorretos', 'Falta de Aprovação', 'Erro no Lançamento', 'Outros'];
+  const MOTIVOS_OCORRENCIA = [
+  'Inserir informações faltantes',
+  'Solicitar correção de informações',
+  'Anexar documentos para pagamento',
+  'Validar informações do processo',
+  'Acompanhar aprovação',
+  'Aguardar retorno de outra área',
+  'Aguardar retorno do fornecedor',
+  'Tratar divergência no processo'
+];
   const [novaPendencia, setNovaPendencia] = useState({
     etapa_origem: '',
     etapa_destino: '',
