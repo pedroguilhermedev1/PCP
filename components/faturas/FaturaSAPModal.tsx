@@ -673,6 +673,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -687,7 +688,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -793,6 +794,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -807,7 +809,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -907,6 +909,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -921,7 +924,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -1047,6 +1050,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -1061,7 +1065,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -1154,6 +1158,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -1168,7 +1173,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -1304,6 +1309,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -1318,7 +1324,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -1477,6 +1483,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
                               setFormData({...formData, ocorrencias: newOc});
                             }}>Devolver para {oc.t_origem}</Button>
 )}
@@ -1491,7 +1498,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
-                            <Input className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_inicio = e.target.value;
@@ -1500,7 +1507,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
-                            <Input className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_fim || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_fim || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].origem_data_fim = e.target.value;
@@ -1725,8 +1732,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   t_destino: ocorrenciaModal.novoDestino,
                   motivo: ocorrenciaModal.novoMotivo,
                   data_envio: new Date().toISOString(),
-                  t_destino_codigo: ocorrenciaModal.novoDestino + '.1',
-                  t_origem_retorno_codigo: (ocorrenciaModal.t_origem || '') + '.1',
+                  t_destino_codigo: ocorrenciaModal.novoDestino + '.' + (((prev.ocorrencias || []).filter(o => o.t_destino === ocorrenciaModal.novoDestino).length) + 1),
+                  t_origem_retorno_codigo: (ocorrenciaModal.t_origem || '') + '.' + (((prev.ocorrencias || []).filter(o => o.t_origem === ocorrenciaModal.t_origem).length) + 1),
                   status: 'Pendente Destino' as 'Pendente Destino'
                 };
                 setFormData(prev => ({...prev, ocorrencias: [...(prev.ocorrencias || []), newOcorrencia]}));
