@@ -652,7 +652,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
-                            <Input disabled={oc.status === 'Resolvida'} disabled={oc.status === 'Resolvida'} disabled={oc.status !== 'Pendente Destino'} disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-red-200" type="date" value={(oc.destino_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                            <Input disabled={oc.status === 'Resolvida' || oc.status !== 'Pendente Destino'} className="h-7 text-xs border-red-200" type="date" value={(oc.destino_data_inicio || '').substring(0, 10)} onChange={(e) => {
                               const newOc = [...(formData.ocorrencias || [])];
                               const idx = newOc.findIndex(x => x.id === oc.id);
                               newOc[idx].destino_data_inicio = e.target.value;

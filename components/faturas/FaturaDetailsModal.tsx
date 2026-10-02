@@ -480,8 +480,8 @@ export function FaturaDetailsModal({
                               
                               {(() => {
                                 // Build unified history
-                                let history = [];
-                                const addEvent = (cycle, code, name, startDate, endDate, slaDias, responsavel) => {
+                                let history: any[] = [];
+                                const addEvent = (cycle: number | string, code: string, name: string, startDate: any, endDate: any, slaDias: number, responsavel: any) => {
                                   if (startDate) {
                                     history.push({
                                       cycle: cycle,

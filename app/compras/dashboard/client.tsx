@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 import { FaturasGantt } from "@/components/faturas/FaturasGantt";
 import { FaturaDetailsModal } from "@/components/faturas/FaturaDetailsModal";
+import { getFaturaPeriodosAction } from "../faturas-sap/periodos-actions";
 import { SelectFilter } from "@/components/ui/select-filter";
 import ApresentacaoSemanalClient from "@/app/compras/apresentacao-semanal/client";
 import { getUserRole, getUserCD } from "@/lib/roles";
@@ -95,7 +96,7 @@ export function DashboardClient({
   const [listFiltroCD, setListFiltroCD] = useState('todos');
   const [listFiltroMes, setListFiltroMes] = useState('todos');
   const [listFiltroAno, setListFiltroAno] = useState('todos');
-  const formatUserName = (n) => !n ? '-' : n.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+  const formatUserName = (n: string | null | undefined) => !n ? '-' : n.split('.').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
 
   const handleMainTabChange = (tab: 'gerencial' | 'operacional') => {
     setMainTab(tab);
@@ -142,11 +143,11 @@ export function DashboardClient({
 
   // Options
   const anos = Array.from(new Set(faturas.map(f => {
-    const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || f.data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
+    const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || (f as any).data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
     let d = new Date(dataStr);
     if (isNaN(d.getTime()) && typeof dataStr === 'string' && dataStr.includes('/')) {
       const parts = dataStr.split('/');
-      if (parts.length === 3) d = new Date(parts[2], parseInt(parts[1])-1, parts[0]);
+      if (parts.length === 3) d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
     }
     if (isNaN(d.getTime())) d = new Date();
     return d.getFullYear().toString();
@@ -557,11 +558,11 @@ export function DashboardClient({
                                   const filterResp = normalizeString(listFiltroResp);
                                   if (listFiltroResp !== 'todos' && resp !== filterResp) return false;
                                   
-                                  const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || f.data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
+                                  const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || (f as any).data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
                                   let d = new Date(dataStr);
                                   if (isNaN(d.getTime()) && typeof dataStr === 'string' && dataStr.includes('/')) {
                                     const parts = dataStr.split('/');
-                                    if (parts.length === 3) d = new Date(parts[2], parseInt(parts[1])-1, parts[0]);
+                                    if (parts.length === 3) d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
                                   }
                                   if (isNaN(d.getTime())) d = new Date();
                                   const m = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -608,11 +609,11 @@ export function DashboardClient({
                                   const filterResp = normalizeString(listFiltroResp);
                                   if (listFiltroResp !== 'todos' && resp !== filterResp) return false;
                                   
-                                  const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || f.data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
+                                  const dataStr = f.data_vencimento || f.data_emissao || f.data_recebimento || (f as any).data_abertura || (f as any).created_at || (f as any).nexa_data_inicio || new Date().toISOString();
                                   let d = new Date(dataStr);
                                   if (isNaN(d.getTime()) && typeof dataStr === 'string' && dataStr.includes('/')) {
                                     const parts = dataStr.split('/');
-                                    if (parts.length === 3) d = new Date(parts[2], parseInt(parts[1])-1, parts[0]);
+                                    if (parts.length === 3) d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
                                   }
                                   if (isNaN(d.getTime())) d = new Date();
                                   const m = (d.getMonth() + 1).toString().padStart(2, '0');
