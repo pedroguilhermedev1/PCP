@@ -1741,8 +1741,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   t_destino: ocorrenciaModal.novoDestino,
                   motivo: ocorrenciaModal.novoMotivo,
                   data_envio: new Date().toISOString(),
-                  t_destino_codigo: ocorrenciaModal.novoDestino + '.' + (((prev.ocorrencias || []).filter(o => o.t_destino === ocorrenciaModal.novoDestino).length) + 1),
-                  t_origem_retorno_codigo: (ocorrenciaModal.t_origem || '') + '.' + (((prev.ocorrencias || []).filter(o => o.t_origem === ocorrenciaModal.t_origem).length) + 1),
+                  t_destino_codigo: ocorrenciaModal.novoDestino + '.' + (((formData.ocorrencias || []).filter(o => o.t_destino === ocorrenciaModal.novoDestino).length) + 1),
+                  t_origem_retorno_codigo: (ocorrenciaModal.t_origem || '') + '.' + (((formData.ocorrencias || []).filter(o => o.t_origem === ocorrenciaModal.t_origem).length) + 1),
                   status: 'Pendente Destino' as 'Pendente Destino'
                 };
                 setFormData(prev => ({...prev, ocorrencias: [...(prev.ocorrencias || []), newOcorrencia]}));
