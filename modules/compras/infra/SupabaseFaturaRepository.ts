@@ -127,6 +127,12 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     // delete sanitizedData.usuario_nexa_programacao;
     // delete sanitizedData.usuario_nexa_pagamento;
 
+    Object.keys(sanitizedData).forEach(key => {
+      if (sanitizedData[key] === "" && (key.includes('data') || key.endsWith('_em') || key.includes('inicio') || key.includes('fim'))) {
+        sanitizedData[key] = null;
+      }
+    });
+
     const { error } = await supabase
       .from('faturas')
       .upsert([sanitizedData]);
@@ -150,6 +156,12 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     // delete mappedData.usuario_nexa_lancamento;
     // delete mappedData.usuario_nexa_programacao;
     // delete mappedData.usuario_nexa_pagamento;
+
+    Object.keys(mappedData).forEach(key => {
+      if (mappedData[key] === "" && (key.includes('data') || key.endsWith('_em') || key.includes('inicio') || key.includes('fim'))) {
+        mappedData[key] = null;
+      }
+    });
 
     const { error } = await supabase
       .from('faturas')

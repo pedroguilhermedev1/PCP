@@ -1397,6 +1397,82 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <Input className="h-7 text-xs border-zinc-200" type="date" value={(formData.fiscal_data_fim || "").substring(0, 10)} onChange={handleInputChange('fiscal_data_fim')} />
                       </div>
                     </div>
+
+                      {/* Ocorrencias T3 Destino */}
+                      {formData.ocorrencias?.filter(oc => oc.t_destino === 'T3').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-red-700">{oc.t_destino_codigo} - Ocorrência</h5>
+                            <p className="text-[10px] font-medium text-red-600 mt-1">Enviado por: {oc.t_origem} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Início ({oc.t_destino_codigo})</label>
+                            <Input disabled={oc.status === 'Resolvida'} className="h-7 text-xs border-red-200" type="date" value={(oc.destino_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                              const newOc = [...(formData.ocorrencias || [])];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-red-600 uppercase">Fim ({oc.t_destino_codigo})</label>
+                            <Input disabled={oc.status !== 'Pendente Destino'} className="h-7 text-xs border-red-200" type="date" value={(oc.destino_data_fim || '').substring(0, 10)} onChange={(e) => {
+                              const newOc = [...(formData.ocorrencias || [])];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].destino_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          {!autoStatus.includes('Pago') && oc.status === 'Pendente Destino' && (
+  <Button size="sm" variant="outline" className="w-full mt-2 border-red-200 text-red-700 hover:bg-red-100" onClick={() => {
+                              const newOc = [...(formData.ocorrencias || [])];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].status = 'Pendente Origem';
+                              if (!newOc[idx].origem_data_inicio) newOc[idx].origem_data_inicio = new Date().toISOString();
+                              setFormData({...formData, ocorrencias: newOc});
+                            }}>Devolver para {oc.t_origem}</Button>
+)}
+                        </div>
+                      ))}
+                      {/* Ocorrencias T3 Origem Retorno */}
+                      {formData.ocorrencias?.filter(oc => oc.t_origem === 'T3' && oc.status !== 'Pendente Destino').map(oc => (
+                        <div key={oc.id} className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg space-y-3">
+                          <div>
+                            <h5 className="text-xs font-bold text-orange-700">{oc.t_origem_retorno_codigo} - Retorno</h5>
+                            <p className="text-[10px] font-medium text-orange-600 mt-1">Devolvido por: {oc.t_destino} | Motivo: {oc.motivo}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Início ({oc.t_origem_retorno_codigo})</label>
+                            <Input disabled={oc.status !== 'Pendente Origem'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_inicio || '').substring(0, 10)} onChange={(e) => {
+                              const newOc = [...(formData.ocorrencias || [])];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_inicio = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-orange-600 uppercase">Fim ({oc.t_origem_retorno_codigo})</label>
+                            <Input disabled={oc.status === 'Resolvida'} className="h-7 text-xs border-orange-200" type="date" value={(oc.origem_data_fim || '').substring(0, 10)} onChange={(e) => {
+                              const newOc = [...(formData.ocorrencias || [])];
+                              const idx = newOc.findIndex(x => x.id === oc.id);
+                              newOc[idx].origem_data_fim = e.target.value;
+                              setFormData({...formData, ocorrencias: newOc});
+                            }} />
+                          </div>
+                          {oc.status !== 'Resolvida' && <Button size="sm" variant="outline" className="w-full mt-2 border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => {
+                            const newOc = [...(formData.ocorrencias || [])];
+                            const idx = newOc.findIndex(x => x.id === oc.id);
+                            newOc[idx].status = 'Resolvida';
+                            setFormData({...formData, ocorrencias: newOc});
+                          }}>Finalizar Ocorrência</Button>}
+                        </div>
+                      ))}
+                      {/* Botoes Ocorrencia T3 */}
+  {!autoStatus.includes('Pago') && (
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                          <Button type="button" variant="ghost" size="sm" className="text-[10px] h-7 text-red-500 hover:bg-red-50" onClick={() => setOcorrenciaModal({isOpen: true, t_origem: 'T3'})}>⚠️ Nova Ocorrência</Button>
+                        </div>
+)}
                   </div>
 
                   {/* T4 - Pagamento */}
