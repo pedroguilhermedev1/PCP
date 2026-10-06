@@ -29,6 +29,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'REPROVADAS' | 'AJUSTE' | 'EXTERNA'>('NOVA');
   const [editingReprovadaId, setEditingReprovadaId] = useState<string | null>(null);
+  const [aprovarModal, setAprovarModal] = useState<{ isOpen: boolean, movId?: string, originalQtd?: number, newQtd?: number, justification?: string }>({ isOpen: false });
 
   const [filterCD, setFilterCD] = useState("TODOS");
 
@@ -416,6 +417,81 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {aprovarModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col border border-zinc-200">
+            <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
+              <h2 className="text-lg font-semibold text-zinc-800">Aprovar Recebimento</h2>
+              <button onClick={() => setAprovarModal({ isOpen: false })} className="text-zinc-400 hover:text-zinc-600 text-xl font-bold">
+                ×
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSubmitting(true);
+              try {
+                let payload = {};
+                if (aprovarModal.newQtd !== aprovarModal.originalQtd) {
+                  if (!aprovarModal.justification) {
+                    setErrorMsg("É obrigatório justificar a divergência de quantidade.");
+                    setIsSubmitting(false);
+                    return;
+                  }
+                  payload = { novaQuantidade: aprovarModal.newQtd, justificativa: aprovarModal.justification };
+                }
+                const res = await fetch(`/api/movimentacoes/${aprovarModal.movId}/confirmar`, { 
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
+                setTimeout(() => setSuccessMsg(""), 5000);
+                refresh();
+                setAprovarModal({ isOpen: false });
+              } catch (e: any) {
+                setErrorMsg(e.message);
+              } finally {
+                setIsSubmitting(false);
+              }
+            }} className="p-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-zinc-700">Quantidade Recebida <span className="text-red-500">*</span></label>
+                <Input 
+                  type="number" 
+                  min="1" 
+                  required 
+                  value={aprovarModal.newQtd || ""} 
+                  onChange={e => setAprovarModal(prev => ({ ...prev, newQtd: Number(e.target.value) }))} 
+                />
+                <p className="text-xs text-zinc-500">Quantidade original solicitada: {aprovarModal.originalQtd}</p>
+              </div>
+              
+              {aprovarModal.newQtd !== aprovarModal.originalQtd && (
+                <div className="flex flex-col gap-1.5 mt-2 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-sm font-medium text-zinc-700">Motivo da Divergência <span className="text-red-500">*</span></label>
+                  <textarea 
+                    required
+                    className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 resize-y"
+                    value={aprovarModal.justification || ""}
+                    onChange={e => setAprovarModal(prev => ({ ...prev, justification: e.target.value }))}
+                    placeholder="Explique por que a quantidade recebida é diferente da solicitada..."
+                  />
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-3 justify-end border-t border-zinc-100 pt-5">
+                <Button type="button" variant="outline" onClick={() => setAprovarModal({ isOpen: false })} disabled={isSubmitting}>Cancelar</Button>
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvando..." : "Confirmar Recebimento"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <header className="bg-white border-b border-zinc-200 px-6 pt-4 flex flex-col flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
@@ -646,7 +722,24 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   <TableBody>
                     {movimentacoes.filter(m => m.status === 'PENDENTE').map(m => (
                       <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
-                        <TableCell className="font-medium text-xs text-zinc-700">{m.identificador || 'S/ ID'}</TableCell>
+                        <TableCell className="font-medium text-xs text-zinc-700">
+                          {(() => {
+                            if (m.observacoes && m.observacoes.includes('Fatura ')) {
+                              const obsParts = m.observacoes.split('|')[0].trim();
+                              if (obsParts.startsWith('Fatura ') && obsParts !== 'Fatura não informada') {
+                                return obsParts.replace('Fatura ', '').trim();
+                              }
+                              if (obsParts === 'Fatura não informada') {
+                                return 'Não informada';
+                              }
+                            }
+                            if (m.fatura_id && typeof m.fatura_id === 'string' && m.fatura_id.includes('__')) {
+                              const prefix = m.fatura_id.split('__')[0];
+                              if (prefix && prefix !== 'null' && prefix !== 'undefined') return prefix;
+                            }
+                            return m.identificador || 'S/ ID';
+                          })()}
+                        </TableCell>
                         <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell className="font-semibold text-zinc-600">{m.cd.toUpperCase()}</TableCell>
                         <TableCell>
@@ -679,21 +772,10 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                               <Button 
                                 size="sm" 
                                 variant="default"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full"
-                                onClick={async () => {
-                                  try {
-                                    const res = await fetch(`/api/movimentacoes/${m.id}/confirmar`, { method: 'POST' });
-                                    const data = await res.json();
-                                    if (!res.ok) throw new Error(data.error);
-                                    setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
-                                    setTimeout(() => setSuccessMsg(""), 5000);
-                                    refresh();
-                                  } catch (e: any) {
-                                    setErrorMsg(e.message);
-                                  }
-                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full text-[11px] px-1"
+                                onClick={() => setAprovarModal({ isOpen: true, movId: m.id, originalQtd: m.quantidade, newQtd: m.quantidade, justification: '' })}
                               >
-                                Aprovar
+                                Aprovar / Editar
                               </Button>
                               <Button 
                                 size="sm" 

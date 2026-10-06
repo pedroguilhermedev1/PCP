@@ -9,6 +9,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dmFqbnNteWxhZWJ4ZmV5cGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwODEyNzksImV4cCI6MjA5MzY1NzI3OX0.vl359IIHkx-oE4Z1CzenYAPcvlZWYqgAwoX8xa6mVTw';
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  let body: any = {};
+  try {
+    body = await request.json();
+  } catch (e) {}
+
+  const novaQuantidade = body.novaQuantidade;
+  const justificativa = body.justificativa;
+
   // Get the movimentacao
   const { data: mov, error: movError } = await supabase
     .from('estoque_movimentacoes')
@@ -22,6 +30,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   if (mov.status !== 'PENDENTE') {
     return NextResponse.json({ error: 'Movimentação já processada' }, { status: 400 });
+  }
+
+  const finalQuantidade = novaQuantidade !== undefined ? Number(novaQuantidade) : Number(mov.quantidade);
+  let finalObservacoes = mov.observacoes;
+  
+  if (justificativa) {
+    const divergenciaText = `[Aprovação c/ Divergência] Original: ${mov.quantidade} -> Novo: ${finalQuantidade}. Motivo: ${justificativa}`;
+    finalObservacoes = finalObservacoes ? `${finalObservacoes} | ${divergenciaText}` : divergenciaText;
   }
 
   // Get insumo
@@ -44,7 +60,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   const isSaida = mov.tipo === 'Saída';
-  const delta = isSaida ? -Number(mov.quantidade) : Number(mov.quantidade);
+  const delta = isSaida ? -finalQuantidade : finalQuantidade;
   const newReal = (insumo.estoque_real || 0) + delta;
 
   if (newReal < 0) {
@@ -67,7 +83,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   const [updateMov, updateIns] = await Promise.all([
-    supabase.from('estoque_movimentacoes').update({ status: 'Aprovada' }).eq('id', id),
+    supabase.from('estoque_movimentacoes').update({ 
+      status: 'Aprovada',
+      quantidade: finalQuantidade,
+      observacoes: finalObservacoes 
+    }).eq('id', id),
     updateInsQuery
   ]);
 

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { getUserRole, getUserCD } from "@/lib/roles";
 
 export interface CronogramaNotificationContextType {
   unseenCount: number;
@@ -40,14 +41,26 @@ export function CronogramaNotificationProvider({ children }: { children: ReactNo
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        setUnseenCount(data.length);
-        
-        const storedDismissed = JSON.parse(localStorage.getItem("pcp_cronograma_dismissed") || "[]");
-        const notDismissed = data.filter(d => !storedDismissed.includes(d.id));
-        
-        if (notDismissed.length > 0) {
-          // Find if we already have an active one so we don't flash, or just take the newest
-          setActiveNotification((prev: any) => prev || notDismissed[0]);
+        const user = localStorage.getItem('pcp_user');
+        const role = getUserRole(user || '');
+        const userCd = getUserCD(user || '');
+
+        let filteredData = data;
+        if (role === 'OPERACIONAL' && userCd) {
+          filteredData = data.filter(d => d.cd.toLowerCase() === userCd.toLowerCase());
+        }
+
+        if (filteredData.length > 0) {
+          setUnseenCount(filteredData.length);
+          
+          const storedDismissed = JSON.parse(localStorage.getItem("pcp_cronograma_dismissed") || "[]");
+          const notDismissed = filteredData.filter(d => !storedDismissed.includes(d.id));
+          
+          if (notDismissed.length > 0) {
+            setActiveNotification((prev: any) => prev || notDismissed[0]);
+          }
+        } else {
+          setUnseenCount(0);
         }
       } else {
         setUnseenCount(0);
