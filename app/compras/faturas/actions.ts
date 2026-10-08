@@ -18,7 +18,7 @@ export async function saveFaturaAction(fatura: Object) {
           .eq('status', 'PENDENTE');
 
         const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
-        const validInsumos = faturaData.insumos.filter(ins => !(ins as any)._meta);
+        const validInsumos = faturaData.insumos.filter(ins => !(ins as any)._meta && (!ins.tipo_item || ins.tipo_item === 'Insumo'));
 
         const movimentacoes = validInsumos.map(insumo => ({
           tipo: 'Entrada',

@@ -451,7 +451,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
-                        <span className="text-xs text-zinc-400 font-bold">{f.identificador || 'S/ ID'}</span>
+
                         <span>{f.fornecedor}</span>
                       </div>
                     </TableCell>

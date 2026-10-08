@@ -442,14 +442,28 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               <section className="space-y-4 p-6 bg-white border border-zinc-200 rounded-xl shadow-sm">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-semibold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
-                    Insumos da Compra
+                    Itens da Fatura
                   </h3>
-                  <Button type="button" variant="outline" size="sm" onClick={() => {
-                    const current = formData.insumos || [];
-                    setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1 }]});
-                  }} className="gap-2">
-                    <Plus className="w-4 h-4" /> Adicionar Insumo
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      const current = formData.insumos || [];
+                      setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1, tipo_item: 'Insumo' }]});
+                    }} className="gap-2">
+                      <Plus className="w-4 h-4" /> Insumo
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      const current = formData.insumos || [];
+                      setFormData({...formData, insumos: [...current, { codigo: 'SRV-MANUAL', item: '', quantidade: 1, tipo_item: 'Serviço' }]});
+                    }} className="gap-2">
+                      <Plus className="w-4 h-4" /> Serviço
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => {
+                      const current = formData.insumos || [];
+                      setFormData({...formData, insumos: [...current, { codigo: 'TAX-MANUAL', item: '', quantidade: 1, tipo_item: 'Imposto/Taxa' }]});
+                    }} className="gap-2">
+                      <Plus className="w-4 h-4" /> Imposto/Taxa
+                    </Button>
+                  </div>
                 </div>
 
                 {(!formData.insumos || formData.insumos.length === 0) ? (
@@ -462,32 +476,46 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                       <div key={index} className="flex flex-col gap-4 p-4 bg-zinc-50 rounded-lg border border-zinc-200">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                           <div className="space-y-2 md:col-span-4 relative">
-                            <label className="text-xs font-medium text-zinc-700">Insumo</label>
-                            <Input 
-                              list={`insumos-list-${index}`}
-                              value={ins.item} 
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                const match = availableInsumos.find(a => a.item === val);
-                                const newInsumos = [...(formData.insumos || [])];
-                                newInsumos[index] = { ...ins, item: val, codigo: match ? match.codigo : ins.codigo };
-                                setFormData({ ...formData, insumos: newInsumos });
-                              }} 
-                              placeholder="Selecione o insumo..." 
-                             
-                            />
-                            <datalist id={`insumos-list-${index}`}>
-                              {availableInsumos.map((a, i) => {
-                                const rawCd = a.cd.includes('-') ? a.cd.split('-')[0] : a.cd;
-                                const cdFormatted = rawCd.charAt(0).toUpperCase() + rawCd.slice(1).toLowerCase();
-                                return (
-                                  <option key={`${a.codigo}-${i}`} value={a.item}>{a.codigo} ({cdFormatted})</option>
-                                );
-                              })}
-                            </datalist>
+                            <label className="text-xs font-medium text-zinc-700">{ins.tipo_item || 'Insumo'}</label>
+                            {ins.tipo_item === 'Serviço' || ins.tipo_item === 'Imposto/Taxa' ? (
+                              <Input 
+                                value={ins.item} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const newInsumos = [...(formData.insumos || [])];
+                                  newInsumos[index] = { ...ins, item: val };
+                                  setFormData({ ...formData, insumos: newInsumos });
+                                }} 
+                                placeholder={`Descrição do ${ins.tipo_item}...`} 
+                              />
+                            ) : (
+                              <>
+                                <Input 
+                                  list={`insumos-list-${index}`}
+                                  value={ins.item} 
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const match = availableInsumos.find(a => a.item === val);
+                                    const newInsumos = [...(formData.insumos || [])];
+                                    newInsumos[index] = { ...ins, item: val, codigo: match ? match.codigo : ins.codigo };
+                                    setFormData({ ...formData, insumos: newInsumos });
+                                  }} 
+                                  placeholder="Selecione o insumo..." 
+                                />
+                                <datalist id={`insumos-list-${index}`}>
+                                  {availableInsumos.map((a, i) => {
+                                    const rawCd = a.cd.includes('-') ? a.cd.split('-')[0] : a.cd;
+                                    const cdFormatted = rawCd.charAt(0).toUpperCase() + rawCd.slice(1).toLowerCase();
+                                    return (
+                                      <option key={`${a.codigo}-${i}`} value={a.item}>{a.codigo} ({cdFormatted})</option>
+                                    );
+                                  })}
+                                </datalist>
+                              </>
+                            )}
                           </div>
                           <div className="space-y-2 md:col-span-2">
-                            <label className="text-xs font-medium text-zinc-700">Código (Auto)</label>
+                            <label className="text-xs font-medium text-zinc-700">Código {(!ins.tipo_item || ins.tipo_item === 'Insumo') && '(Auto)'}</label>
                             <Input value={ins.codigo} readOnly className="bg-zinc-100 text-zinc-500 cursor-not-allowed" />
                           </div>
                           <div className="space-y-2 md:col-span-2">

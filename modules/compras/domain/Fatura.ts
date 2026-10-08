@@ -14,6 +14,7 @@ export interface FaturaInsumo {
   desc_conta_protheus?: string;
   cd?: string;
   codigo_fornecedor?: string;
+  tipo_item?: 'Insumo' | 'Serviço' | 'Imposto/Taxa';
 }
 
 

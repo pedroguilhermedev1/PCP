@@ -32,7 +32,7 @@ export async function saveFaturaAction(fatura: Object) {
         // 2. Format CD function was moved outside
         // 3. Filter valid insumos, ignoring the ones already confirmed
         const validInsumos = faturaData.insumos
-          .filter(ins => !(ins as any)._meta)
+          .filter(ins => !(ins as any)._meta && (!ins.tipo_item || ins.tipo_item === 'Insumo'))
           .filter(ins => !confirmedCodigos.has(ins.codigo));
 
         if (validInsumos.length > 0) {
