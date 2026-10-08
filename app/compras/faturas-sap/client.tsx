@@ -88,8 +88,9 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
 
     if (!filterNovoSLA.includes('todos')) {
-      const isFinalizado = (calcularEtapa(f) === 'Aguardando pagamento' || calcularEtapa(f) === 'Pago');
-      if (isFinalizado) return false;
+      const etapa = calcularEtapa(f);
+      const isPaid = calcularStatus(f).startsWith('Pago');
+      if (etapa === 'Aguardando pagamento' || isPaid) return false;
 
       const viabilidade = calcularViabilidadePagamento(f);
       const matchesNovoSla = filterNovoSLA.some(slaOpt => {
