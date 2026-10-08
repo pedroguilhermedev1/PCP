@@ -1,6 +1,5 @@
 export const ADMIN_USERS = [
-  'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro',
-  'francisco.edson',
+  'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco',
 ];
 
 export const REPORTS_USERS: string[] = [];

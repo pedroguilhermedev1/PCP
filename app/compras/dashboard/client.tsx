@@ -64,7 +64,7 @@ export function DashboardClient({
 
   // Auth
   const [currentUser, setCurrentUser] = useState("");
-  const isAdmin = !currentUser || (currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('felipe.castro')) || currentUser.startsWith('francisco.edson') || (currentUser.startsWith('debora.mota') || currentUser.startsWith('raphael.ramiro'));
+  const isAdmin = !currentUser || (currentUser.startsWith('pedro.queiroz') || currentUser.startsWith('felipe.castro')) || currentUser.startsWith('francisco.edson') || (currentUser.startsWith('debora.mota') || currentUser.startsWith('raphael.ramiro') || currentUser.startsWith('lideranca.arco'));
   const isGabriel = currentUser.toLowerCase() === 'gabriel.oliveira';
 
   // Theme
@@ -129,7 +129,7 @@ export function DashboardClient({
     setUserRole(role);
     const cd = getUserCD(user);
     
-    const admin = !user || (user.startsWith('pedro.queiroz') || user.startsWith('felipe.castro')) || user.startsWith('francisco.edson') || (user.startsWith('debora.mota') || user.startsWith('raphael.ramiro'));
+    const admin = !user || (user.startsWith('pedro.queiroz') || user.startsWith('felipe.castro')) || user.startsWith('francisco.edson') || (user.startsWith('debora.mota') || user.startsWith('raphael.ramiro') || user.startsWith('lideranca.arco'));
     if (!admin) {
       setMainTab('operacional');
       setActiveTab('insumos');
