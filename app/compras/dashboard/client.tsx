@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 import { FaturasGantt } from "@/components/faturas/FaturasGantt";
 import { FaturaDetailsModal } from "@/components/faturas/FaturaDetailsModal";
+import { TimeDetailsModal } from "@/components/faturas/TimeDetailsModal";
 import { getFaturaPeriodosAction } from "../faturas-sap/periodos-actions";
 import { SelectFilter } from "@/components/ui/select-filter";
 import ApresentacaoSemanalClient from "@/app/compras/apresentacao-semanal/client";
@@ -91,6 +92,7 @@ export function DashboardClient({
   const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('gerencial');
   const [activeTab, setActiveTab] = useState<'faturas2' | 'insumos' | 'movimentacoes' | 'performance'>('faturas2');
   const [selectedViewFatura, setSelectedViewFatura] = useState<any | null>(null);
+  const [selectedStage, setSelectedStage] = useState<{fatura: any, stage: string} | null>(null);
   const [faturaPeriodos, setFaturaPeriodos] = useState<any[]>([]);
   const [listFiltroResp, setListFiltroResp] = useState('todos');
   const [listFiltroCD, setListFiltroCD] = useState('todos');
@@ -802,10 +804,19 @@ export function DashboardClient({
             handleDuplicate={() => {}}
             setFaturaToTransfer={() => {}}
             handleEdit={() => {}}
-            setSelectedStage={() => {}}
+            setSelectedStage={setSelectedStage}
             getStatusColor={(s) => 'gray'}
             getEtapaColor={(e) => 'gray'}
             getEtapaLabel={(e) => e}
+          />
+        )}
+
+        {selectedStage && (
+          <TimeDetailsModal
+            isOpen={!!selectedStage}
+            onClose={() => setSelectedStage(null)}
+            fatura={selectedStage.fatura}
+            stage={selectedStage.stage}
           />
         )}
 

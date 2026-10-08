@@ -10,11 +10,12 @@ export interface Lembrete {
   isCompleted: boolean;
   notified: boolean; 
   createdAt: string;
+  usuario?: string;
 }
 
 interface LembretesContextType {
   lembretes: Lembrete[];
-  addLembrete: (lembrete: Omit<Lembrete, "id" | "createdAt" | "notified">) => void;
+  addLembrete: (lembrete: Omit<Lembrete, "id" | "createdAt" | "notified" | "usuario">) => void;
   updateLembrete: (id: string, updates: Partial<Lembrete>) => void;
   deleteLembrete: (id: string) => void;
   markAsCompleted: (id: string) => void;
@@ -35,7 +36,12 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
 
   const fetchLembretes = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from('lembretes').select('*').order('createdAt', { ascending: false });
+    const user = typeof window !== 'undefined' ? localStorage.getItem('pcp_user') : null;
+    if (!user) {
+      setLembretes([]);
+      return;
+    }
+    const { data, error } = await supabase.from('lembretes').select('*').eq('usuario', user).order('createdAt', { ascending: false });
     if (!error && data) {
       // API returns column names like scheduledFor, isCompleted because we used them with quotes in SQL,
       // but let's map them just in case.
@@ -45,7 +51,8 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
         scheduledFor: l.scheduledFor || l.scheduled_for || l.scheduledFor,
         isCompleted: l.isCompleted === true || l.is_completed === true,
         notified: l.notified === true,
-        createdAt: l.createdAt || l.created_at || l.createdAt
+        createdAt: l.createdAt || l.created_at || l.createdAt,
+        usuario: l.usuario
       })) as Lembrete[];
       setLembretes(mapped);
     }
@@ -55,10 +62,12 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
     fetchLembretes();
   }, [fetchLembretes]);
 
-  const addLembrete = async (data: Omit<Lembrete, "id" | "createdAt" | "notified">) => {
+  const addLembrete = async (data: Omit<Lembrete, "id" | "createdAt" | "notified" | "usuario">) => {
+    const user = typeof window !== 'undefined' ? localStorage.getItem('pcp_user') : null;
     const novo: Partial<Lembrete> = {
       ...data,
       notified: false,
+      usuario: user || '',
     };
     if (!supabase) return;
     const { data: inserted, error } = await supabase.from('lembretes').insert([novo]).select().single();
@@ -69,7 +78,8 @@ export function LembretesProvider({ children }: { children: ReactNode }) {
         scheduledFor: inserted.scheduledFor || inserted.scheduled_for,
         isCompleted: inserted.isCompleted === true,
         notified: inserted.notified === true,
-        createdAt: inserted.createdAt || inserted.created_at
+        createdAt: inserted.createdAt || inserted.created_at,
+        usuario: inserted.usuario
       } as Lembrete, ...prev]);
     }
   };

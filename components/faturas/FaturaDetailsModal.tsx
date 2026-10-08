@@ -177,7 +177,7 @@ export function FaturaDetailsModal({
                                       </div>
 
                                       {/* T2 - Nexa */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between", fatura.doc_subsequente_criado ? "border-cyan-200" : "border-zinc-200 opacity-60")}>
+                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-cyan-50/30 transition-all", fatura.doc_subsequente_criado ? "border-cyan-200" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T2"})}>
                                         <div>
                                           <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T2</div>
                                           <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-1 mt-1">Nexa</span>
@@ -213,7 +213,7 @@ export function FaturaDetailsModal({
                                       </div>
 
                                       {/* T3 - Fiscal */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between", fatura.nexa_anexada ? "border-slate-300" : "border-zinc-200 opacity-60")}>
+                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/30 transition-all", fatura.nexa_anexada ? "border-slate-300" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T3"})}>
                                         <div>
                                           <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T3</div>
                                           <span className="text-[11px] font-bold text-slate-800 uppercase block mb-1 mt-1">Fiscal</span>
@@ -247,7 +247,7 @@ export function FaturaDetailsModal({
                                       </div>
 
                                       {/* T4 - Pagamento */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between", fatura.nexa_lancamento_concluido ? "border-green-300" : "border-zinc-200 opacity-60")}>
+                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-green-50/30 transition-all", fatura.nexa_lancamento_concluido ? "border-green-300" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T4"})}>
                                         <div>
                                           <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
                                           <span className="text-[11px] font-bold text-green-800 uppercase block mb-1 mt-1">Pagamento (Prog + Real)</span>
@@ -395,7 +395,7 @@ export function FaturaDetailsModal({
                                       </div>
 
                                       {/* T4 - Pagamento */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between", fatura.nexa_lancamento_concluido ? "border-green-300" : "border-zinc-200 opacity-60")}>
+                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-green-50/30 transition-all", fatura.nexa_lancamento_concluido ? "border-green-300" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T4"})}>
                                         <div>
                                           <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
                                           <span className="text-[11px] font-bold text-green-800 uppercase block mb-1 mt-1">Pagamento (Prog + Real)</span>
