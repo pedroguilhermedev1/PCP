@@ -153,7 +153,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
 
 
   const SLA_DIAS = 3;
-  const RESPONSAVEIS_LIST = ["Heitor Ribeiro", "Raphael Ramiro", "Débora Mota", "Diego Simões", "Rogger Hendler", "Guilherme Teixeira", "Rafael Inácio", "Joana Sá"];
+  const RESPONSAVEIS_LIST = ["Heitor Ribeiro", "Raphael Ramiro", "Débora Mota", "Diego Simões", "Rogger Hendler", "Guilherme Teixeira", "Rafael Inácio", "Joana Sá", "Luiz Felipe", "Rafael Soares", "Fernanda Serrano"];
 
   const MultiSelectResponsavel = ({ value, onChange, options }: { value: string, onChange: (val: string) => void, options: string[] }) => {
     const selected = value ? value.split(', ') : [];
