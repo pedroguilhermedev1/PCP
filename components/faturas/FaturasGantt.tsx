@@ -401,7 +401,7 @@ export function FaturasGantt({ faturas, flowType = '1.0' }: FaturasGanttProps) {
                         <div>
                           <h4 className="font-bold text-zinc-800 text-xs uppercase mb-2 flex items-center gap-1"><Info className="w-3 h-3" /> Detalhes Gerais</h4>
                           <div className="grid grid-cols-2 gap-y-1 gap-x-4 text-xs text-zinc-600">
-                            <span className="font-medium text-zinc-500">NF:</span> <span>{pf.fatura.numero_documento}</span>
+                            <span className="font-medium text-zinc-500">Doc:</span> <span>{pf.fatura.numero_documento}</span>
                             <span className="font-medium text-zinc-500">Fornecedor:</span> <span className="truncate">{pf.fatura.fornecedor}</span>
                             <span className="font-medium text-zinc-500">CD:</span> <span>{getFaturaCD(pf.fatura) || '-'}</span>
                             <span className="font-medium text-zinc-500">Valor:</span> <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pf.fatura.valor)}</span>

@@ -114,7 +114,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
       if (agrupamento === "Fornecedor") {
         // simplificar o nome do fornecedor para a matriz caber
         if (key.length > 15) key = key.substring(0, 15) + '...';
-        if (f.numero_documento) key += ` (NF: ${f.numero_documento})`;
+        if (f.numero_documento) key += ` (Doc: ${f.numero_documento})`;
       }
       
       const stats = map.get(key) || { planejado: 0, realizado: 0 };
@@ -247,7 +247,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
               </select>
             </div>
           </div>
-          <p className="text-zinc-500 font-medium mt-1">Aderência NF & Backlog - Visão Semana {selectedWeekIndex} ({format(w1.start, 'dd/MM/yyyy')} a {format(w1.end, 'dd/MM/yyyy')})</p>
+          <p className="text-zinc-500 font-medium mt-1">Aderência Doc & Backlog - Visão Semana {selectedWeekIndex} ({format(w1.start, 'dd/MM/yyyy')} a {format(w1.end, 'dd/MM/yyyy')})</p>
         </div>
         
         <div className="flex items-center gap-6">
@@ -404,7 +404,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
             <table className="w-full text-sm text-left">
               <thead>
                 <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-500 uppercase tracking-wider">
-                  <th className="px-6 py-3 font-semibold">Fatura / NF</th>
+                  <th className="px-6 py-3 font-semibold">Fatura / Doc</th>
                   <th className="px-6 py-3 font-semibold">Fornecedor</th>
                   <th className="px-6 py-3 font-semibold">Data Ideal (Prazo 10d)</th>
                   <th className="px-6 py-3 font-semibold">Motivo Desvio</th>
@@ -423,7 +423,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
                           <ChevronRight className={cn("w-4 h-4 text-zinc-400 transition-transform", isExpanded && "rotate-90")} />
                           <div>
                             {f.tipo_documento || f.id.split('__')[0]}
-                            <div className="text-zinc-400 font-sans mt-0.5 font-normal">NF: {f.numero_documento || '-'}</div>
+                            <div className="text-zinc-400 font-sans mt-0.5 font-normal">Doc: {f.numero_documento || '-'}</div>
                           </div>
                         </div>
                       </td>

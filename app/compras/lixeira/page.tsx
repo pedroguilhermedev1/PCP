@@ -128,7 +128,7 @@ export default function LixeiraPage() {
                 <table className="w-full text-left text-sm text-zinc-600">
                   <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 text-xs font-semibold uppercase tracking-wider">
                     <tr>
-                      <th className="px-6 py-4">Nota Fiscal / Doc</th>
+                      <th className="px-6 py-4">Documento</th>
                       <th className="px-6 py-4">Fornecedor</th>
                       <th className="px-6 py-4">Data de Exclusão</th>
                       <th className="px-6 py-4 text-right">Ações</th>

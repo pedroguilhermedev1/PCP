@@ -200,7 +200,7 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Nota Fiscal</label>
+                  <label className="text-sm font-medium">Documento</label>
                   <Input value={formData.numero_documento || ""} onChange={handleInputChange('numero_documento')} />
                 </div>
                 <div className="space-y-2">

@@ -91,7 +91,7 @@ export function FaturaDetailsModal({
                                     <span className="text-sm font-medium text-zinc-900">{formatCNPJ(fatura.cnpj)}</span>
                                   </div>
                                   <div>
-                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Nota Fiscal</span>
+                                    <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Documento</span>
                                     <span className="text-sm font-medium text-zinc-900">{fatura.numero_documento}</span>
                                   </div>
                                   <div>

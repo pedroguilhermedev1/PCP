@@ -707,7 +707,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                 <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
                   <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                     <TableRow className="border-zinc-100 hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nota Fiscal</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo</TableHead>

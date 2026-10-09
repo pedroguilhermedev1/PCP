@@ -243,7 +243,7 @@ export function RelatoriosClient() {
         if (cdStr === 'Jundiai') cdStr = 'Jundiaí';
 
         const baseFatura = {
-          "Nota Fiscal": d.numero_documento,
+          "Documento": d.numero_documento,
           "Identificador": d.codigo_fatura || d.tipo_documento || '-',
           "Fornecedor": d.fornecedor,
           "CNPJ": d.cnpj || '-',
@@ -553,7 +553,7 @@ export function RelatoriosClient() {
                     )}
                     {(activeTab === 'faturas' || activeTab === 'faturas-sap' || activeTab === 'sla') && (
                       <>
-                        <TableHead>Nota Fiscal</TableHead>
+                        <TableHead>Documento</TableHead>
                         <TableHead>Fornecedor</TableHead>
                         <TableHead>Dt Emissão</TableHead>
                         <TableHead>Dt Vencimento</TableHead>

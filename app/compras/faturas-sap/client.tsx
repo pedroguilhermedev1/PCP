@@ -270,7 +270,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       case 'Aguardando programação de pagamento': return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'Aguardando pagamento': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'Aguardando lançamento fiscal': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Aguardando emissão de NF': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'Aguardando emissão de Documento': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'Aguardando PC Nexa': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'Pago': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
@@ -281,7 +281,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     switch (etapa) {
       case 'Aguardando programação de pagamento': return 'Prog. de Pagamento';
       case 'Aguardando lançamento fiscal': return 'Lançamento Fiscal';
-      case 'Aguardando emissão de NF': return 'Emissão de NF';
+      case 'Aguardando emissão de Documento': return 'Emissão de Doc';
       case 'Aguardando pagamento': return 'Pagamento';
       case 'Aguardando PC Nexa': return 'PC Nexa';
       default: return etapa;
@@ -327,7 +327,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input 
               type="text" 
-              placeholder="Pesquisar por Fornecedor, NF, RC, PC, Pedido SAP ou Cód NEXA..."
+              placeholder="Pesquisar por Fornecedor, Doc, RC, PC, Pedido SAP ou Cód NEXA..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-zinc-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all shadow-sm"
@@ -421,7 +421,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Fornecedor</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Local</TableHead>
-              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Nota Fiscal</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
               <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Valor</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Vencimento</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status Fatura</TableHead>

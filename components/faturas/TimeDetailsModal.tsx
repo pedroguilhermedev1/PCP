@@ -86,8 +86,8 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
         details = [
           { label: 'Chamado / Ticket', value: fatura.nexa_chamado || 'Pendente', icon: <Info className="w-4 h-4" /> },
           { label: 'Data Abertura Nexa', value: renderDate(fatura.nexa_data_envio), icon: <Calendar className="w-4 h-4" /> },
-          { label: 'NF Emitida?', value: fatura.nexa_emitiu_nf ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'NF Anexada?', value: fatura.nexa_anexada ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Doc. Emitido?', value: fatura.nexa_emitiu_nf ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Doc. Anexado?', value: fatura.nexa_anexada ? 'Sim' : 'Não', icon: <CheckCircle className="w-4 h-4" /> },
           { label: 'Status SLA (1 dia)', value: renderSLA(fatura.data_pedido_sap, fatura.nexa_data_envio, 1), icon: <Timer className="w-4 h-4" /> }
         ];
         break;
@@ -209,7 +209,7 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm font-bold text-blue-700">Próxima janela normal de pagamento: sexta-feira, {projecao.proximaSextaNormal}</p>
                   {projecao.vencimentoUltrapassado && (
-                     <p className="text-xs font-bold text-red-600 mt-1">Atenção: O vencimento da NF já foi ultrapassado.</p>
+                     <p className="text-xs font-bold text-red-600 mt-1">Atenção: O vencimento do documento já foi ultrapassado.</p>
                   )}
                 </div>
               )}
