@@ -83,7 +83,7 @@ function NovaMovimentacaoModal({
   }, [isOpen, editItem, responsavel]);
 
   const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
-  const isPrivileged = (responsavelOriginal.startsWith('pedro.queiroz') || responsavelOriginal.startsWith('felipe.castro')) || responsavelOriginal.startsWith('francisco.edson');
+  const isPrivileged = (responsavelOriginal.startsWith('pedro.queiroz') || responsavelOriginal.startsWith('vando.sousa') || responsavelOriginal.startsWith('felipe.castro')) || responsavelOriginal.startsWith('francisco.edson');
   const setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
 
   useEffect(() => {
@@ -306,12 +306,12 @@ function InsumosModuleClientInner({ cd }: { cd: string }) {
       }
     }
     const admin = [
-      'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco'
+      'pedro.queiroz', 'vando.sousa', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco'
     ].includes(user || '')
     setIsAdmin(admin)
   }, [cd]);
 
-  const canEditOrDelete = !currentUserOriginal || (currentUserOriginal.startsWith('pedro.queiroz') || currentUserOriginal.startsWith('felipe.castro')) || currentUserOriginal.startsWith('francisco.edson');
+  const canEditOrDelete = !currentUserOriginal || (currentUserOriginal.startsWith('pedro.queiroz') || currentUserOriginal.startsWith('vando.sousa') || currentUserOriginal.startsWith('felipe.castro')) || currentUserOriginal.startsWith('francisco.edson');
 
   const cdName = cd_names_map[cd] || cd.toUpperCase();
 

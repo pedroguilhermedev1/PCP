@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getUserRole, ADMIN_USERS, OPERACIONAL_USERS } from '@/lib/roles';
+import { getUserRole, ADMIN_USERS, OPERACIONAL_USERS, formatUserName } from '@/lib/roles';
 import { toast } from 'sonner';
 
 export function LoginForm() {
@@ -68,6 +68,7 @@ export function LoginForm() {
         localStorage.setItem('pcp_user', parsedUsername);
         const fallbackRole = getUserRole(parsedUsername);
         if (fallbackRole) localStorage.setItem('pcp_role', fallbackRole);
+        localStorage.setItem('pcp_name', formatUserName(parsedUsername));
         toast.success('Login efetuado com sucesso!');
         router.push('/compras/dashboard');
         return;

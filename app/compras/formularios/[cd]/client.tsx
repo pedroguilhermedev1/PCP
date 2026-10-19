@@ -61,7 +61,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const cdName = cd_names_map[cd] || cd.toUpperCase();
 
   const [responsavelOriginal, setResponsavelOriginal] = useState("");
-  const isAjusteAllowed = (responsavelOriginal.toLowerCase() === 'pedro.queiroz' || responsavelOriginal.toLowerCase() === 'felipe.castro') || responsavelOriginal.toLowerCase() === 'francisco.edson';
+  const isAjusteAllowed = (responsavelOriginal.toLowerCase() === 'pedro.queiroz' || responsavelOriginal.toLowerCase() === 'vando.sousa' || responsavelOriginal.toLowerCase() === 'felipe.castro') || responsavelOriginal.toLowerCase() === 'francisco.edson';
   const isExternaAllowed = isAjusteAllowed && cd.toLowerCase() === 'psd';
   const isFabio = responsavelOriginal.toLowerCase() === 'fabio.pessoa';
   const isGabriel = responsavelOriginal.toLowerCase() === 'gabriel.oliveira';
@@ -78,7 +78,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
       setUserRole(role);
       setUserCD(userCd);
 
-      if ((user.toLowerCase() === 'pedro.queiroz' || user.toLowerCase() === 'felipe.castro') || user.toLowerCase() === 'francisco.edson') {
+      if ((user.toLowerCase() === 'pedro.queiroz' || user.toLowerCase() === 'vando.sousa' || user.toLowerCase() === 'felipe.castro') || user.toLowerCase() === 'francisco.edson') {
         setActiveTab('AJUSTE');
       } else if (user.toLowerCase() === 'fabio.pessoa') {
         setActiveTab('PENDENTES');
@@ -97,7 +97,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   }, [responsavel]);
 
   const setoresBase = ["Expedição", "CIQ", "Estoque", "Recebimento", "PMM"];
-  const isPrivileged = (responsavelOriginal.toLowerCase().startsWith('pedro.queiroz') || responsavelOriginal.toLowerCase().startsWith('felipe.castro')) || responsavelOriginal.toLowerCase().startsWith('francisco.edson');
+  const isPrivileged = (responsavelOriginal.toLowerCase().startsWith('pedro.queiroz') || responsavelOriginal.toLowerCase().startsWith('vando.sousa') || responsavelOriginal.toLowerCase().startsWith('felipe.castro')) || responsavelOriginal.toLowerCase().startsWith('francisco.edson');
   let setores = isPrivileged ? [...setoresBase, "Ajuste de Inventário"] : setoresBase;
 
   if (cd.toLowerCase() === 'jundiai' && responsavelOriginal.toLowerCase().startsWith('raphael.farrao')) {

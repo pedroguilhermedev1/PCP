@@ -193,7 +193,7 @@ export function Sidebar() {
   const isReportsOnly = currentUser === 'ivna.teixeira';
   const isLideranca = getUserRole(currentUser || '') === 'LIDERANCA';
 
-  const isAjusteEstoqueUser = (currentUser === 'pedro.queiroz' || currentUser === 'felipe.castro') || currentUser === 'francisco.edson';
+  const isAjusteEstoqueUser = (currentUser === 'pedro.queiroz' || currentUser === 'vando.sousa' || currentUser === 'felipe.castro') || currentUser === 'francisco.edson';
 
   // Injetar CDs dinamicamente nos items
   const dynamicSidebarItems = sidebarItems.map(item => {

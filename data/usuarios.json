@@ -1,0 +1,98 @@
+[
+  {
+    "id": "1",
+    "username": "pedro.queiroz",
+    "nome_completo": "Pedro Queiroz",
+    "role": "SUPERADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "2",
+    "username": "vando.sousa",
+    "nome_completo": "Vando Sousa",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "3",
+    "username": "debora.mota",
+    "nome_completo": "Débora Mota",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "4",
+    "username": "raphael.ramiro",
+    "nome_completo": "Raphael Ramiro",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "5",
+    "username": "francisco.edson",
+    "nome_completo": "Francisco Edson",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "6",
+    "username": "lideranca.arco",
+    "nome_completo": "Liderança Arco",
+    "role": "LIDERANCA",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "7",
+    "username": "raphael.farrao",
+    "nome_completo": "Raphael Farrão",
+    "role": "OPERACIONAL",
+    "cd_slug": "jundiai",
+    "ativo": true
+  },
+  {
+    "id": "8",
+    "username": "rafael.soares",
+    "nome_completo": "Rafael Soares",
+    "role": "OPERACIONAL",
+    "cd_slug": "nse",
+    "ativo": true
+  },
+  {
+    "id": "9",
+    "username": "fabio.pessoa",
+    "nome_completo": "Fábio Pessoa",
+    "role": "OPERACIONAL",
+    "cd_slug": "fortaleza",
+    "ativo": true
+  },
+  {
+    "id": "10",
+    "username": "gabriel.oliveira",
+    "nome_completo": "Gabriel Oliveira",
+    "role": "OPERACIONAL",
+    "cd_slug": "fortaleza",
+    "ativo": true
+  },
+  {
+    "id": "11",
+    "username": "psd.arco",
+    "nome_completo": "PSD",
+    "role": "OPERACIONAL",
+    "cd_slug": "psd",
+    "ativo": true
+  },
+  {
+    "id": "12",
+    "username": "coc.arco",
+    "nome_completo": "COC",
+    "role": "OPERACIONAL",
+    "cd_slug": "coc",
+    "ativo": true
+  }
+]

@@ -1,5 +1,5 @@
 export const ADMIN_USERS = [
-  'pedro.queiroz', 'felipe.castro', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco',
+  'pedro.queiroz', 'vando.sousa', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco',
 ];
 
 export const REPORTS_USERS: string[] = [];
@@ -23,6 +23,15 @@ export function getUserRole(username?: string) {
 
   const normalized = username.trim().toLowerCase();
 
+  // Suporte a role dinâmica via banco / login
+  if (typeof window !== 'undefined') {
+    const storedUser = localStorage.getItem('pcp_user');
+    const storedRole = localStorage.getItem('pcp_role');
+    if (storedUser && storedUser.trim().toLowerCase() === normalized && storedRole) {
+      return storedRole;
+    }
+  }
+
   if (normalized === 'pedro.queiroz') return 'SUPERADMIN';
 
   if (ADMIN_USERS.includes(normalized)) {
@@ -44,9 +53,18 @@ export function formatUserName(username?: string): string {
   if (!username) return '';
 
   const normalized = username.trim().toLowerCase();
+
+  if (typeof window !== 'undefined') {
+    const storedUser = localStorage.getItem('pcp_user');
+    const storedName = localStorage.getItem('pcp_name');
+    if (storedUser && storedUser.trim().toLowerCase() === normalized && storedName) {
+      return storedName;
+    }
+  }
   
   if (normalized === 'pedro.queiroz') return 'Pedro Queiroz';
   if (normalized === 'felipe.castro') return 'Felipe Castro';
+  if (normalized === 'vando.sousa') return 'Vando Sousa';
   if (normalized === 'debora.mota') return 'Débora Mota';
   if (normalized === 'raphael.ramiro') return 'Raphael Ramiro';
   if (normalized === 'francisco.edson') return 'Francisco Edson';
@@ -60,6 +78,10 @@ export function formatUserName(username?: string): string {
   if (normalized === 'coc.arco') return 'COC';
   if (normalized === 'lideranca.arco' || normalized === 'liderança.arco') return 'Liderança Arco';
   
+  if (username.includes('.')) {
+    return username.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+  }
+
   return username;
 }
 
@@ -67,6 +89,14 @@ export function getUserCD(username?: string): string | null {
   if (!username) return null;
 
   const normalized = username.trim().toLowerCase();
+
+  if (typeof window !== 'undefined') {
+    const storedUser = localStorage.getItem('pcp_user');
+    const storedCD = localStorage.getItem('pcp_cd');
+    if (storedUser && storedUser.trim().toLowerCase() === normalized && storedCD) {
+      return storedCD;
+    }
+  }
   
   if (['raphael.farrao', 'jundiai.arco'].includes(normalized)) return 'jundiai';
   if (['rafael.soares', 'nse.arco'].includes(normalized)) return 'nse';
