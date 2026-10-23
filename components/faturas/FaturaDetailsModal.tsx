@@ -1,5 +1,5 @@
 import React from 'react';
-import { Fatura, calcularStatus, calcularEtapa } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularStatus, calcularEtapa, getEtapasDatas, calcularTempoDias, parseObservacoes } from "@/modules/compras/domain/Fatura";
 import { formatCNPJ, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Copy, ArrowRightLeft, Edit, FileText, Clock, X } from "lucide-react";
@@ -65,10 +65,13 @@ export function FaturaDetailsModal({
                                     <Copy className="w-4 h-4 mr-2" />
                                     Duplicar
                                   </Button>
-                                  <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => setFaturaToTransfer(fatura)}>
-                                    <ArrowRightLeft className="w-4 h-4 mr-2" />
-                                    Transferir / Devolver
-                                  </Button>
+                                  {/* Botão Transferir / Devolver ocultado temporariamente */}
+                                  {false && (
+                                    <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => fatura && setFaturaToTransfer(fatura)}>
+                                      <ArrowRightLeft className="w-4 h-4 mr-2" />
+                                      Transferir / Devolver
+                                    </Button>
+                                  )}
                                   <Button variant="secondary" size="sm" onClick={() => handleEdit(fatura)}>
                                     <Edit className="w-4 h-4 mr-2" />
                                     Editar
@@ -126,319 +129,470 @@ export function FaturaDetailsModal({
 
                                                             {/* Fluxo */}
                               <div className="space-y-5 col-span-1 md:col-span-2 lg:col-span-3 mt-4 pt-4 border-t border-zinc-200">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-6">Fluxo de Trabalho ({fatura.fluxo_iniciado_por || 'SAP'})</h4>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                  {fatura.fluxo_iniciado_por !== 'Nexa' ? (
+                                {(() => {
+                                  const datas = getEtapasDatas(fatura);
+                                  const obs = parseObservacoes(fatura.observacoes);
+                                  const isFluxoSap = fatura.fluxo_iniciado_por !== 'Nexa';
+
+                                  const tempoRcAprov = calcularTempoDias(datas.sap_rc_criacao, datas.sap_rc_aprovacao);
+                                  const tempoSapNexa = calcularTempoDias(datas.sap_rc_aprovacao || datas.sap_pc_geracao, datas.nexa_abertura);
+                                  const tempoNexaFiscal = calcularTempoDias(datas.nexa_abertura, datas.fiscal_conclusao);
+                                  const tempoFiscalPagto = calcularTempoDias(datas.fiscal_conclusao, datas.pagamento_efetiva || datas.pagamento_prevista);
+
+                                  if (isFluxoSap) {
+                                    return (
+                                      <>
+                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                                          <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                            Fluxo de Trabalho 1 (SAP + Nexa)
+                                          </h4>
+                                          <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-0.5 rounded-full font-semibold w-fit">
+                                            SAP → Nexa → Fiscal → Pagamento
+                                          </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                          {/* T1 - SAP */}
+                                          <div 
+                                            className="relative p-4 bg-white rounded-xl border border-purple-200 hover:border-purple-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-purple-50/30"
+                                            onClick={() => setSelectedStage({fatura, stage: "T1"})}
+                                          >
+                                            <div>
+                                              <div className="absolute -top-3 left-4 w-6 h-6 bg-purple-50 rounded-full border border-purple-300 flex items-center justify-center text-[10px] font-bold text-purple-700">T1</div>
+                                              <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1 mt-1">SAP (RC, Aprovação, PC)</span>
+
+                                              <div className="space-y-2.5 mt-3 text-xs">
+                                                <div className="flex justify-between pb-1.5 border-b border-purple-100">
+                                                  <span className="text-zinc-500 font-medium">Nº RC:</span>
+                                                  <span className="font-bold text-zinc-900">{fatura.rc_sap || 'Pendente'}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-zinc-500">Criação RC:</span>
+                                                  <span className="font-medium text-zinc-800">{formatDateDisplay(datas.sap_rc_criacao)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center py-1 px-1.5 rounded bg-purple-50/60 border border-purple-100">
+                                                  <span className="text-purple-700 font-semibold text-[11px]">Aprovação RC:</span>
+                                                  <span className="font-bold text-purple-900 text-[11px]">{formatDateDisplay(datas.sap_rc_aprovacao)}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-1 border-t border-purple-100">
+                                                  <span className="text-zinc-500 font-medium">Nº Pedido (PC):</span>
+                                                  <span className="font-bold text-zinc-900">{fatura.pedido_sap || 'Pendente'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[11px]">
+                                                  <span className="text-zinc-500">Geração PC:</span>
+                                                  <span className="font-medium text-zinc-700">
+                                                    {formatDateDisplay(datas.sap_pc_geracao)}
+                                                    {datas.sap_pc_is_inherited && (
+                                                      <span className="ml-1 text-[9px] text-purple-600 font-normal">(herdada)</span>
+                                                    )}
+                                                  </span>
+                                                </div>
+
+                                                {tempoRcAprov !== null && (
+                                                  <div className="text-[9px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded text-center">
+                                                    Criação → Aprovação: {tempoRcAprov} dia(s)
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Ocorrências ocultadas temporariamente */}
+                                            {false && (
+                                              <div className="mt-3 space-y-1.5">
+                                                {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T1' || oc.t_origem === 'T1').map(oc => (
+                                                  <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T1' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                    <div className="flex justify-between">
+                                                      <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T1' ? 'text-red-700' : 'text-orange-700')}>
+                                                        {oc.t_destino === 'T1' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                      </h5>
+                                                    </div>
+                                                    <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T1' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* T2 - Nexa */}
+                                          <div 
+                                            className="relative p-4 bg-white rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-cyan-50/30"
+                                            onClick={() => setSelectedStage({fatura, stage: "T2"})}
+                                          >
+                                            <div>
+                                              <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T2</div>
+                                              <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-1 mt-1">Nexa</span>
+
+                                              <div className="space-y-2.5 mt-3 text-xs">
+                                                <div className="flex justify-between items-center py-1 px-1.5 rounded bg-cyan-50/60 border border-cyan-100">
+                                                  <span className="text-cyan-700 font-semibold text-[11px]">Início (Herdada SAP):</span>
+                                                  <span className="font-bold text-cyan-900 text-[11px]">{formatDateDisplay(datas.nexa_inicio)}</span>
+                                                </div>
+                                                <div className="flex justify-between pb-1.5 border-b border-cyan-100">
+                                                  <span className="text-zinc-500 font-medium">Chamado:</span>
+                                                  <span className="font-bold text-zinc-900">{fatura.nexa_chamado || 'Pendente'}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-zinc-500">Abertura:</span>
+                                                  <span className="font-bold text-cyan-800">{formatDateDisplay(datas.nexa_abertura)}</span>
+                                                </div>
+                                                {datas.nexa_conclusao && (
+                                                  <div className="flex justify-between text-[11px]">
+                                                    <span className="text-zinc-500">Conclusão:</span>
+                                                    <span className="font-medium text-zinc-700">{formatDateDisplay(datas.nexa_conclusao)}</span>
+                                                  </div>
+                                                )}
+                                                {tempoSapNexa !== null && (
+                                                  <div className="text-[9px] font-semibold text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded text-center">
+                                                    Aprovação → Abertura: {tempoSapNexa} dia(s)
+                                                  </div>
+                                                )}
+                                                <div className="pt-1.5 border-t border-cyan-100 flex justify-between text-[10px] text-zinc-500">
+                                                  <span>Etapa concluída: <b className="text-zinc-800">{fatura.nexa_emitiu_nf && fatura.nexa_anexada ? 'Sim' : 'Não'}</b></span>
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* Ocorrências ocultadas temporariamente */}
+                                            {false && (
+                                              <div className="mt-3 space-y-1.5">
+                                                {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T2' || oc.t_origem === 'T2').map(oc => (
+                                                  <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T2' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                    <div className="flex justify-between">
+                                                      <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T2' ? 'text-red-700' : 'text-orange-700')}>
+                                                        {oc.t_destino === 'T2' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                      </h5>
+                                                    </div>
+                                                    <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T2' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* T3 - Fiscal */}
+                                          <div 
+                                            className="relative p-4 bg-white rounded-xl border border-slate-300 hover:border-slate-400 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/30"
+                                            onClick={() => setSelectedStage({fatura, stage: "T3"})}
+                                          >
+                                            <div>
+                                              <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T3</div>
+                                              <span className="text-[11px] font-bold text-slate-800 uppercase block mb-1 mt-1">Fiscal</span>
+
+                                              <div className="space-y-2.5 mt-3 text-xs">
+                                                <div className="flex justify-between items-center py-1 px-1.5 rounded bg-slate-100 border border-slate-200">
+                                                  <span className="text-slate-600 font-semibold text-[11px]">Início (Herdada Nexa):</span>
+                                                  <span className="font-bold text-slate-900 text-[11px]">{formatDateDisplay(datas.fiscal_inicio)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-zinc-500 font-medium">Status:</span>
+                                                  <span className={cn("font-bold text-[11px] px-2 py-0.5 rounded", fatura.nexa_lancamento_concluido ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800")}>
+                                                    {fatura.nexa_lancamento_concluido ? 'Concluído' : 'Em andamento'}
+                                                  </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-zinc-500">Conclusão Fiscal:</span>
+                                                  <span className="font-bold text-slate-800">{formatDateDisplay(datas.fiscal_conclusao)}</span>
+                                                </div>
+
+                                                {tempoNexaFiscal !== null && (
+                                                  <div className="text-[9px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-center">
+                                                    Nexa → Fiscal: {tempoNexaFiscal} dia(s)
+                                                  </div>
+                                                )}
+
+                                                {obs.fiscal_observacao && (
+                                                  <div className="pt-2 border-t border-slate-100">
+                                                    <span className="text-[9px] font-semibold text-zinc-500 uppercase block mb-0.5">Observação:</span>
+                                                    <p className="text-[10px] text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-200 italic line-clamp-2">
+                                                      "{obs.fiscal_observacao}"
+                                                    </p>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Ocorrências ocultadas temporariamente */}
+                                            {false && (
+                                              <div className="mt-3 space-y-1.5">
+                                                {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T3' || oc.t_origem === 'T3').map(oc => (
+                                                  <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T3' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                    <div className="flex justify-between">
+                                                      <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T3' ? 'text-red-700' : 'text-orange-700')}>
+                                                        {oc.t_destino === 'T3' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                      </h5>
+                                                    </div>
+                                                    <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T3' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* T4 - Pagamento */}
+                                          <div 
+                                            className="relative p-4 bg-white rounded-xl border border-green-300 hover:border-green-400 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-green-50/30"
+                                            onClick={() => setSelectedStage({fatura, stage: "T4"})}
+                                          >
+                                            <div>
+                                              <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
+                                              <span className="text-[11px] font-bold text-green-800 uppercase block mb-1 mt-1">Pagamento (Prog + Real)</span>
+
+                                              <div className="space-y-2.5 mt-3 text-xs">
+                                                <div className="flex justify-between items-center py-1 px-1.5 rounded bg-green-50/60 border border-green-200">
+                                                  <span className="text-green-700 font-semibold text-[11px]">Início (Herdada Fiscal):</span>
+                                                  <span className="font-bold text-green-900 text-[11px]">{formatDateDisplay(datas.pagamento_inicio)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                  <span className="text-zinc-500 font-medium">Status:</span>
+                                                  <span className={cn(
+                                                    "font-bold text-[10px] px-2 py-0.5 rounded",
+                                                    datas.pagamento_status === 'Pago' ? 'bg-green-100 text-green-800' :
+                                                    datas.pagamento_status === 'Programado' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                                                  )}>
+                                                    {datas.pagamento_status}
+                                                  </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-zinc-500">Data Prevista:</span>
+                                                  <span className="font-semibold text-blue-700">{formatDateDisplay(datas.pagamento_prevista)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                  <span className="text-zinc-500 font-medium">Data Efetiva (Real):</span>
+                                                  <span className="font-bold text-green-700">{formatDateDisplay(datas.pagamento_efetiva)}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-1 border-t border-green-100">
+                                                  <span className="text-zinc-500 font-medium">Valor Pago:</span>
+                                                  <span className="font-bold text-zinc-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor || 0)}</span>
+                                                </div>
+
+                                                {tempoFiscalPagto !== null && (
+                                                  <div className="text-[9px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded text-center">
+                                                    Envio Fiscal → Pagamento: {tempoFiscalPagto} dia(s)
+                                                  </div>
+                                                )}
+
+                                                {obs.pagamento_observacao && (
+                                                  <div className="pt-2 border-t border-green-100">
+                                                    <span className="text-[9px] font-semibold text-zinc-500 uppercase block mb-0.5">Observação:</span>
+                                                    <p className="text-[10px] text-green-800 bg-green-50 p-1.5 rounded border border-green-200 italic line-clamp-2">
+                                                      "{obs.pagamento_observacao}"
+                                                    </p>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Ocorrências ocultadas temporariamente */}
+                                            {false && (
+                                              <div className="mt-3 space-y-1.5">
+                                                {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T4' || oc.t_origem === 'T4').map(oc => (
+                                                  <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T4' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                    <div className="flex justify-between">
+                                                      <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T4' ? 'text-red-700' : 'text-orange-700')}>
+                                                        {oc.t_destino === 'T4' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                      </h5>
+                                                    </div>
+                                                    <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T4' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </>
+                                    );
+                                  }
+
+                                  // Fluxo 2 (Nexa Direto) - Exibição de 3 etapas
+                                  return (
                                     <>
-                                      {/* T1 - SAP */}
-                                      <div className="relative p-4 bg-white rounded-xl border border-purple-200 hover:border-purple-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-purple-50/30" onClick={() => setSelectedStage({fatura, stage: "T1"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-purple-50 rounded-full border border-purple-300 flex items-center justify-center text-[10px] font-bold text-purple-700">T1</div>
-                                          <span className="text-[11px] font-bold text-purple-800 uppercase block mb-1 mt-1">SAP (RC, Aprovação, PC)</span>
-                                          
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="pb-2 border-b border-purple-100 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">RC</span> <span className="font-medium text-zinc-900">{fatura.rc_sap || '-'}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.rc_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.rc_data_fim)}</span></div>
-                                            </div>
-                                            <div className="pb-2 border-b border-purple-100 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Aprovação</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.aprovacao_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.aprovacao_data_fim)}</span></div>
-                                            </div>
-                                            <div className="pb-2 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">PC</span> <span className="font-medium text-zinc-900">{fatura.pedido_sap || '-'}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.pc_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.pc_data_fim)}</span></div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T1' || oc.t_origem === 'T1').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T1' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T1' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T1' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T1' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T1' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T1' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
+                                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                                        <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                                          Fluxo de Trabalho 2 (Nexa Direto)
+                                        </h4>
+                                        <span className="text-[10px] text-cyan-700 bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 rounded-full font-semibold w-fit">
+                                          Nexa Solicitação → Lançamento Fiscal → Pagamento
+                                        </span>
                                       </div>
 
-                                      {/* T2 - Nexa */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-cyan-50/30 transition-all", fatura.doc_subsequente_criado ? "border-cyan-200" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T2"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T2</div>
-                                          <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-1 mt-1">Nexa</span>
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Chamado</span> <span className="font-medium text-zinc-900">{fatura.nexa_chamado || '-'}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.nexa_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.nexa_data_fim)}</span></div>
-                                              <div className="flex justify-between mt-2 pt-2 border-t border-cyan-100"><span className="text-zinc-500">Doc Emitido?</span> <span>{fatura.nexa_emitiu_nf ? 'Sim' : 'Não'}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Doc Anexado?</span> <span>{fatura.nexa_anexada ? 'Sim' : 'Não'}</span></div>
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* T1 - Nexa / Solicitação */}
+                                        <div 
+                                          className="relative p-4 bg-white rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-cyan-50/30"
+                                          onClick={() => setSelectedStage({fatura, stage: "T1"})}
+                                        >
+                                          <div>
+                                            <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T1</div>
+                                            <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-1 mt-1">Nexa / Solicitação</span>
+
+                                            <div className="space-y-2.5 mt-3 text-xs">
+                                              <div className="flex justify-between pb-1.5 border-b border-cyan-100">
+                                                <span className="text-zinc-500 font-medium">Chamado:</span>
+                                                <span className="font-bold text-zinc-900">{fatura.nexa_chamado || 'Pendente'}</span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                <span className="text-zinc-500">Data Abertura:</span>
+                                                <span className="font-bold text-cyan-800">{formatDateDisplay(datas.nexa_abertura)}</span>
+                                              </div>
+                                              {datas.nexa_conclusao && (
+                                                <div className="flex justify-between text-[11px]">
+                                                  <span className="text-zinc-500">Conclusão (Histórico):</span>
+                                                  <span className="font-medium text-zinc-700">{formatDateDisplay(datas.nexa_conclusao)}</span>
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
-                                        </div>
 
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T2' || oc.t_origem === 'T2').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T2' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T2' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T2' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T2' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T2' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T2' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
+                                          {/* Ocorrências ocultadas temporariamente */}
+                                          {false && (
+                                            <div className="mt-3 space-y-1.5">
+                                              {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T1' || oc.t_origem === 'T1').map(oc => (
+                                                <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T1' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                  <div className="flex justify-between">
+                                                    <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T1' ? 'text-red-700' : 'text-orange-700')}>
+                                                      {oc.t_destino === 'T1' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                    </h5>
+                                                  </div>
+                                                  <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T1' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                </div>
+                                              ))}
                                             </div>
-                                          ))}
+                                          )}
                                         </div>
-                                      </div>
 
-                                      {/* T3 - Fiscal */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/30 transition-all", fatura.nexa_anexada ? "border-slate-300" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T3"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T3</div>
-                                          <span className="text-[11px] font-bold text-slate-800 uppercase block mb-1 mt-1">Fiscal</span>
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="space-y-1">
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.fiscal_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.fiscal_data_fim)}</span></div>
-                                              <div className="flex justify-between mt-2 pt-2 border-t border-slate-100"><span className="text-zinc-500">Concluído?</span> <span>{fatura.nexa_lancamento_concluido ? 'Sim' : 'Não'}</span></div>
+                                        {/* T2 - Lançamento Fiscal */}
+                                        <div 
+                                          className="relative p-4 bg-white rounded-xl border border-slate-300 hover:border-slate-400 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/30"
+                                          onClick={() => setSelectedStage({fatura, stage: "T2"})}
+                                        >
+                                          <div>
+                                            <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T2</div>
+                                            <span className="text-[11px] font-bold text-slate-800 uppercase block mb-1 mt-1">Lançamento Fiscal</span>
+
+                                            <div className="space-y-2.5 mt-3 text-xs">
+                                              <div className="flex justify-between items-center py-1 px-1.5 rounded bg-slate-100 border border-slate-200">
+                                                <span className="text-slate-600 font-semibold text-[11px]">Início (Herdada Nexa):</span>
+                                                <span className="font-bold text-slate-900 text-[11px]">{formatDateDisplay(datas.fiscal_inicio)}</span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                <span className="text-zinc-500 font-medium">Status:</span>
+                                                <span className={cn("font-bold text-[11px] px-2 py-0.5 rounded", fatura.nexa_lancamento_concluido ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800")}>
+                                                  {fatura.nexa_lancamento_concluido ? 'Concluído' : 'Em andamento'}
+                                                </span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                <span className="text-zinc-500">Conclusão Fiscal:</span>
+                                                <span className="font-bold text-slate-800">{formatDateDisplay(datas.fiscal_conclusao)}</span>
+                                              </div>
+
+                                              {tempoNexaFiscal !== null && (
+                                                <div className="text-[9px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-center">
+                                                  Nexa → Fiscal: {tempoNexaFiscal} dia(s)
+                                                </div>
+                                              )}
+
+                                              {obs.fiscal_observacao && (
+                                                <div className="pt-2 border-t border-slate-100">
+                                                  <span className="text-[9px] font-semibold text-zinc-500 uppercase block mb-0.5">Observação:</span>
+                                                  <p className="text-[10px] text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-200 italic line-clamp-2">
+                                                    "{obs.fiscal_observacao}"
+                                                  </p>
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
+
+                                          {/* Ocorrências ocultadas temporariamente */}
+                                          {false && (
+                                            <div className="mt-3 space-y-1.5">
+                                              {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T2' || oc.t_origem === 'T2').map(oc => (
+                                                <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T2' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                  <div className="flex justify-between">
+                                                    <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T2' ? 'text-red-700' : 'text-orange-700')}>
+                                                      {oc.t_destino === 'T2' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                    </h5>
+                                                  </div>
+                                                  <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T2' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
                                         </div>
 
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T3' || oc.t_origem === 'T3').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T3' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                        {/* T3 - Pagamento */}
+                                        <div 
+                                          className="relative p-4 bg-white rounded-xl border border-green-300 hover:border-green-400 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-green-50/30"
+                                          onClick={() => setSelectedStage({fatura, stage: "T3"})}
+                                        >
+                                          <div>
+                                            <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T3</div>
+                                            <span className="text-[11px] font-bold text-green-800 uppercase block mb-1 mt-1">Pagamento (Prog + Real)</span>
+
+                                            <div className="space-y-2.5 mt-3 text-xs">
+                                              <div className="flex justify-between items-center py-1 px-1.5 rounded bg-green-50/60 border border-green-200">
+                                                <span className="text-green-700 font-semibold text-[11px]">Início (Herdada Fiscal):</span>
+                                                <span className="font-bold text-green-900 text-[11px]">{formatDateDisplay(datas.pagamento_inicio)}</span>
+                                              </div>
+                                              <div className="flex justify-between items-center">
+                                                <span className="text-zinc-500 font-medium">Status:</span>
+                                                <span className={cn(
+                                                  "font-bold text-[10px] px-2 py-0.5 rounded",
+                                                  datas.pagamento_status === 'Pago' ? 'bg-green-100 text-green-800' :
+                                                  datas.pagamento_status === 'Programado' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                                                )}>
+                                                  {datas.pagamento_status}
+                                                </span>
+                                              </div>
                                               <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T3' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T3' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
+                                                <span className="text-zinc-500">Data Prevista:</span>
+                                                <span className="font-semibold text-blue-700">{formatDateDisplay(datas.pagamento_prevista)}</span>
                                               </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T3' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T3' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
+                                              <div className="flex justify-between">
+                                                <span className="text-zinc-500 font-medium">Data Efetiva (Real):</span>
+                                                <span className="font-bold text-green-700">{formatDateDisplay(datas.pagamento_efetiva)}</span>
                                               </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T3' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
+                                              <div className="flex justify-between pt-1 border-t border-green-100">
+                                                <span className="text-zinc-500 font-medium">Valor Pago:</span>
+                                                <span className="font-bold text-zinc-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor || 0)}</span>
                                               </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
 
-                                      {/* T4 - Pagamento */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-green-50/30 transition-all", fatura.nexa_lancamento_concluido ? "border-green-300" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T4"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
-                                          <span className="text-[11px] font-bold text-green-800 uppercase block mb-1 mt-1">Pagamento (Prog + Real)</span>
-                                          
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="pb-2 border-b border-green-100 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Programação</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.prog_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Prevista:</span> <span>{formatDateDisplay(fatura.nexa_data_prevista_pagamento)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.prog_data_fim)}</span></div>
-                                            </div>
-                                            <div className="pt-1 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Pagamento</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.pagamento_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Data Real:</span> <span className="font-medium text-green-700">{formatDateDisplay(fatura.data_pagamento_real)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.pagamento_data_fim)}</span></div>
-                                              <div className="flex justify-between mt-1"><span className="text-zinc-500">Pago?</span> <span>{fatura.nexa_pagamento_realizado ? 'Sim' : 'Não'}</span></div>
+                                              {tempoFiscalPagto !== null && (
+                                                <div className="text-[9px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded text-center">
+                                                  Envio Fiscal → Pagamento: {tempoFiscalPagto} dia(s)
+                                                </div>
+                                              )}
+
+                                              {obs.pagamento_observacao && (
+                                                <div className="pt-2 border-t border-green-100">
+                                                  <span className="text-[9px] font-semibold text-zinc-500 uppercase block mb-0.5">Observação:</span>
+                                                  <p className="text-[10px] text-green-800 bg-green-50 p-1.5 rounded border border-green-200 italic line-clamp-2">
+                                                    "{obs.pagamento_observacao}"
+                                                  </p>
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
-                                        </div>
 
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T4' || oc.t_origem === 'T4').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T4' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T4' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T4' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T4' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T4' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T4' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
+                                          {/* Ocorrências ocultadas temporariamente */}
+                                          {false && (
+                                            <div className="mt-3 space-y-1.5">
+                                              {fatura?.ocorrencias?.filter(oc => oc.t_destino === 'T3' || oc.t_origem === 'T3').map(oc => (
+                                                <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T3' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
+                                                  <div className="flex justify-between">
+                                                    <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T3' ? 'text-red-700' : 'text-orange-700')}>
+                                                      {oc.t_destino === 'T3' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
+                                                    </h5>
+                                                  </div>
+                                                  <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T3' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
+                                                </div>
+                                              ))}
                                             </div>
-                                          ))}
+                                          )}
                                         </div>
                                       </div>
                                     </>
-                                  ) : (
-                                    <>
-                                      {/* T1 - Nexa */}
-                                      <div className="relative p-4 bg-white rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-cyan-50/30" onClick={() => setSelectedStage({fatura, stage: "T1"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-cyan-50 rounded-full border border-cyan-300 flex items-center justify-center text-[10px] font-bold text-cyan-700">T1</div>
-                                          <span className="text-[11px] font-bold text-cyan-800 uppercase block mb-1 mt-1">Nexa / Solicitação</span>
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Chamado</span> <span className="font-medium text-zinc-900">{fatura.nexa_chamado || '-'}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.nexa_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.nexa_data_fim)}</span></div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T1' || oc.t_origem === 'T1').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T1' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T1' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T1' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T1' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T1' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T1' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      {/* T2 - Requisição / Pedido */}
-                                      <div className="relative p-4 bg-white rounded-xl border border-blue-200 hover:border-blue-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-blue-50/30" onClick={() => setSelectedStage({fatura, stage: "T2"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-blue-50 rounded-full border border-blue-300 flex items-center justify-center text-[10px] font-bold text-blue-700">T2</div>
-                                          <span className="text-[11px] font-bold text-blue-800 uppercase block mb-1 mt-1">Requisição / Pedido (Nexa)</span>
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="space-y-1">
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.req_nexa_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">RC Nexa</span> <span className="font-medium text-zinc-900">{fatura.nexa_rc_numero || '-'}</span></div>
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">PC Nexa</span> <span className="font-medium text-zinc-900">{fatura.numero_pc_nexa || '-'}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.req_nexa_data_fim)}</span></div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T2' || oc.t_origem === 'T2').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T2' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T2' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T2' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T2' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T2' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T2' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      {/* T3 - Fiscal */}
-                                      <div className="relative p-4 bg-white rounded-xl border border-slate-200 hover:border-slate-300 transition-all shadow-sm flex flex-col justify-between cursor-pointer hover:bg-slate-50/30" onClick={() => setSelectedStage({fatura, stage: "T3"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-slate-100 rounded-full border border-slate-300 flex items-center justify-center text-[10px] font-bold text-slate-700">T3</div>
-                                          <span className="text-[11px] font-bold text-slate-800 uppercase block mb-1 mt-1">Fiscal</span>
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="space-y-1">
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.fiscal_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.fiscal_data_fim)}</span></div>
-                                              <div className="flex justify-between mt-2 pt-2 border-t border-slate-100"><span className="text-zinc-500">Concluído?</span> <span>{fatura.nexa_lancamento_concluido ? 'Sim' : 'Não'}</span></div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                        
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T3' || oc.t_origem === 'T3').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T3' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T3' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T3' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T3' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T3' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T3' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      {/* T4 - Pagamento */}
-                                      <div className={cn("relative p-4 bg-white rounded-xl border shadow-sm flex flex-col justify-between cursor-pointer hover:bg-green-50/30 transition-all", fatura.nexa_lancamento_concluido ? "border-green-300" : "border-zinc-200")} onClick={() => setSelectedStage({fatura, stage: "T4"})}>
-                                        <div>
-                                          <div className="absolute -top-3 left-4 w-6 h-6 bg-green-50 rounded-full border border-green-300 flex items-center justify-center text-[10px] font-bold text-green-700">T4</div>
-                                          <span className="text-[11px] font-bold text-green-800 uppercase block mb-1 mt-1">Pagamento (Prog + Real)</span>
-                                          
-                                          <div className="space-y-3 mt-2 text-xs">
-                                            <div className="pb-2 border-b border-green-100 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Programação</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.prog_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Prevista:</span> <span>{formatDateDisplay(fatura.nexa_data_prevista_pagamento)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.prog_data_fim)}</span></div>
-                                            </div>
-                                            <div className="pt-1 space-y-1">
-                                              <div className="flex justify-between"><span className="font-semibold text-zinc-500 uppercase">Pagamento</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(fatura.pagamento_data_inicio)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Data Real:</span> <span className="font-medium text-green-700">{formatDateDisplay(fatura.data_pagamento_real)}</span></div>
-                                              <div className="flex justify-between"><span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(fatura.pagamento_data_fim)}</span></div>
-                                              <div className="flex justify-between mt-1"><span className="text-zinc-500">Pago?</span> <span>{fatura.nexa_pagamento_realizado ? 'Sim' : 'Não'}</span></div>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div className="mt-2 space-y-2">
-                                          {fatura.ocorrencias?.filter(oc => oc.t_destino === 'T4' || oc.t_origem === 'T4').map(oc => (
-                                            <div key={oc.id} className={cn("p-2 rounded-lg space-y-1 border", oc.t_destino === 'T4' ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200')}>
-                                              <div className="flex justify-between">
-                                                <h5 className={cn("text-[10px] font-bold", oc.t_destino === 'T4' ? 'text-red-700' : 'text-orange-700')}>
-                                                  {oc.t_destino === 'T4' ? `${oc.t_destino_codigo} - Ocorrência` : `${oc.t_origem_retorno_codigo} - Retorno`}
-                                                </h5>
-                                              </div>
-                                              <p className={cn("text-[9px] font-medium leading-tight", oc.t_destino === 'T4' ? 'text-red-600' : 'text-orange-600')}>{oc.motivo}</p>
-                                              <div className="flex justify-between text-[9px] pt-1">
-                                                <span className="text-zinc-500">Início:</span> <span>{formatDateDisplay(oc.t_destino === 'T4' ? oc.destino_data_inicio : oc.origem_data_inicio)}</span>
-                                              </div>
-                                              <div className="flex justify-between text-[9px]">
-                                                <span className="text-zinc-500">Fim:</span> <span>{formatDateDisplay(oc.t_destino === 'T4' ? oc.destino_data_fim : oc.origem_data_fim)}</span>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                             

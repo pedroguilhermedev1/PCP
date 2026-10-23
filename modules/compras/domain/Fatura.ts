@@ -168,6 +168,8 @@ export interface Fatura {
 
   data_pagamento_real?: string;
   observacoes?: string;
+  fiscal_observacao?: string;
+  pagamento_observacao?: string;
   
   // Responsaveis T (Cards)
   responsavel_t1?: string;
@@ -264,18 +266,17 @@ export function calcularStatus(fatura: Partial<Fatura>): string {
 export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
   if (fatura.is_sap) {
     if (fatura.fluxo_iniciado_por === 'Nexa') {
-      if (!fatura.pc_nexa_concluido) return 'Aguardando PC Nexa';
       if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
-      if (!fatura.nexa_pagamento_programado) return 'Aguardando programação de pagamento';
-      if (!fatura.nexa_pagamento_realizado) return 'Aguardando pagamento';
+      if (!fatura.nexa_pagamento_programado && fatura.status_pagamento !== 'Pago' && !fatura.nexa_pagamento_realizado) return 'Aguardando programação de pagamento';
+      if (!fatura.nexa_pagamento_realizado && fatura.status_pagamento !== 'Pago') return 'Aguardando pagamento';
       return 'Pago';
     }
 
     if (fatura.doc_subsequente_criado) {
       if (!fatura.nexa_emitiu_nf) return 'Aguardando emissão de Documento';
       if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
-      if (!fatura.nexa_pagamento_programado) return 'Aguardando programação de pagamento';
-      if (!fatura.nexa_pagamento_realizado) return 'Aguardando pagamento';
+      if (!fatura.nexa_pagamento_programado && fatura.status_pagamento !== 'Pago' && !fatura.nexa_pagamento_realizado) return 'Aguardando programação de pagamento';
+      if (!fatura.nexa_pagamento_realizado && fatura.status_pagamento !== 'Pago') return 'Aguardando pagamento';
       return 'Pago';
     }
     if (fatura.pedido_sap || fatura.data_pedido_sap) return 'Pedido de Compras';
@@ -661,4 +662,127 @@ export function calcularSlaDinamico(
   }
 
   return standardSla;
+}
+
+export function parseObservacoes(obs?: string): { fiscal_observacao?: string; pagamento_observacao?: string; observacoes?: string } {
+  if (!obs) return {};
+  let fiscal_observacao: string | undefined;
+  let pagamento_observacao: string | undefined;
+
+  const fiscalMatch = obs.match(/(?:^|\n)\[Fiscal\]:?\s*([\s\S]*?)(?=(?:\n\[Pagamento\])|$)/i);
+  const pagtoMatch = obs.match(/(?:^|\n)\[Pagamento\]:?\s*([\s\S]*?)(?=(?:\n\[Fiscal\])|$)/i);
+
+  if (fiscalMatch) fiscal_observacao = fiscalMatch[1].trim();
+  if (pagtoMatch) pagamento_observacao = pagtoMatch[1].trim();
+
+  return { fiscal_observacao, pagamento_observacao, observacoes: obs };
+}
+
+export function buildObservacoes(fiscal?: string, pagto?: string, existingGeneral?: string): string {
+  const parts: string[] = [];
+  if (fiscal && fiscal.trim()) parts.push(`[Fiscal] ${fiscal.trim()}`);
+  if (pagto && pagto.trim()) parts.push(`[Pagamento] ${pagto.trim()}`);
+
+  if (existingGeneral && existingGeneral.trim()) {
+    const generalClean = existingGeneral
+      .replace(/(?:^|\n)\[Fiscal\]:?\s*[\s\S]*?(?=(?:\n\[Pagamento\])|$)/gi, '')
+      .replace(/(?:^|\n)\[Pagamento\]:?\s*[\s\S]*?(?=(?:\n\[Fiscal\])|$)/gi, '')
+      .trim();
+    if (generalClean) parts.push(generalClean);
+  }
+  return parts.join('\n');
+}
+
+export interface FaturaEtapasDatas {
+  sap_rc_criacao?: string;
+  sap_rc_aprovacao?: string;
+  sap_pc_geracao?: string;
+  sap_pc_is_inherited?: boolean;
+
+  nexa_inicio?: string;
+  nexa_inicio_is_inherited?: boolean;
+  nexa_abertura?: string;
+  nexa_conclusao?: string;
+
+  fiscal_inicio?: string;
+  fiscal_inicio_is_inherited?: boolean;
+  fiscal_conclusao?: string;
+
+  pagamento_inicio?: string;
+  pagamento_inicio_is_inherited?: boolean;
+  pagamento_prevista?: string;
+  pagamento_efetiva?: string;
+  pagamento_status: 'Pendente' | 'Programado' | 'Pago';
+}
+
+export function getEtapasDatas(fatura: Partial<Fatura>): FaturaEtapasDatas {
+  const isNexa = fatura.fluxo_iniciado_por === 'Nexa';
+
+  // 1. T1 SAP (se aplicavel)
+  const sap_rc_criacao = fatura.rc_data_inicio || fatura.data_rc_sap || fatura.data_recebimento || undefined;
+  const sap_rc_aprovacao = fatura.data_aprovacao || fatura.aprovacao_data_fim || undefined;
+
+  // Data PC: se digitada explicitamente, usa; senao herda da aprovacao da RC
+  const sap_pc_geracao = fatura.data_pedido_sap || fatura.pc_data_fim || sap_rc_aprovacao;
+  const sap_pc_is_inherited = !fatura.data_pedido_sap && !fatura.pc_data_fim && !!sap_rc_aprovacao;
+
+  // 2. Nexa (T2 no SAP, T1 no Nexa Direto)
+  const nexa_inicio = isNexa
+    ? (fatura.nexa_data_inicio || fatura.nexa_data_envio || undefined)
+    : (fatura.nexa_data_inicio || sap_pc_geracao || sap_rc_aprovacao);
+  const nexa_inicio_is_inherited = !isNexa && !fatura.nexa_data_inicio && !!(sap_pc_geracao || sap_rc_aprovacao);
+
+  const nexa_abertura = fatura.nexa_data_envio || fatura.nexa_data_inicio || undefined;
+  const nexa_conclusao = fatura.nexa_data_fim || undefined;
+
+  // 3. Fiscal (T3 no SAP, T2 no Nexa Direto)
+  const fiscal_inicio = fatura.fiscal_data_inicio || nexa_abertura || nexa_inicio;
+  const fiscal_inicio_is_inherited = !fatura.fiscal_data_inicio && !!(nexa_abertura || nexa_inicio);
+  const fiscal_conclusao = fatura.fiscal_data_fim || fatura.nexa_data_conclusao_lancamento || undefined;
+
+  // 4. Pagamento (T4 no SAP, T3 no Nexa Direto)
+  const pagamento_inicio = fatura.pagamento_data_inicio || fatura.prog_data_inicio || fiscal_conclusao;
+  const pagamento_inicio_is_inherited = !fatura.pagamento_data_inicio && !fatura.prog_data_inicio && !!fiscal_conclusao;
+  const pagamento_prevista = fatura.nexa_data_prevista_pagamento || undefined;
+
+  let pagamento_status: 'Pendente' | 'Programado' | 'Pago' = 'Pendente';
+  if (fatura.status_pagamento === 'Pago' || fatura.nexa_pagamento_realizado) {
+    pagamento_status = 'Pago';
+  } else if (fatura.nexa_pagamento_programado || !!pagamento_prevista) {
+    pagamento_status = 'Programado';
+  } else {
+    pagamento_status = 'Pendente';
+  }
+
+  const pagamento_efetiva = (pagamento_status === 'Pago')
+    ? (fatura.data_pagamento_real || fatura.pagamento_data_fim || undefined)
+    : undefined;
+
+  return {
+    sap_rc_criacao,
+    sap_rc_aprovacao,
+    sap_pc_geracao,
+    sap_pc_is_inherited,
+    nexa_inicio,
+    nexa_inicio_is_inherited,
+    nexa_abertura,
+    nexa_conclusao,
+    fiscal_inicio,
+    fiscal_inicio_is_inherited,
+    fiscal_conclusao,
+    pagamento_inicio,
+    pagamento_inicio_is_inherited,
+    pagamento_prevista,
+    pagamento_efetiva,
+    pagamento_status
+  };
+}
+
+export function calcularTempoDias(dataInicio?: string, dataFim?: string): number | null {
+  if (!dataInicio || !dataFim) return null;
+  const d1 = new Date(dataInicio.split('T')[0] + 'T00:00:00');
+  const d2 = new Date(dataFim.split('T')[0] + 'T00:00:00');
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return null;
+  const diffTime = d2.getTime() - d1.getTime();
+  return Math.max(0, Math.round(diffTime / (1000 * 60 * 60 * 24)));
 }

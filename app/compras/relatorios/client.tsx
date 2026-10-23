@@ -10,7 +10,7 @@ import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { getUserRole, getUserCD } from "@/lib/roles";
-import { calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
+import { calcularViabilidadePagamento, getEtapasDatas, parseObservacoes } from "@/modules/compras/domain/Fatura";
 
 type ReportType = 'fornecedores' | 'produtos' | 'movimentacoes' | 'faturas' | 'faturas-sap' | 'sla';
 
@@ -264,21 +264,30 @@ export function RelatoriosClient() {
         
         if (activeTab === 'faturas-sap') {
           const isNexa = d.fluxo_iniciado_por === 'Nexa';
+          const datas = getEtapasDatas(d);
+          const obs = parseObservacoes(d.observacoes);
+
           Object.assign(baseFatura, {
-            "Fluxo Iniciado": d.fluxo_iniciado_por || 'SAP',
+            "Fluxo": isNexa ? 'Fluxo 2 (Nexa Direto)' : 'Fluxo 1 (SAP + Nexa)',
             "RC SAP": isNexa ? '-' : (d.rc_sap || '-'),
-            "Data RC SAP": isNexa ? '-' : (d.data_rc_sap || '-'),
+            "Data Criação RC": isNexa ? '-' : (datas.sap_rc_criacao ? datas.sap_rc_criacao.substring(0, 10) : '-'),
+            "Data Aprovação RC (Marco)": isNexa ? '-' : (datas.sap_rc_aprovacao ? datas.sap_rc_aprovacao.substring(0, 10) : '-'),
             "Pedido SAP": isNexa ? '-' : (d.pedido_sap || '-'),
-            "Data Pedido SAP": isNexa ? '-' : (d.data_pedido_sap || '-'),
-            "Doc Subsequente Criado": isNexa ? '-' : (d.doc_subsequente_criado ? 'Sim' : 'Não'),
-            "PC Nexa Concluído": d.pc_nexa_concluido ? 'Sim' : 'Não',
-            "Nº PC Nexa": d.numero_pc_nexa || '-',
-            "Data PC Nexa": d.data_pc_nexa || '-',
+            "Data Pedido SAP": isNexa ? '-' : (datas.sap_pc_geracao ? datas.sap_pc_geracao.substring(0, 10) : '-'),
+            "Data Início Nexa": datas.nexa_inicio ? datas.nexa_inicio.substring(0, 10) : '-',
+            "Chamado Nexa": d.nexa_chamado || '-',
+            "Data Abertura Nexa": datas.nexa_abertura ? datas.nexa_abertura.substring(0, 10) : '-',
+            "Data Conclusão Nexa": datas.nexa_conclusao ? datas.nexa_conclusao.substring(0, 10) : '-',
+            "Data Início Fiscal": datas.fiscal_inicio ? datas.fiscal_inicio.substring(0, 10) : '-',
             "Lanc. Fiscal Concluído": d.nexa_lancamento_concluido ? 'Sim' : 'Não',
-            "Data Lanc. Fiscal": d.nexa_data_conclusao_lancamento || '-',
-            "Pagamento Programado": d.nexa_pagamento_programado ? 'Sim' : 'Não',
-            "Data Prevista Pgto": d.nexa_data_prevista_pagamento || '-',
-            "Pagamento Realizado": d.nexa_pagamento_realizado ? 'Sim' : 'Não'
+            "Data Conclusão Fiscal": datas.fiscal_conclusao ? datas.fiscal_conclusao.substring(0, 10) : '-',
+            "Observação Fiscal": obs.fiscal_observacao || '-',
+            "Status Pagamento": datas.pagamento_status,
+            "Data Início Pagamento": datas.pagamento_inicio ? datas.pagamento_inicio.substring(0, 10) : '-',
+            "Data Prevista Pgto": datas.pagamento_prevista ? datas.pagamento_prevista.substring(0, 10) : '-',
+            "Data Efetiva Pgto": datas.pagamento_efetiva ? datas.pagamento_efetiva.substring(0, 10) : '-',
+            "Observação Pagamento": obs.pagamento_observacao || '-',
+            "Doc Subsequente Criado": isNexa ? '-' : (d.doc_subsequente_criado ? 'Sim' : 'Não')
           });
         }
 

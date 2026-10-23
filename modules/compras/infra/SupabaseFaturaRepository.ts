@@ -1,4 +1,4 @@
-import { Fatura } from "../domain/Fatura";
+import { Fatura, parseObservacoes, buildObservacoes } from "../domain/Fatura";
 import { FaturaRepository } from "../application/FaturaRepository";
 import { supabase } from "@/lib/supabase";
 
@@ -23,8 +23,11 @@ export class SupabaseFaturaRepository implements FaturaRepository {
         categoria = d.id.split('__CAT__')[1];
         if (categoria === 'Servico') categoria = 'Serviço';
       }
+      const parsedObs = parseObservacoes(d.observacoes);
       return {
         ...d,
+        fiscal_observacao: parsedObs.fiscal_observacao,
+        pagamento_observacao: parsedObs.pagamento_observacao,
         categoria: d.categoria || categoria,
         codigo_fatura: d.tipo_documento,
         tipo_documento: undefined,
@@ -72,9 +75,11 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       nextCodigoFatura = `FAT-${String(nextNum).padStart(6, '0')}`;
     }
     
+    const combinedObs = buildObservacoes(faturaData.fiscal_observacao, faturaData.pagamento_observacao, faturaData.observacoes);
     // Ensure text fields are explicitly populated to avoid not-null constraint errors
     const sanitizedData = {
       ...faturaData,
+      observacoes: combinedObs || faturaData.observacoes || null,
       fornecedor: faturaData.fornecedor || '',
       cnpj: faturaData.cnpj || '',
       centro_custo: faturaData.centro_custo || '',
@@ -123,6 +128,8 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     delete sanitizedData.numero_pc_nexa;
     delete sanitizedData.data_pc_nexa;
     delete sanitizedData.usuario_pc_nexa;
+    delete sanitizedData.fiscal_observacao;
+    delete sanitizedData.pagamento_observacao;
     // delete sanitizedData.usuario_nexa_lancamento;
     // delete sanitizedData.usuario_nexa_programacao;
     // delete sanitizedData.usuario_nexa_pagamento;
