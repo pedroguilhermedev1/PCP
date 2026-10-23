@@ -108,6 +108,8 @@ export interface Fatura {
   fluxo_iniciado_por?: string;
 
   // Datas
+  created_at?: string;
+  data_criacao?: string;
   data_emissao: string;
   data_recebimento: string;
   data_vencimento: string;
@@ -222,6 +224,20 @@ export interface Fatura {
   valor_encargo?: number;
 
   status_pagamento: StatusPagamento;
+
+  // Período estimado de recebimento
+  previsao_recebimento_dias_min?: number;
+  previsao_recebimento_dias_max?: number;
+  previsao_recebimento_data_inicio?: string;
+  previsao_recebimento_data_fim?: string;
+  historico_previsao?: Array<{
+    dias_min: number;
+    dias_max: number;
+    data_inicio?: string;
+    data_fim?: string;
+    alterado_por: string;
+    data_alteracao: string;
+  }>;
 
   // Calculados (Opcionais no model para persistência, mas gerados pela view/helper)
   status?: string;

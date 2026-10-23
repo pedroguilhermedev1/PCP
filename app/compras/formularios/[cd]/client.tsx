@@ -1,16 +1,18 @@
 "use client";
 
-import { Box, CheckCircle2, AlertCircle, MessageCircle, MessageSquare, Settings2 } from "lucide-react";
+import { Box, CheckCircle2, AlertCircle, MessageCircle, MessageSquare, Settings2, Calendar, RotateCcw, Send, History, AlertTriangle, FileText, CheckCheck, X, Clock, ArrowRight } from "lucide-react";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatUserName } from "@/lib/utils";
+import { formatUserName, cn } from "@/lib/utils";
 import { useEstoqueInsumos } from "@/hooks/useEstoqueInsumos";
-import { useInsumosMovimentacoes } from "@/hooks/useInsumos";
+import { useInsumosMovimentacoes, InsumoMovimentacao } from "@/hooks/useInsumos";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useSearchParams } from "next/navigation";
 import { getUserRole, getUserCD } from "@/lib/roles";
+import { SolicitacoesCalendario } from "@/components/solicitacoes/SolicitacoesCalendario";
+import { extrairMetaDeObservacoes, formatarPeriodoEstimado } from "@/lib/previsaoRecebimento";
 
 const cd_names_map: Record<string, string> = {
   fortaleza: 'Fortaleza',
@@ -23,13 +25,62 @@ const cd_names_map: Record<string, string> = {
 function FormulariosModuleClientInner({ cd }: { cd: string }) {
   
   const { insumos, refetch: refetchInsumos } = useEstoqueInsumos(cd);
-  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd, undefined, 'PENDENTE');
-  const { movimentacoes: histAprovadas, refresh: refreshAprovadas } = useInsumosMovimentacoes(cd, undefined, 'Aprovada');
+  const { movimentacoes, refresh, loading } = useInsumosMovimentacoes(cd, undefined, 'PENDENTE,PARCIAL,AGUARDANDO_CONFERENCIA');
+  const { movimentacoes: histAprovadas, refresh: refreshAprovadas } = useInsumosMovimentacoes(cd, undefined, 'Aprovada,CONFIRMADO');
   const { movimentacoes: movsReprovadas, refresh: refreshReprovadas } = useInsumosMovimentacoes(cd, undefined, 'REPROVADO');
+  const { movimentacoes: movsPendenciasCriador, refresh: refreshPendenciasCriador } = useInsumosMovimentacoes(cd, undefined, 'REPROVADO,PARCIAL,AGUARDANDO_CONFERENCIA,ENCERRADO');
 
-  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'REPROVADAS' | 'AJUSTE' | 'EXTERNA'>('NOVA');
+  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'REPROVADAS' | 'CALENDARIO' | 'AJUSTE' | 'EXTERNA'>('PENDENTES');
+  const [filterPendencia, setFilterPendencia] = useState<'TODAS' | 'REPROVADA' | 'PARCIAL' | 'AGUARDANDO_CONFERENCIA' | 'ENCERRADO'>('TODAS');
   const [editingReprovadaId, setEditingReprovadaId] = useState<string | null>(null);
-  const [aprovarModal, setAprovarModal] = useState<{ isOpen: boolean, movId?: string, originalQtd?: number, newQtd?: number, justification?: string }>({ isOpen: false });
+
+  const [recebimentoModal, setRecebimentoModal] = useState<{
+    isOpen: boolean;
+    mov?: InsumoMovimentacao;
+    meta?: any;
+    qtdRecebidaAgora: number;
+    observacao: string;
+    encerrarSaldo: boolean;
+    justificativaEncerramento: string;
+    isSubmitting?: boolean;
+  }>({
+    isOpen: false,
+    qtdRecebidaAgora: 0,
+    observacao: '',
+    encerrarSaldo: false,
+    justificativaEncerramento: '',
+    isSubmitting: false
+  });
+
+  const [reprovarModal, setReprovarModal] = useState<{
+    isOpen: boolean;
+    mov?: InsumoMovimentacao;
+    motivo: string;
+    isSubmitting?: boolean;
+  }>({
+    isOpen: false,
+    motivo: '',
+    isSubmitting: false
+  });
+
+  const [encaminharModal, setEncaminharModal] = useState<{
+    isOpen: boolean;
+    mov?: InsumoMovimentacao;
+    texto: string;
+    isSubmitting?: boolean;
+  }>({
+    isOpen: false,
+    texto: '',
+    isSubmitting: false
+  });
+
+  const refreshAll = () => {
+    refresh();
+    refreshAprovadas();
+    refreshReprovadas();
+    refreshPendenciasCriador();
+    refetchInsumos();
+  };
 
   const [filterCD, setFilterCD] = useState("TODOS");
 
@@ -126,6 +177,185 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   }, [item, uniqueInsumos]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const canApprove = isPrivileged || isFabio || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase());
+
+  const formatNumeroDocumento = (m: InsumoMovimentacao) => {
+    if (m.observacoes && m.observacoes.includes('Fatura ')) {
+      const obsClean = m.observacoes.split('___META_PCP___:')[0];
+      const obsParts = obsClean.split('|')[0].trim();
+      if (obsParts.startsWith('Fatura ') && obsParts !== 'Fatura não informada') {
+        return obsParts.replace('Fatura ', '').trim();
+      }
+      if (obsParts === 'Fatura não informada') {
+        return 'Não informada';
+      }
+    }
+    if (m.fatura_id && typeof m.fatura_id === 'string' && m.fatura_id.includes('__')) {
+      const prefix = m.fatura_id.split('__')[0];
+      if (prefix && prefix !== 'null' && prefix !== 'undefined') return prefix;
+    }
+    return m.identificador || m.codigo_movimentacao || 'S/ ID';
+  };
+
+  const formatDataCriacao = (m: InsumoMovimentacao, meta: any) => {
+    const dataStr = meta?.data_criacao_original || m.data_hora;
+    if (!dataStr) return '-';
+    const clean = dataStr.includes('T') ? dataStr.split('T')[0] : dataStr.split(' ')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dataStr;
+  };
+
+  const openRecebimentoModal = (m: InsumoMovimentacao) => {
+    const { meta } = extrairMetaDeObservacoes(m.observacoes);
+    const qtdPrev = meta.quantidade_prevista ?? Number(m.quantidade);
+    const qtdRec = meta.quantidade_recebida ?? 0;
+    const saldoPend = meta.saldo_pendente ?? (qtdPrev - qtdRec);
+    
+    setRecebimentoModal({
+      isOpen: true,
+      mov: m,
+      meta,
+      qtdRecebidaAgora: saldoPend,
+      observacao: '',
+      encerrarSaldo: false,
+      justificativaEncerramento: '',
+      isSubmitting: false
+    });
+  };
+
+  const handleConfirmarRecebimento = async () => {
+    if (!recebimentoModal.mov) return;
+    setRecebimentoModal(prev => ({ ...prev, isSubmitting: true }));
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/movimentacoes/${recebimentoModal.mov.id}/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quantidadeRecebidaAgora: recebimentoModal.qtdRecebidaAgora,
+          usuario: responsavel,
+          observacao: recebimentoModal.observacao,
+          encerrarSaldo: recebimentoModal.encerrarSaldo,
+          justificativaEncerramento: recebimentoModal.justificativaEncerramento
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao processar recebimento');
+
+      setSuccessMsg(data.mensagem || 'Recebimento registrado com sucesso!');
+      setTimeout(() => setSuccessMsg(''), 7000);
+      setRecebimentoModal(prev => ({ ...prev, isOpen: false }));
+      refreshAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+    } finally {
+      setRecebimentoModal(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
+
+  const openReprovarModal = (m: InsumoMovimentacao) => {
+    setReprovarModal({
+      isOpen: true,
+      mov: m,
+      motivo: '',
+      isSubmitting: false
+    });
+  };
+
+  const handleReprovar = async () => {
+    if (!reprovarModal.mov) return;
+    if (!reprovarModal.motivo.trim()) {
+      setErrorMsg('Informe o motivo da reprovação.');
+      return;
+    }
+    setReprovarModal(prev => ({ ...prev, isSubmitting: true }));
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/movimentacoes/${reprovarModal.mov.id}/reprovar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          motivo: reprovarModal.motivo,
+          usuario: responsavel
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao reprovar');
+
+      setSuccessMsg('Solicitação reprovada e registrada no histórico.');
+      setTimeout(() => setSuccessMsg(''), 5000);
+      setReprovarModal(prev => ({ ...prev, isOpen: false }));
+      refreshAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+    } finally {
+      setReprovarModal(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
+
+  const handleReabrir = async (movId: string) => {
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/movimentacoes/${movId}/reabrir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: responsavel })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao reabrir');
+
+      setSuccessMsg('Solicitação reaberta com sucesso e retornada para Aprovações Pendentes.');
+      setTimeout(() => setSuccessMsg(''), 5000);
+      refreshAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+    }
+  };
+
+  const openEncaminharModal = (m: InsumoMovimentacao) => {
+    setEncaminharModal({
+      isOpen: true,
+      mov: m,
+      texto: '',
+      isSubmitting: false
+    });
+  };
+
+  const handleEncaminhar = async () => {
+    if (!encaminharModal.mov) return;
+    if (!encaminharModal.texto.trim()) {
+      setErrorMsg('A observação é obrigatória para encaminhar a pendência.');
+      return;
+    }
+    setEncaminharModal(prev => ({ ...prev, isSubmitting: true }));
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/movimentacoes/${encaminharModal.mov.id}/encaminhar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          texto: encaminharModal.texto,
+          usuario: responsavel
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao encaminhar');
+
+      setSuccessMsg('Pendência encaminhada com sucesso ao responsável pelo recebimento.');
+      setTimeout(() => setSuccessMsg(''), 5000);
+      setEncaminharModal(prev => ({ ...prev, isOpen: false }));
+      refreshAll();
+    } catch (e: any) {
+      setErrorMsg(e.message);
+    } finally {
+      setEncaminharModal(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,81 +647,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      {aprovarModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col border border-zinc-200">
-            <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/50">
-              <h2 className="text-lg font-semibold text-zinc-800">Aprovar Recebimento</h2>
-              <button onClick={() => setAprovarModal({ isOpen: false })} className="text-zinc-400 hover:text-zinc-600 text-xl font-bold">
-                ×
-              </button>
-            </div>
-            
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setIsSubmitting(true);
-              try {
-                let payload = {};
-                if (aprovarModal.newQtd !== aprovarModal.originalQtd) {
-                  if (!aprovarModal.justification) {
-                    setErrorMsg("É obrigatório justificar a divergência de quantidade.");
-                    setIsSubmitting(false);
-                    return;
-                  }
-                  payload = { novaQuantidade: aprovarModal.newQtd, justificativa: aprovarModal.justification };
-                }
-                const res = await fetch(`/api/movimentacoes/${aprovarModal.movId}/confirmar`, { 
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
-                setSuccessMsg(`Movimentação confirmada! Novo estoque: ${data.novo_estoque}`);
-                setTimeout(() => setSuccessMsg(""), 5000);
-                refresh();
-                setAprovarModal({ isOpen: false });
-              } catch (e: any) {
-                setErrorMsg(e.message);
-              } finally {
-                setIsSubmitting(false);
-              }
-            }} className="p-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-zinc-700">Quantidade Recebida <span className="text-red-500">*</span></label>
-                <Input 
-                  type="number" 
-                  min="1" 
-                  required 
-                  value={aprovarModal.newQtd || ""} 
-                  onChange={e => setAprovarModal(prev => ({ ...prev, newQtd: Number(e.target.value) }))} 
-                />
-                <p className="text-xs text-zinc-500">Quantidade original solicitada: {aprovarModal.originalQtd}</p>
-              </div>
-              
-              {aprovarModal.newQtd !== aprovarModal.originalQtd && (
-                <div className="flex flex-col gap-1.5 mt-2 animate-in fade-in slide-in-from-top-2">
-                  <label className="text-sm font-medium text-zinc-700">Motivo da Divergência <span className="text-red-500">*</span></label>
-                  <textarea 
-                    required
-                    className="flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 resize-y"
-                    value={aprovarModal.justification || ""}
-                    onChange={e => setAprovarModal(prev => ({ ...prev, justification: e.target.value }))}
-                    placeholder="Explique por que a quantidade recebida é diferente da solicitada..."
-                  />
-                </div>
-              )}
-
-              <div className="mt-4 flex gap-3 justify-end border-t border-zinc-100 pt-5">
-                <Button type="button" variant="outline" onClick={() => setAprovarModal({ isOpen: false })} disabled={isSubmitting}>Cancelar</Button>
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={isSubmitting}>
-                  {isSubmitting ? "Salvando..." : "Confirmar Recebimento"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       <header className="bg-white border-b border-zinc-200 px-6 pt-4 flex flex-col flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
@@ -503,55 +658,77 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           </div>
         </div>
 
-        <div className="flex gap-4 border-b border-transparent">
-          {!isAjusteAllowed && (
-            <>
-              <button 
-                className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-                onClick={() => setActiveTab('NOVA')}
-              >
-                NOVA SOLICITAÇÃO
-              </button>
-              {!isGabriel && (
-                <button 
-                  className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-                  onClick={() => setActiveTab('PENDENTES')}
-                >
-                  APROVAÇÕES PENDENTES
-                  {movimentacoes.filter(m => m.status === 'PENDENTE').length > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                      {movimentacoes.filter(m => m.status === 'PENDENTE').length}
-                    </span>
-                  )}
-                </button>
-              )}
-            </>
+        <div className="flex flex-wrap gap-2 sm:gap-4 border-b border-transparent">
+          {!isFabio && (
+            <button 
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              onClick={() => setActiveTab('NOVA')}
+            >
+              NOVA SOLICITAÇÃO
+            </button>
           )}
-          {(isPrivileged || userRole === 'OPERACIONAL') && (
-                <button 
-                  className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-                  onClick={() => setActiveTab('REPROVADAS')}
-                >
-                  REPROVADAS
-                  {movsReprovadas.length > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                      {movsReprovadas.length}
-                    </span>
-                  )}
-                </button>
+
+          {!isGabriel && (
+            <button 
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              onClick={() => setActiveTab('PENDENTES')}
+            >
+              APROVAÇÕES PENDENTES
+              {movimentacoes.length > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                  {movimentacoes.length}
+                </span>
               )}
+            </button>
+          )}
+
+          {isFabio ? (
+            <button 
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              onClick={() => setActiveTab('REPROVADAS')}
+            >
+              REPROVADAS
+              {movsReprovadas.length > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                  {movsReprovadas.length}
+                </span>
+              )}
+            </button>
+          ) : (
+            <button 
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              onClick={() => setActiveTab('REPROVADAS')}
+            >
+              PENDÊNCIAS
+              {movsPendenciasCriador.length > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                  {movsPendenciasCriador.length}
+                </span>
+              )}
+            </button>
+          )}
+
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'CALENDARIO' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('CALENDARIO')}
+          >
+            <Calendar className="w-4 h-4" />
+            CALENDÁRIO
+          </button>
+
           {isAjusteAllowed && (
             <button 
-              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'AJUSTE' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'AJUSTE' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
               onClick={() => setActiveTab('AJUSTE')}
             >
               <Settings2 className="w-4 h-4" />
               AJUSTE DE ESTOQUE
             </button>
           )}
+
           {isExternaAllowed && (
             <button 
-              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'EXTERNA' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'EXTERNA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
               onClick={() => setActiveTab('EXTERNA')}
             >
               <Settings2 className="w-4 h-4" />
@@ -566,28 +743,44 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           
           {successMsg && (
             <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-lg flex items-center gap-3 border border-green-200 shadow-sm animate-in fade-in slide-in-from-top-4">
-              <CheckCircle2 className="w-5 h-5" />
-              <span className="font-medium">{successMsg}</span>
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium text-sm">{successMsg}</span>
             </div>
           )}
           
           {errorMsg && (
             <div className="mb-6 p-4 bg-red-50 text-red-800 rounded-lg flex items-center gap-3 border border-red-200 shadow-sm animate-in fade-in slide-in-from-top-4">
-              <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">{errorMsg}</span>
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium text-sm">{errorMsg}</span>
             </div>
           )}
 
           <div className="w-full">
-            <div className="pb-4 mb-6 border-b border-zinc-200/60">
-              <h2 className="text-xl font-bold text-zinc-800">
-                {activeTab === 'NOVA' ? (editingReprovadaId ? 'CORRIGIR SOLICITAÇÃO' : 'NOVA SOLICITAÇÃO') : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' : activeTab === 'REPROVADAS' ? 'SOLICITAÇÕES REPROVADAS' : 'AJUSTE DE ESTOQUE'}
-              </h2>
-              {activeTab === 'NOVA' && (
-                <p className="text-sm text-zinc-500 mt-1">
-                  Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
-                </p>
-              )}
+            <div className="pb-4 mb-6 border-b border-zinc-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xl font-bold text-zinc-800">
+                  {activeTab === 'NOVA' ? (editingReprovadaId ? 'CORRIGIR SOLICITAÇÃO' : 'NOVA SOLICITAÇÃO') 
+                    : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' 
+                    : activeTab === 'REPROVADAS' ? (isFabio ? 'SOLICITAÇÕES REPROVADAS' : 'PENDÊNCIAS EM ACOMPANHAMENTO')
+                    : activeTab === 'CALENDARIO' ? 'CALENDÁRIO DE ENTREGAS'
+                    : 'AJUSTE DE ESTOQUE'}
+                </h2>
+                {activeTab === 'NOVA' && (
+                  <p className="text-sm text-zinc-500 mt-1">
+                    Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
+                  </p>
+                )}
+                {activeTab === 'PENDENTES' && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Conferência e recebimento de insumos com acompanhamento de entregas parciais e prazos estimados.
+                  </p>
+                )}
+                {activeTab === 'CALENDARIO' && (
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Visualização mensal das faixas contínuas de entrega previstas para as faturas deste CD.
+                  </p>
+                )}
+              </div>
             </div>
 
             {activeTab === 'NOVA' && (
@@ -707,107 +900,131 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                 <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
                   <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                     <TableRow className="border-zinc-100 hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Setor</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Qtd</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
-                      {(isPrivileged || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase())) && <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>}
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">1. Documento</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">2. Data Criação</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">3. Período Estimado</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">4. Item / Insumo</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">5. Qtd Prevista</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">6. Qtd Recebida</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">7. Saldo Pendente</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">8. Usuário Criação</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">9. Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {movimentacoes.filter(m => m.status === 'PENDENTE').map(m => (
-                      <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-purple-50/50 transition-colors">
-                        <TableCell className="font-medium text-xs text-zinc-700">
-                          {(() => {
-                            if (m.observacoes && m.observacoes.includes('Fatura ')) {
-                              const obsParts = m.observacoes.split('|')[0].trim();
-                              if (obsParts.startsWith('Fatura ') && obsParts !== 'Fatura não informada') {
-                                return obsParts.replace('Fatura ', '').trim();
-                              }
-                              if (obsParts === 'Fatura não informada') {
-                                return 'Não informada';
-                              }
-                            }
-                            if (m.fatura_id && typeof m.fatura_id === 'string' && m.fatura_id.includes('__')) {
-                              const prefix = m.fatura_id.split('__')[0];
-                              if (prefix && prefix !== 'null' && prefix !== 'undefined') return prefix;
-                            }
-                            return m.identificador || 'S/ ID';
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell className="font-semibold text-zinc-600">{m.cd.toUpperCase()}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
-                            {m.tipo}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="max-w-[200px] text-zinc-900 font-medium" style={{wordBreak: 'break-word'}}>{m.item}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-zinc-600">
-                          {m.setor || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="secondary" className="font-bold text-sm bg-zinc-100 text-zinc-800">
-                            {m.quantidade}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-zinc-600">{m.usuario}</TableCell>
-                        <TableCell>
-                          <div className="max-w-[200px] text-xs text-zinc-500" style={{wordBreak: 'break-word'}}>
-                            {m.observacoes || '-'}
-                          </div>
-                        </TableCell>
-                        {(isPrivileged || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase())) && (
-                          <TableCell className="text-center">
-                            <div className="flex flex-col gap-2 items-center justify-center">
-                              <Button 
-                                size="sm" 
-                                variant="default"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white w-full text-[11px] px-1"
-                                onClick={() => setAprovarModal({ isOpen: true, movId: m.id, originalQtd: m.quantidade, newQtd: m.quantidade, justification: '' })}
-                              >
-                                Aprovar / Editar
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-red-600 border-red-200 hover:bg-red-50 w-full"
-                                onClick={async () => {
-                                  try {
-                                    const res = await fetch(`/api/movimentacoes/${m.id}/reprovar`, { method: 'POST' });
-                                    const data = await res.json();
-                                    if (!res.ok) throw new Error(data.error);
-                                    setSuccessMsg(`Movimentação enviada para correção!`);
-                                    setTimeout(() => setSuccessMsg(""), 5000);
-                                    refresh();
-                                    refreshReprovadas();
-                                  } catch (e: any) {
-                                    setErrorMsg(e.message);
-                                  }
-                                }}
-                              >
-                                Reprovar
-                              </Button>
+                    {movimentacoes.map(m => {
+                      const { meta } = extrairMetaDeObservacoes(m.observacoes);
+                      const qtdPrevista = meta.quantidade_prevista ?? Number(m.quantidade);
+                      const qtdRecebida = meta.quantidade_recebida ?? (m.status === 'Aprovada' || m.status === 'CONFIRMADO' ? Number(m.quantidade) : 0);
+                      const saldoPendente = meta.saldo_pendente ?? (qtdPrevista - qtdRecebida);
+                      const periodoTexto = formatarPeriodoEstimado(
+                        meta.previsao_dias_min,
+                        meta.previsao_dias_max,
+                        meta.previsao_data_inicio,
+                        meta.previsao_data_fim
+                      );
+                      const docNum = formatNumeroDocumento(m);
+                      const dataCriacao = formatDataCriacao(m, meta);
+                      const nomeUsuario = formatUserName(m.usuario);
+                      const ultimasObsCriador = meta.observacoes_criador && meta.observacoes_criador.length > 0 
+                        ? meta.observacoes_criador[meta.observacoes_criador.length - 1] 
+                        : null;
+
+                      return (
+                        <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-purple-50/40 transition-colors">
+                          <TableCell className="font-semibold text-xs text-zinc-800 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span>{docNum}</span>
+                              {m.status === 'PARCIAL' && (
+                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full w-fit mt-0.5">
+                                  Recebimento Parcial
+                                </span>
+                              )}
+                              {m.status === 'AGUARDANDO_CONFERENCIA' && (
+                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full w-fit mt-0.5">
+                                  Aguardando Conferência
+                                </span>
+                              )}
                             </div>
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                    {movimentacoes.filter(m => m.status === 'PENDENTE').length === 0 && (
+                          <TableCell className="text-zinc-600 text-xs whitespace-nowrap">
+                            {dataCriacao}
+                          </TableCell>
+                          <TableCell className="text-xs whitespace-nowrap">
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-[11px] font-medium inline-block",
+                              periodoTexto === 'Não informado'
+                                ? "text-zinc-400 bg-zinc-100"
+                                : "text-purple-700 bg-purple-50 border border-purple-200"
+                            )}>
+                              {periodoTexto}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-zinc-900 text-xs max-w-[220px]" style={{wordBreak: 'break-word'}}>{m.item}</span>
+                              {m.codigo && m.codigo !== '-' && (
+                                <span className="text-[10px] text-zinc-400 font-mono">{m.codigo}</span>
+                              )}
+                              {ultimasObsCriador && (
+                                <div className="mt-1 text-[11px] text-blue-800 bg-blue-50/80 border border-blue-200 rounded p-1 max-w-[260px]">
+                                  <span className="font-bold">Criador ({formatUserName(ultimasObsCriador.usuario)}): </span>
+                                  <span>{ultimasObsCriador.texto}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center font-medium text-xs text-zinc-700">
+                            {qtdPrevista}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold text-xs text-emerald-700">
+                            {qtdRecebida}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={cn(
+                              "font-bold text-xs px-2 py-0.5",
+                              saldoPendente > 0 
+                                ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-100"
+                                : "bg-zinc-100 text-zinc-500 hover:bg-zinc-100"
+                            )}>
+                              {saldoPendente}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-zinc-700 text-xs font-medium whitespace-nowrap">
+                            {nomeUsuario}
+                          </TableCell>
+                          <TableCell className="text-center whitespace-nowrap">
+                            {canApprove ? (
+                              <div className="flex items-center justify-center gap-1.5">
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5 shadow-xs"
+                                  onClick={() => openRecebimentoModal(m)}
+                                >
+                                  Receber
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 border-red-200 hover:bg-red-50 text-xs h-7 px-2.5"
+                                  onClick={() => openReprovarModal(m)}
+                                >
+                                  Reprovar
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-zinc-400 italic">Em acompanhamento</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {movimentacoes.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={userRole === 'OPERACIONAL' ? 10 : 9} className="text-center py-12 text-zinc-500">
+                        <TableCell colSpan={9} className="text-center py-12 text-zinc-500">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <CheckCircle2 className="w-8 h-8 text-zinc-300" />
-                            <p>Nenhuma solicitação pendente encontrada.</p>
+                            <p>Nenhuma solicitação ou recebimento pendente encontrado.</p>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -817,71 +1034,84 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               </div>
             )}
 
-            {activeTab === 'REPROVADAS' && (isPrivileged || userRole === 'OPERACIONAL') && (
+            {/* Subaba REPROVADAS (para o perfil de recebimento - Fabio) */}
+            {activeTab === 'REPROVADAS' && isFabio && (
               <div className="p-0 overflow-x-auto w-full">
                 <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
                   <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
                     <TableRow className="border-zinc-100 hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Tipo</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Setor</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-right">Qtd</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data Criação</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item / Insumo</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd Prevista</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd Recebida</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Saldo Pendente</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Motivo da Reprovação</TableHead>
                       <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Justificativa</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ação</TableHead>
+                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {movsReprovadas.map(m => (
-                      <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-red-50/50 transition-colors">
-                        <TableCell className="text-zinc-500 whitespace-nowrap">{new Date(m.data_hora).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell className="font-semibold text-zinc-600">{m.cd.toUpperCase()}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={m.tipo === 'Entrada' ? 'text-blue-700 border-blue-200 bg-blue-50' : 'text-orange-700 border-orange-200 bg-orange-50'}>
-                            {m.tipo}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="max-w-[200px] text-zinc-900 font-medium" style={{wordBreak: 'break-word'}}>{m.item}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-zinc-600">
-                          {m.setor || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="secondary" className="font-bold text-sm bg-zinc-100 text-zinc-800">
-                            {m.quantidade}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-zinc-600">{m.usuario}</TableCell>
-                        <TableCell>
-                          <div className="max-w-[200px] text-xs text-zinc-500" style={{wordBreak: 'break-word'}}>
-                            {m.observacoes || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={() => {
-                              setEditingReprovadaId(m.id);
-                              setItem(m.item);
-                              setCodigo(m.codigo || "");
-                              setQuantidade(m.quantidade || "");
-                              setSetor(m.setor || "");
-                              setJustificativa(m.observacoes || "");
-                              setActiveTab('NOVA');
-                            }}
-                          >
-                            Corrigir
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {movsReprovadas.map(m => {
+                      const { meta } = extrairMetaDeObservacoes(m.observacoes);
+                      const qtdPrevista = meta.quantidade_prevista ?? Number(m.quantidade);
+                      const qtdRecebida = meta.quantidade_recebida ?? 0;
+                      const saldoPendente = meta.saldo_pendente ?? (qtdPrevista - qtdRecebida);
+                      const docNum = formatNumeroDocumento(m);
+                      const dataCriacao = formatDataCriacao(m, meta);
+                      const ultimaReprovacao = meta.reprovacoes && meta.reprovacoes.length > 0 
+                        ? meta.reprovacoes[meta.reprovacoes.length - 1] 
+                        : null;
+
+                      return (
+                        <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-red-50/40 transition-colors">
+                          <TableCell className="font-semibold text-xs text-zinc-800 whitespace-nowrap">
+                            {docNum}
+                          </TableCell>
+                          <TableCell className="text-zinc-600 text-xs whitespace-nowrap">
+                            {dataCriacao}
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-semibold text-zinc-900 text-xs">{m.item}</span>
+                          </TableCell>
+                          <TableCell className="text-center font-medium text-xs text-zinc-700">
+                            {qtdPrevista}
+                          </TableCell>
+                          <TableCell className="text-center font-medium text-xs text-emerald-700">
+                            {qtdRecebida}
+                          </TableCell>
+                          <TableCell className="text-center font-medium text-xs text-amber-700">
+                            {saldoPendente}
+                          </TableCell>
+                          <TableCell className="text-xs text-red-700 max-w-[200px]" style={{wordBreak: 'break-word'}}>
+                            {ultimaReprovacao ? (
+                              <div>
+                                <span className="font-semibold">{ultimaReprovacao.motivo}</span>
+                                <span className="block text-[10px] text-zinc-400 mt-0.5">
+                                  por {formatUserName(ultimaReprovacao.usuario)} em {new Date(ultimaReprovacao.data_hora).toLocaleDateString('pt-BR')}
+                                </span>
+                              </div>
+                            ) : (
+                              m.observacoes || 'Reprovado sem motivo detalhado'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-zinc-600 text-xs whitespace-nowrap">
+                            {formatUserName(m.usuario)}
+                          </TableCell>
+                          <TableCell className="text-center whitespace-nowrap">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-purple-700 border-purple-200 hover:bg-purple-50 text-xs h-7 px-2.5 gap-1.5"
+                              onClick={() => handleReabrir(m.id)}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              Reabrir solicitação
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                     {movsReprovadas.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={9} className="text-center py-12 text-zinc-500">
@@ -895,6 +1125,214 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   </TableBody>
                 </Table>
               </div>
+            )}
+
+            {/* Subaba PENDÊNCIAS (para o perfil do usuário criador - Pedro, etc.) */}
+            {activeTab === 'REPROVADAS' && !isFabio && (
+              <div className="space-y-4">
+                {/* Filtro por categoria de pendência */}
+                <div className="flex flex-wrap gap-2 items-center bg-zinc-50 p-2 rounded-lg border border-zinc-200 text-xs">
+                  <span className="text-zinc-500 font-medium px-2">Filtrar pendências:</span>
+                  {(['TODAS', 'REPROVADA', 'PARCIAL', 'AGUARDANDO_CONFERENCIA', 'ENCERRADO'] as const).map(cat => {
+                    const labelMap: Record<string, string> = {
+                      TODAS: 'Todas',
+                      REPROVADA: 'Reprovadas',
+                      PARCIAL: 'Recebimento Parcial',
+                      AGUARDANDO_CONFERENCIA: 'Aguardando Nova Conferência',
+                      ENCERRADO: 'Encerradas s/ Integral'
+                    };
+                    return (
+                      <Button
+                        key={cat}
+                        variant={filterPendencia === cat ? 'default' : 'outline'}
+                        size="sm"
+                        className={cn(
+                          "h-7 text-xs",
+                          filterPendencia === cat && "bg-purple-700 text-white"
+                        )}
+                        onClick={() => setFilterPendencia(cat)}
+                      >
+                        {labelMap[cat]}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <div className="p-0 overflow-x-auto w-full">
+                  <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
+                    <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
+                      <TableRow className="border-zinc-100 hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data Criação</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Situação</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Período Estimado</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item / Insumo</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd Prevista</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd Recebida</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Saldo Pendente</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Detalhes / Histórico</TableHead>
+                        <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {movsPendenciasCriador
+                        .filter(m => {
+                          if (filterPendencia === 'TODAS') return true;
+                          if (filterPendencia === 'REPROVADA') return m.status === 'REPROVADO';
+                          if (filterPendencia === 'PARCIAL') return m.status === 'PARCIAL';
+                          if (filterPendencia === 'AGUARDANDO_CONFERENCIA') return m.status === 'AGUARDANDO_CONFERENCIA';
+                          if (filterPendencia === 'ENCERRADO') return m.status === 'ENCERRADO';
+                          return true;
+                        })
+                        .map(m => {
+                          const { meta } = extrairMetaDeObservacoes(m.observacoes);
+                          const qtdPrevista = meta.quantidade_prevista ?? Number(m.quantidade);
+                          const qtdRecebida = meta.quantidade_recebida ?? 0;
+                          const saldoPendente = meta.saldo_pendente ?? (qtdPrevista - qtdRecebida);
+                          const docNum = formatNumeroDocumento(m);
+                          const dataCriacao = formatDataCriacao(m, meta);
+                          const periodoTexto = formatarPeriodoEstimado(
+                            meta.previsao_dias_min,
+                            meta.previsao_dias_max,
+                            meta.previsao_data_inicio,
+                            meta.previsao_data_fim
+                          );
+                          const ultimaReprovacao = meta.reprovacoes && meta.reprovacoes.length > 0 
+                            ? meta.reprovacoes[meta.reprovacoes.length - 1] 
+                            : null;
+
+                          return (
+                            <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors">
+                              <TableCell className="font-semibold text-xs text-zinc-800 whitespace-nowrap">
+                                {docNum}
+                              </TableCell>
+                              <TableCell className="text-zinc-600 text-xs whitespace-nowrap">
+                                {dataCriacao}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap">
+                                {m.status === 'REPROVADO' ? (
+                                  <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                                    Reprovada
+                                  </span>
+                                ) : m.status === 'PARCIAL' ? (
+                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                    Recebimento Parcial
+                                  </span>
+                                ) : m.status === 'AGUARDANDO_CONFERENCIA' ? (
+                                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                                    Aguardando Nova Conferência
+                                  </span>
+                                ) : m.status === 'ENCERRADO' ? (
+                                  <span className="text-[10px] font-bold text-zinc-700 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-full">
+                                    Encerrada s/ Recebimento Integral
+                                  </span>
+                                ) : (
+                                  <Badge variant="outline">{m.status}</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs whitespace-nowrap">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded text-[11px] font-medium inline-block",
+                                  periodoTexto === 'Não informado'
+                                    ? "text-zinc-400 bg-zinc-100"
+                                    : "text-purple-700 bg-purple-50 border border-purple-200"
+                                )}>
+                                  {periodoTexto}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-semibold text-zinc-900 text-xs">{m.item}</span>
+                              </TableCell>
+                              <TableCell className="text-center font-medium text-xs text-zinc-700">
+                                {qtdPrevista}
+                              </TableCell>
+                              <TableCell className="text-center font-medium text-xs text-emerald-700">
+                                {qtdRecebida}
+                              </TableCell>
+                              <TableCell className="text-center font-bold text-xs text-amber-700">
+                                {saldoPendente}
+                              </TableCell>
+                              <TableCell className="text-xs max-w-[240px]">
+                                {m.status === 'REPROVADO' && (
+                                  <div className="text-red-700">
+                                    <span className="font-semibold">Motivo: </span>
+                                    <span>{ultimaReprovacao ? ultimaReprovacao.motivo : m.observacoes}</span>
+                                  </div>
+                                )}
+                                {meta.entregas && meta.entregas.length > 0 && (
+                                  <div className="text-[11px] text-zinc-600">
+                                    <span className="font-semibold">{meta.entregas.length} entrega(s) realizada(s).</span>
+                                    <span className="block text-[10px] text-zinc-400">
+                                      Última: {meta.entregas[meta.entregas.length - 1].quantidade} un em {new Date(meta.entregas[meta.entregas.length - 1].data_hora).toLocaleDateString('pt-BR')}
+                                    </span>
+                                  </div>
+                                )}
+                                {meta.encerramento && (
+                                  <div className="text-[11px] text-zinc-600">
+                                    <span className="font-semibold text-zinc-800">Encerrado: </span>
+                                    <span>{meta.encerramento.justificativa} ({meta.encerramento.quantidade_encerrada} un)</span>
+                                  </div>
+                                )}
+                                {meta.observacoes_criador && meta.observacoes_criador.length > 0 && (
+                                  <div className="mt-1 text-[10px] text-blue-700 bg-blue-50 rounded p-1">
+                                    <span className="font-bold">Sua última nota: </span>
+                                    <span>{meta.observacoes_criador[meta.observacoes_criador.length - 1].texto}</span>
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center whitespace-nowrap">
+                                {m.status === 'REPROVADO' ? (
+                                  <Button
+                                    size="sm"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7 px-2.5"
+                                    onClick={() => {
+                                      setEditingReprovadaId(m.id);
+                                      setItem(m.item);
+                                      setCodigo(m.codigo || "");
+                                      setQuantidade(m.quantidade || "");
+                                      setSetor(m.setor || "");
+                                      setJustificativa(m.observacoes || "");
+                                      setActiveTab('NOVA');
+                                    }}
+                                  >
+                                    Corrigir
+                                  </Button>
+                                ) : (m.status === 'PARCIAL' || m.status === 'AGUARDANDO_CONFERENCIA') ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-blue-700 border-blue-200 hover:bg-blue-50 text-xs h-7 px-2.5 gap-1.5"
+                                    onClick={() => openEncaminharModal(m)}
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                    Encaminhar
+                                  </Button>
+                                ) : (
+                                  <span className="text-[11px] text-zinc-400">Encerrado</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      {movsPendenciasCriador.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={10} className="text-center py-12 text-zinc-500">
+                            <div className="flex flex-col items-center justify-center space-y-2">
+                              <CheckCircle2 className="w-8 h-8 text-zinc-300" />
+                              <p>Nenhuma pendência encontrada para este CD.</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {/* Subaba CALENDÁRIO */}
+            {activeTab === 'CALENDARIO' && (
+              <SolicitacoesCalendario cd={cd} />
             )}
 
             {activeTab === 'AJUSTE' && isAjusteAllowed && (
@@ -1158,6 +1596,362 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                       )}
                     </TableBody>
                   </Table>
+                </div>
+              </div>
+            )}
+
+            {/* Modal de Conferência e Recebimento de Insumo (Requirement 3 e 5) */}
+            {recebimentoModal.isOpen && recebimentoModal.mov && (
+              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-xl shadow-2xl border border-zinc-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between p-4 border-b border-zinc-100 bg-zinc-50/80">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <h3 className="font-bold text-zinc-900 text-sm">
+                        Conferência e Recebimento de Insumo
+                      </h3>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-zinc-400 hover:text-zinc-700"
+                      onClick={() => setRecebimentoModal(prev => ({ ...prev, isOpen: false }))}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                    {/* Resumo do Item */}
+                    <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-200 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                            Documento
+                          </span>
+                          <span className="font-bold text-zinc-800 text-sm">
+                            {formatNumeroDocumento(recebimentoModal.mov)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                            Previsão Estimada
+                          </span>
+                          <span className="font-semibold text-purple-700">
+                            {formatarPeriodoEstimado(
+                              recebimentoModal.meta?.previsao_dias_min,
+                              recebimentoModal.meta?.previsao_dias_max,
+                              recebimentoModal.meta?.previsao_data_inicio,
+                              recebimentoModal.meta?.previsao_data_fim
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                          Item / Insumo
+                        </span>
+                        <span className="font-medium text-zinc-900">
+                          {recebimentoModal.mov.item}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-200 text-center">
+                        <div className="p-2 bg-white rounded border border-zinc-100">
+                          <span className="text-[10px] text-zinc-400 block">Previsto</span>
+                          <span className="font-bold text-zinc-700 text-sm">
+                            {recebimentoModal.meta?.quantidade_prevista ?? Number(recebimentoModal.mov.quantidade)}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-zinc-100">
+                          <span className="text-[10px] text-zinc-400 block">Já Recebido</span>
+                          <span className="font-bold text-emerald-700 text-sm">
+                            {recebimentoModal.meta?.quantidade_recebida ?? 0}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-zinc-100">
+                          <span className="text-[10px] text-zinc-400 block">Saldo Pendente</span>
+                          <span className="font-bold text-amber-700 text-sm">
+                            {(recebimentoModal.meta?.quantidade_prevista ?? Number(recebimentoModal.mov.quantidade)) - (recebimentoModal.meta?.quantidade_recebida ?? 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Observação do criador */}
+                    {recebimentoModal.meta?.observacoes_criador && recebimentoModal.meta.observacoes_criador.length > 0 && (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-1.5 text-blue-900 font-semibold mb-1">
+                          <MessageCircle className="w-4 h-4 text-blue-700" />
+                          <span>Observação do Solicitante</span>
+                        </div>
+                        <div className="space-y-1">
+                          {recebimentoModal.meta.observacoes_criador.map((obs: any, idx: number) => (
+                            <p key={idx} className="text-blue-800 text-xs">
+                              <span className="font-bold">{formatUserName(obs.usuario)} ({new Date(obs.data_hora).toLocaleDateString('pt-BR')}): </span>
+                              {obs.texto}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Histórico de Entregas Anteriores */}
+                    {recebimentoModal.meta?.entregas && recebimentoModal.meta.entregas.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-bold text-zinc-700 flex items-center gap-1">
+                          <History className="w-3.5 h-3.5 text-zinc-500" />
+                          Entregas anteriores registradas
+                        </span>
+                        <div className="space-y-1 max-h-28 overflow-y-auto">
+                          {recebimentoModal.meta.entregas.map((ent: any, idx: number) => (
+                            <div key={idx} className="p-2 bg-zinc-50 rounded border border-zinc-200 text-[11px] flex justify-between items-center">
+                              <div>
+                                <span className="font-bold text-zinc-800">Entrega #{ent.entrega_numero}: </span>
+                                <span className="text-emerald-700 font-semibold">{ent.quantidade} un </span>
+                                <span className="text-zinc-500">em {new Date(ent.data_hora).toLocaleString('pt-BR')} por {formatUserName(ent.usuario)}</span>
+                                {ent.observacao && <span className="block text-zinc-400 italic">"{ent.observacao}"</span>}
+                              </div>
+                              <span className="text-zinc-500 text-[10px]">Restou: {ent.saldo_restante} un</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Opção de Encerramento Formal do Saldo */}
+                    <div className="pt-2 border-t border-zinc-200">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="rounded border-zinc-300 text-purple-600 focus:ring-purple-500"
+                          checked={recebimentoModal.encerrarSaldo}
+                          onChange={(e) => setRecebimentoModal(prev => ({ ...prev, encerrarSaldo: e.target.checked }))}
+                        />
+                        <span className="text-xs font-semibold text-zinc-800">
+                          Encerrar formalmente o saldo não recebido restante
+                        </span>
+                      </label>
+                    </div>
+
+                    {recebimentoModal.encerrarSaldo ? (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                        <p className="text-[11px] text-amber-800">
+                          Atenção: O saldo pendente será cancelado sem recebimento e NÃO movimentará o estoque.
+                        </p>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-zinc-700">Justificativa do encerramento *</label>
+                          <textarea
+                            required
+                            className="w-full p-2 border border-zinc-200 rounded text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            rows={3}
+                            placeholder="Informe obrigatoriamente o motivo pelo qual o saldo restante não será entregue..."
+                            value={recebimentoModal.justificativaEncerramento}
+                            onChange={(e) => setRecebimentoModal(prev => ({ ...prev, justificativaEncerramento: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      /* Formulário de Confirmação da Entrega */
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-zinc-700">
+                            Quantidade recebida nesta entrega *
+                          </label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={(recebimentoModal.meta?.quantidade_prevista ?? Number(recebimentoModal.mov.quantidade)) - (recebimentoModal.meta?.quantidade_recebida ?? 0)}
+                            value={recebimentoModal.qtdRecebidaAgora || ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : Number(e.target.value);
+                              setRecebimentoModal(prev => ({ ...prev, qtdRecebidaAgora: val }));
+                            }}
+                            className="h-9 font-semibold text-emerald-700"
+                          />
+                          <p className="text-[10px] text-zinc-500">
+                            Máximo permitido: {(recebimentoModal.meta?.quantidade_prevista ?? Number(recebimentoModal.mov.quantidade)) - (recebimentoModal.meta?.quantidade_recebida ?? 0)} unidades. Somente a quantidade desta entrega incrementará o estoque.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-zinc-700">
+                            Observação da entrega (opcional)
+                          </label>
+                          <Input
+                            type="text"
+                            placeholder="Ex: 1º lote entregue pelo fornecedor"
+                            value={recebimentoModal.observacao}
+                            onChange={(e) => setRecebimentoModal(prev => ({ ...prev, observacao: e.target.value }))}
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecebimentoModal(prev => ({ ...prev, isOpen: false }))}
+                      disabled={recebimentoModal.isSubmitting}
+                      className="text-xs"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "text-xs text-white",
+                        recebimentoModal.encerrarSaldo
+                          ? "bg-amber-600 hover:bg-amber-700"
+                          : "bg-emerald-600 hover:bg-emerald-700"
+                      )}
+                      onClick={handleConfirmarRecebimento}
+                      disabled={recebimentoModal.isSubmitting}
+                    >
+                      {recebimentoModal.isSubmitting ? (
+                        'Processando...'
+                      ) : recebimentoModal.encerrarSaldo ? (
+                        'Confirmar Encerramento Formal'
+                      ) : (
+                        'Confirmar Recebimento'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal de Reprovação (Requirement 2 e 6) */}
+            {reprovarModal.isOpen && reprovarModal.mov && (
+              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-xl shadow-2xl border border-zinc-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between p-4 border-b border-zinc-100 bg-zinc-50/80">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <h3 className="font-bold text-zinc-900 text-sm">
+                        Reprovar Solicitação
+                      </h3>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-zinc-400 hover:text-zinc-700"
+                      onClick={() => setReprovarModal(prev => ({ ...prev, isOpen: false }))}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="p-5 space-y-4 text-xs">
+                    <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-200 space-y-1">
+                      <p><span className="font-bold text-zinc-700">Documento: </span>{formatNumeroDocumento(reprovarModal.mov)}</p>
+                      <p><span className="font-bold text-zinc-700">Item: </span>{reprovarModal.mov.item}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-700">
+                        Motivo da Reprovação *
+                      </label>
+                      <textarea
+                        required
+                        className="w-full p-2.5 border border-zinc-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                        rows={4}
+                        placeholder="Descreva detalhadamente o motivo da reprovação..."
+                        value={reprovarModal.motivo}
+                        onChange={(e) => setReprovarModal(prev => ({ ...prev, motivo: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReprovarModal(prev => ({ ...prev, isOpen: false }))}
+                      disabled={reprovarModal.isSubmitting}
+                      className="text-xs"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white text-xs"
+                      onClick={handleReprovar}
+                      disabled={reprovarModal.isSubmitting}
+                    >
+                      {reprovarModal.isSubmitting ? 'Reprovando...' : 'Confirmar Reprovação'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal de Encaminhamento do Criador (Requirement 4) */}
+            {encaminharModal.isOpen && encaminharModal.mov && (
+              <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-xl shadow-2xl border border-zinc-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between p-4 border-b border-zinc-100 bg-zinc-50/80">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-bold text-zinc-900 text-sm">
+                        Encaminhar Pendência ao Recebimento
+                      </h3>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-zinc-400 hover:text-zinc-700"
+                      onClick={() => setEncaminharModal(prev => ({ ...prev, isOpen: false }))}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="p-5 space-y-4 text-xs">
+                    <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-200 space-y-1">
+                      <p><span className="font-bold text-zinc-700">Documento: </span>{formatNumeroDocumento(encaminharModal.mov)}</p>
+                      <p><span className="font-bold text-zinc-700">Item: </span>{encaminharModal.mov.item}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-700">
+                        Observação / Previsão para o Recebedor *
+                      </label>
+                      <textarea
+                        required
+                        className="w-full p-2.5 border border-zinc-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={4}
+                        placeholder="Ex: As 4 unidades restantes têm previsão de chegada amanhã. Favor manter a pendência em acompanhamento."
+                        value={encaminharModal.texto}
+                        onChange={(e) => setEncaminharModal(prev => ({ ...prev, texto: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEncaminharModal(prev => ({ ...prev, isOpen: false }))}
+                      disabled={encaminharModal.isSubmitting}
+                      className="text-xs"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
+                      onClick={handleEncaminhar}
+                      disabled={encaminharModal.isSubmitting}
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      {encaminharModal.isSubmitting ? 'Encaminhando...' : 'Encaminhar ao Recebedor'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

@@ -45,7 +45,32 @@ export class SupabaseFaturaRepository implements FaturaRepository {
         historico_passagens: typeof d.historico_passagens === 'string' ? JSON.parse(d.historico_passagens) : (d.historico_passagens || {}),
         nexa_possui_rc: d.nexa_possui_rc || false,
         nexa_rc_numero: d.nexa_rc_numero || null,
-        nexa_rc_data: d.nexa_rc_data || null
+        nexa_rc_data: d.nexa_rc_data || null,
+        previsao_recebimento_dias_min: (() => {
+          if (d.previsao_recebimento_dias_min) return d.previsao_recebimento_dias_min;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta && i.previsao_recebimento);
+          return meta?.previsao_recebimento?.dias_min || undefined;
+        })(),
+        previsao_recebimento_dias_max: (() => {
+          if (d.previsao_recebimento_dias_max) return d.previsao_recebimento_dias_max;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta && i.previsao_recebimento);
+          return meta?.previsao_recebimento?.dias_max || undefined;
+        })(),
+        previsao_recebimento_data_inicio: (() => {
+          if (d.previsao_recebimento_data_inicio) return d.previsao_recebimento_data_inicio;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta && i.previsao_recebimento);
+          return meta?.previsao_recebimento?.data_inicio || undefined;
+        })(),
+        previsao_recebimento_data_fim: (() => {
+          if (d.previsao_recebimento_data_fim) return d.previsao_recebimento_data_fim;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta && i.previsao_recebimento);
+          return meta?.previsao_recebimento?.data_fim || undefined;
+        })(),
+        historico_previsao: (() => {
+          if (d.historico_previsao) return d.historico_previsao;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta && i.previsao_recebimento);
+          return meta?.previsao_recebimento?.historico || [];
+        })(),
       };
     }) as Fatura[];
   }
@@ -123,6 +148,22 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       nexa_rc_data: faturaData.nexa_rc_data || null
     };
     
+    // Empacotar previsao_recebimento dentro de insumos (_meta) para garantir persistência sem quebrar caso coluna SQL não exista
+    const cleanInsumos = (sanitizedData.insumos || []).filter((i: any) => !(i && i._meta));
+    if (faturaData.previsao_recebimento_dias_min && faturaData.previsao_recebimento_dias_max) {
+      cleanInsumos.push({
+        _meta: true,
+        previsao_recebimento: {
+          dias_min: faturaData.previsao_recebimento_dias_min,
+          dias_max: faturaData.previsao_recebimento_dias_max,
+          data_inicio: faturaData.previsao_recebimento_data_inicio,
+          data_fim: faturaData.previsao_recebimento_data_fim,
+          historico: faturaData.historico_previsao || []
+        }
+      });
+    }
+    sanitizedData.insumos = cleanInsumos;
+
     // Convert undefined to null or omit, as supabase expects certain formats
     delete sanitizedData.pc_nexa_concluido;
     delete sanitizedData.numero_pc_nexa;
@@ -130,6 +171,11 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     delete sanitizedData.usuario_pc_nexa;
     delete sanitizedData.fiscal_observacao;
     delete sanitizedData.pagamento_observacao;
+    delete sanitizedData.previsao_recebimento_dias_min;
+    delete sanitizedData.previsao_recebimento_dias_max;
+    delete sanitizedData.previsao_recebimento_data_inicio;
+    delete sanitizedData.previsao_recebimento_data_fim;
+    delete sanitizedData.historico_previsao;
     // delete sanitizedData.usuario_nexa_lancamento;
     // delete sanitizedData.usuario_nexa_programacao;
     // delete sanitizedData.usuario_nexa_pagamento;

@@ -9,6 +9,7 @@ import { cn, formatCNPJ } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
 import { formatUserName, getUserRole } from "@/lib/roles";
+import { calcularDatasPrevisao, formatarPeriodoEstimado } from "@/lib/previsaoRecebimento";
 
 interface FaturaModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
   const currentUser = typeof window !== 'undefined' ? localStorage.getItem('pcp_user') || '' : '';
   const isReadOnly = getUserRole(currentUser) === 'LIDERANCA' || getUserRole(currentUser) === 'REPORTS';
 
+  const metaInsumo = (fatura?.insumos?.find(i => (i as any)._meta) as any) || {};
+
   const [formData, setFormData] = useState<Partial<Fatura>>({
     categoria: categoriaAtiva,
     possui_encargo: false,
@@ -38,10 +41,15 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
     forma_pagamento: fatura?.forma_pagamento || 'Boleto',
     fluxo_iniciado_por: fatura?.fluxo_iniciado_por || 'SAP',
     ...fatura,
+    previsao_recebimento_dias_min: fatura?.previsao_recebimento_dias_min ?? metaInsumo.previsao_recebimento_dias_min ?? undefined,
+    previsao_recebimento_dias_max: fatura?.previsao_recebimento_dias_max ?? metaInsumo.previsao_recebimento_dias_max ?? undefined,
+    previsao_recebimento_data_inicio: fatura?.previsao_recebimento_data_inicio ?? metaInsumo.previsao_recebimento_data_inicio ?? undefined,
+    previsao_recebimento_data_fim: fatura?.previsao_recebimento_data_fim ?? metaInsumo.previsao_recebimento_data_fim ?? undefined,
+    historico_previsao: fatura?.historico_previsao ?? metaInsumo.historico_previsao ?? [],
     fiscal_observacao: fatura?.fiscal_observacao || parseObservacoes(fatura?.observacoes).fiscal_observacao || '',
     pagamento_observacao: fatura?.pagamento_observacao || parseObservacoes(fatura?.observacoes).pagamento_observacao || '',
-    cd: fatura?.cd || fatura?.insumos?.find(i => (i as any)._meta)?.cd || fatura?.insumos?.[0]?.cd || '',
-    codigo_fornecedor: fatura?.codigo_fornecedor || fatura?.insumos?.find(i => (i as any)._meta)?.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
+    cd: fatura?.cd || metaInsumo.cd || fatura?.insumos?.[0]?.cd || '',
+    codigo_fornecedor: fatura?.codigo_fornecedor || metaInsumo.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
     insumos: fatura?.insumos?.filter(i => !(i as any)._meta) || [],
   });
 
@@ -139,14 +147,72 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       }
     }
 
+    // Validação do período estimado de recebimento
+    const rawMin = formData.previsao_recebimento_dias_min;
+    const rawMax = formData.previsao_recebimento_dias_max;
+    const prevDiasMin = rawMin !== undefined && rawMin !== null && rawMin !== ('' as any) ? Number(rawMin) : undefined;
+    const prevDiasMax = rawMax !== undefined && rawMax !== null && rawMax !== ('' as any) ? Number(rawMax) : undefined;
+
+    if (prevDiasMin !== undefined || prevDiasMax !== undefined) {
+      if (prevDiasMin === undefined || prevDiasMax === undefined || prevDiasMin < 1 || prevDiasMax < 1 || !Number.isInteger(prevDiasMin) || !Number.isInteger(prevDiasMax)) {
+        setFormError("O período estimado de recebimento deve ser composto por números inteiros positivos (mínimo de 1 dia útil).");
+        return;
+      }
+      if (prevDiasMin > prevDiasMax) {
+        setFormError("O prazo mínimo em dias úteis não pode ser maior que o prazo máximo.");
+        return;
+      }
+    }
+
+    const baseCriacao = formData.data_criacao || formData.created_at || formData.data_recebimento || formData.data_emissao || new Date().toISOString().slice(0, 10);
+    let finalDataInicio: string | undefined = formData.previsao_recebimento_data_inicio;
+    let finalDataFim: string | undefined = formData.previsao_recebimento_data_fim;
+
+    if (prevDiasMin && prevDiasMax) {
+      const calc = calcularDatasPrevisao(baseCriacao, prevDiasMin, prevDiasMax);
+      finalDataInicio = calc.data_inicio;
+      finalDataFim = calc.data_fim;
+    }
+
+    // Auditoria de histórico de alteração do período
+    const user = typeof window !== 'undefined' ? localStorage.getItem('pcp_user') || 'Sistema' : 'Sistema';
+    let historicoPrev = formData.historico_previsao ? [...formData.historico_previsao] : [];
+    if (
+      fatura?.previsao_recebimento_dias_min &&
+      (fatura.previsao_recebimento_dias_min !== prevDiasMin || fatura.previsao_recebimento_dias_max !== prevDiasMax)
+    ) {
+      historicoPrev.push({
+        dias_min: prevDiasMin || 0,
+        dias_max: prevDiasMax || 0,
+        data_inicio: finalDataInicio,
+        data_fim: finalDataFim,
+        alterado_por: user,
+        data_alteracao: new Date().toISOString()
+      });
+    }
+
     const currentInsumos = formData.insumos || [];
-    const metaObj = { _meta: true, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor };
+    const metaObj = { 
+      _meta: true, 
+      cd: formData.cd, 
+      codigo_fornecedor: formData.codigo_fornecedor,
+      previsao_recebimento_dias_min: prevDiasMin,
+      previsao_recebimento_dias_max: prevDiasMax,
+      previsao_recebimento_data_inicio: finalDataInicio,
+      previsao_recebimento_data_fim: finalDataFim,
+      historico_previsao: historicoPrev
+    };
     
     const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
     const currentDatas = getEtapasDatas(formData);
     const combinedObs = buildObservacoes(formData.fiscal_observacao, formData.pagamento_observacao, formData.observacoes);
     const finalFatura = {
       ...formData,
+      previsao_recebimento_dias_min: prevDiasMin,
+      previsao_recebimento_dias_max: prevDiasMax,
+      previsao_recebimento_data_inicio: finalDataInicio,
+      previsao_recebimento_data_fim: finalDataFim,
+      historico_previsao: historicoPrev,
       data_aprovacao: formData.data_aprovacao || currentDatas.sap_rc_aprovacao || null,
       data_pedido_sap: formData.data_pedido_sap || (formData.pedido_sap ? currentDatas.sap_pc_geracao : null),
       nexa_data_inicio: formData.nexa_data_inicio || currentDatas.nexa_inicio || null,
@@ -630,7 +696,76 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
               </section>
             )}
 
-                                    {/* Fluxos de Trabalho */}
+            {/* Período Estimado de Recebimento */}
+            <section className="p-5 bg-white border border-zinc-200 rounded-xl shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-zinc-100">
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
+                    Período Estimado de Recebimento
+                  </h4>
+                  <p className="text-[11px] text-zinc-500">
+                    Prazo em dias úteis (segunda a sexta-feira) a partir da criação da fatura. Compartilhado por todos os itens.
+                  </p>
+                </div>
+                {(() => {
+                  const baseCriacao = formData.data_criacao || formData.created_at || formData.data_recebimento || formData.data_emissao || new Date().toISOString().slice(0, 10);
+                  const pMin = formData.previsao_recebimento_dias_min ? Number(formData.previsao_recebimento_dias_min) : undefined;
+                  const pMax = formData.previsao_recebimento_dias_max ? Number(formData.previsao_recebimento_dias_max) : undefined;
+                  let datas = { data_inicio: formData.previsao_recebimento_data_inicio, data_fim: formData.previsao_recebimento_data_fim };
+                  if (pMin && pMax && pMin >= 1 && pMax >= pMin) {
+                    datas = calcularDatasPrevisao(baseCriacao, pMin, pMax);
+                  }
+                  const texto = formatarPeriodoEstimado(pMin, pMax, datas.data_inicio, datas.data_fim);
+                  return (
+                    <span className={cn(
+                      "text-xs font-semibold px-2.5 py-1 rounded-md border inline-flex items-center gap-1.5 self-start sm:self-auto",
+                      texto === "Não informado"
+                        ? "text-zinc-500 bg-zinc-100 border-zinc-200"
+                        : "text-purple-700 bg-purple-50 border-purple-200"
+                    )}>
+                      {texto}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md pt-1">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-700">De (dias úteis)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step={1}
+                    placeholder="Ex: 3"
+                    value={formData.previsao_recebimento_dias_min ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+                      handleChange("previsao_recebimento_dias_min", isNaN(val as number) ? undefined : val);
+                    }}
+                    disabled={isReadOnly}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-700">Até (dias úteis)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step={1}
+                    placeholder="Ex: 5"
+                    value={formData.previsao_recebimento_dias_max ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+                      handleChange("previsao_recebimento_dias_max", isNaN(val as number) ? undefined : val);
+                    }}
+                    disabled={isReadOnly}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Fluxos de Trabalho */}
             {(() => {
               const etapasDatas = getEtapasDatas(formData);
               const isFluxoSap = formData.fluxo_iniciado_por === 'SAP';

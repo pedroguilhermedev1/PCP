@@ -16,7 +16,12 @@ export async function GET(request: Request) {
     query = query.ilike('cd', cd);
   }
   if (status) {
-    query = query.eq('status', status);
+    if (status.includes(',')) {
+      const statuses = status.split(',').map(s => s.trim());
+      query = query.in('status', statuses);
+    } else {
+      query = query.eq('status', status);
+    }
   }
 
   const { data, error } = await query;

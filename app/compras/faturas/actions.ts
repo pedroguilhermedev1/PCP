@@ -4,6 +4,7 @@ import { Fatura } from "@/modules/compras/domain/Fatura";
 import { faturaRepository } from "@/modules/compras/infra/SupabaseFaturaRepository";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
+import { serializarObservacoesComMeta } from "@/lib/previsaoRecebimento";
 
 export async function saveFaturaAction(fatura: Object) {
   try {
@@ -20,18 +21,34 @@ export async function saveFaturaAction(fatura: Object) {
         const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
         const validInsumos = faturaData.insumos.filter(ins => !(ins as any)._meta && (!ins.tipo_item || ins.tipo_item === 'Insumo'));
 
-        const movimentacoes = validInsumos.map(insumo => ({
-          tipo: 'Entrada',
-          codigo: insumo.codigo,
-          item: insumo.item,
-          cd: formatCd(faturaData.cd || ''),
-          quantidade: insumo.quantidade,
-          usuario: faturaData.responsavel || 'Sistema Faturas',
-          observacoes: `${faturaData.numero_documento ? 'Fatura ' + faturaData.numero_documento : 'Fatura não informada'} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim(),
-          status: 'PENDENTE',
-          fatura_id: faturaData.id,
-          tipo_envio: 'Principal',
-        }));
+        const movimentacoes = validInsumos.map(insumo => {
+          const obsTexto = `${faturaData.numero_documento ? 'Fatura ' + faturaData.numero_documento : 'Fatura não informada'} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim();
+          const metaData = {
+            quantidade_prevista: insumo.quantidade,
+            quantidade_recebida: 0,
+            saldo_pendente: insumo.quantidade,
+            entregas: [],
+            previsao_dias_min: faturaData.previsao_recebimento_dias_min,
+            previsao_dias_max: faturaData.previsao_recebimento_dias_max,
+            previsao_data_inicio: faturaData.previsao_recebimento_data_inicio,
+            previsao_data_fim: faturaData.previsao_recebimento_data_fim,
+            data_criacao_original: faturaData.data_criacao || faturaData.created_at || faturaData.data_recebimento || new Date().toISOString()
+          };
+          const observacoesFinal = serializarObservacoesComMeta(obsTexto, metaData);
+
+          return {
+            tipo: 'Entrada',
+            codigo: insumo.codigo,
+            item: insumo.item,
+            cd: formatCd(faturaData.cd || ''),
+            quantidade: insumo.quantidade,
+            usuario: faturaData.responsavel || 'Sistema Faturas',
+            observacoes: observacoesFinal,
+            status: 'PENDENTE',
+            fatura_id: faturaData.id,
+            tipo_envio: 'Principal',
+          };
+        });
 
         const { error } = await supabase.from('estoque_movimentacoes').insert(movimentacoes);
         if (error) {

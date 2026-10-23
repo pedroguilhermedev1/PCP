@@ -235,33 +235,37 @@ export function Sidebar() {
   });
 
   const visibleItems = (isAdmin
-  ? dynamicSidebarItems.filter(item => {
-      // Esconder as telas administrativas de admins comuns
-      if (!isSuperAdmin && (item.title === 'Configurações' || item.title === 'Gestão de Acessos' || item.title === 'Lixeira')) {
-        return false;
-      }
-      return item.title !== 'Solicitações' || isAjusteEstoqueUser;
-    })
-  : isReportsOnly 
-    ? dynamicSidebarItems.filter(item => item.title === 'Relatórios')
-    : isLideranca
-      ? dynamicSidebarItems.filter(item => item.title === 'Dashboard' || item.title === 'Cronograma' || item.title === 'Relatórios')
-      : dynamicSidebarItems.filter(item =>
-          item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Cronograma' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
-        )).map(item => {
-        if (!isAdmin && (item.title === 'Insumos' || item.title === 'Solicitações')) {
-          const userCd = getUserCD(currentUser || undefined)?.toLowerCase();
-          if (userCd) {
-            const filteredItems = item.items?.filter(subItem => {
-              const subTitleNormalized = subItem.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-              const mappedCdNormalized = userCd.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-              return subTitleNormalized.includes(mappedCdNormalized);
-            });
-            return { ...item, items: filteredItems };
-          }
+    ? dynamicSidebarItems.filter(item => {
+        // Esconder as telas administrativas de admins comuns
+        if (!isSuperAdmin && (item.title === 'Configurações' || item.title === 'Gestão de Acessos' || item.title === 'Lixeira')) {
+          return false;
         }
-        return item;
-      });
+        // Ocultar Cronograma e Lembretes da navegação
+        if (item.title === 'Cronograma' || item.title === 'Lembretes') {
+          return false;
+        }
+        return true;
+      })
+    : isReportsOnly 
+      ? dynamicSidebarItems.filter(item => item.title === 'Relatórios')
+      : isLideranca
+        ? dynamicSidebarItems.filter(item => item.title === 'Dashboard' || item.title === 'Relatórios')
+        : dynamicSidebarItems.filter(item =>
+            item.title === 'Dashboard' || item.title === 'Solicitações' || item.title === 'Relatórios' || item.title === 'Insumos' || item.title === 'Apresentação Semanal'
+          )).map(item => {
+          if (!isAdmin && (item.title === 'Insumos' || item.title === 'Solicitações')) {
+            const userCd = getUserCD(currentUser || undefined)?.toLowerCase();
+            if (userCd) {
+              const filteredItems = item.items?.filter(subItem => {
+                const subTitleNormalized = subItem.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const mappedCdNormalized = userCd.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return subTitleNormalized.includes(mappedCdNormalized);
+              });
+              return { ...item, items: filteredItems };
+            }
+          }
+          return item;
+        });
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
