@@ -216,6 +216,7 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       data_aprovacao: formData.data_aprovacao || currentDatas.sap_rc_aprovacao || null,
       data_pedido_sap: formData.data_pedido_sap || (formData.pedido_sap ? currentDatas.sap_pc_geracao : null),
       nexa_data_inicio: formData.nexa_data_inicio || currentDatas.nexa_inicio || null,
+      nexa_data_fim: formData.nexa_data_fim || currentDatas.nexa_conclusao || null,
       fiscal_data_inicio: formData.fiscal_data_inicio || currentDatas.fiscal_inicio || null,
       fiscal_data_fim: formData.fiscal_data_fim || currentDatas.fiscal_conclusao || null,
       prog_data_inicio: formData.prog_data_inicio || currentDatas.pagamento_inicio || null,
@@ -859,6 +860,29 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               )}
                             </div>
 
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase flex items-center justify-between">
+                                <span>Data do Pedido (PC)</span>
+                                {etapasDatas.sap_pc_is_inherited && (
+                                  <span className="text-[9px] text-purple-600 font-normal">Herdada Aprovação</span>
+                                )}
+                              </label>
+                              <Input 
+                                className="h-7 text-xs border-zinc-200" 
+                                type="date" 
+                                value={(formData.data_pedido_sap || etapasDatas.sap_pc_geracao || "").substring(0, 10)} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    data_pedido_sap: val,
+                                    pc_data_fim: val,
+                                    nexa_data_inicio: prev.nexa_data_inicio || val
+                                  }));
+                                }} 
+                              />
+                            </div>
+
                             {tempoRcAprov !== null && (
                               <div className="text-[9px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-1 rounded">
                                 Tempo Criação → Aprovação: {tempoRcAprov} dia(s)
@@ -968,10 +992,26 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="mb-3"><SlaBadge startDate={etapasDatas.nexa_inicio} endDate={etapasDatas.nexa_abertura} slaDias={1} /></div>
 
                           <div className="space-y-3">
-                            {/* Data de início herdada */}
-                            <div className="p-2 rounded bg-cyan-50/50 border border-cyan-100 space-y-0.5">
-                              <span className="text-[9px] font-semibold text-cyan-700 uppercase block">Início (Herdada Aprovação SAP)</span>
-                              <span className="text-xs font-bold text-cyan-900">{formatDateDisplay(etapasDatas.nexa_inicio)}</span>
+                            {/* Data de início */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-cyan-700 uppercase flex items-center justify-between">
+                                <span>Início (Nexa)</span>
+                                {etapasDatas.nexa_inicio_is_inherited && (
+                                  <span className="text-[9px] text-cyan-600 font-normal">Herdada Aprovação SAP</span>
+                                )}
+                              </label>
+                              <Input 
+                                className="h-7 text-xs border-cyan-200 bg-cyan-50/20" 
+                                type="date" 
+                                value={(formData.nexa_data_inicio || etapasDatas.nexa_inicio || "").substring(0, 10)} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    nexa_data_inicio: val
+                                  }));
+                                }} 
+                              />
                             </div>
 
                             <div className="space-y-1">
@@ -1008,8 +1048,8 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                               </div>
                             )}
 
-                            {/* Checkbox único de conclusão da etapa */}
-                            <div className="mt-3 pt-2 border-t border-zinc-100">
+                            {/* Checkbox de conclusão da etapa e Data de Conclusão */}
+                            <div className="mt-3 pt-2 border-t border-zinc-100 space-y-2">
                               <label className="flex items-center justify-between cursor-pointer group">
                                 <span className="text-[10px] font-bold text-zinc-700 uppercase group-hover:text-cyan-600 transition-colors">Etapa concluída</span>
                                 <input 
@@ -1023,12 +1063,36 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                                       ...prev,
                                       nexa_emitiu_nf: checked,
                                       nexa_anexada: checked,
-                                      nexa_data_fim: checked ? (prev.nexa_data_fim || todayStr) : prev.nexa_data_fim,
+                                      nexa_data_fim: checked ? (prev.nexa_data_fim || todayStr) : '',
                                       fiscal_data_inicio: checked ? (prev.fiscal_data_inicio || prev.nexa_data_fim || todayStr) : prev.fiscal_data_inicio
                                     }));
                                   }}
                                 />
                               </label>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-semibold text-zinc-500 uppercase flex items-center justify-between">
+                                  <span>Data de Conclusão (Nexa)</span>
+                                  {Boolean(formData.nexa_emitiu_nf && formData.nexa_anexada) && (
+                                    <span className="text-[9px] text-cyan-600 font-normal">Editável</span>
+                                  )}
+                                </label>
+                                <Input 
+                                  className="h-7 text-xs border-zinc-200" 
+                                  type="date" 
+                                  value={(formData.nexa_data_fim || "").substring(0, 10)} 
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      nexa_data_fim: val,
+                                      fiscal_data_inicio: (!prev.fiscal_data_inicio || prev.fiscal_data_inicio === prev.nexa_data_fim) ? val : prev.fiscal_data_inicio,
+                                      nexa_emitiu_nf: !!val,
+                                      nexa_anexada: !!val
+                                    }));
+                                  }} 
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1124,14 +1188,35 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="mb-3"><SlaBadge startDate={etapasDatas.fiscal_inicio} endDate={etapasDatas.fiscal_conclusao} slaDias={3} /></div>
 
                           <div className="space-y-3">
-                            {/* Data de início herdada do Nexa */}
-                            <div className="p-2 rounded bg-slate-50 border border-slate-200 space-y-0.5">
-                              <span className="text-[9px] font-semibold text-slate-600 uppercase block">Início (Herdada Nexa)</span>
-                              <span className="text-xs font-bold text-slate-900">{formatDateDisplay(etapasDatas.fiscal_inicio)}</span>
+                            {/* Data de início herdada do Nexa (editável) */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-slate-700 uppercase flex items-center justify-between">
+                                <span>Início (Fiscal)</span>
+                                {etapasDatas.fiscal_inicio_is_inherited && (
+                                  <span className="text-[9px] text-slate-600 font-normal">Herdada Nexa</span>
+                                )}
+                              </label>
+                              <Input 
+                                className="h-7 text-xs border-slate-200 bg-slate-50/20" 
+                                type="date" 
+                                value={(formData.fiscal_data_inicio || etapasDatas.fiscal_inicio || "").substring(0, 10)} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    fiscal_data_inicio: val
+                                  }));
+                                }} 
+                              />
                             </div>
 
                             <div className="space-y-1">
-                              <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data de Conclusão (Fiscal)</label>
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase flex items-center justify-between">
+                                <span>Data de Conclusão (Fiscal)</span>
+                                {Boolean(formData.nexa_lancamento_concluido || formData.fiscal_data_fim) && (
+                                  <span className="text-[9px] text-slate-600 font-normal">Editável</span>
+                                )}
+                              </label>
                               <Input 
                                 className="h-7 text-xs border-zinc-200" 
                                 type="date" 
@@ -1142,8 +1227,9 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                                     ...prev,
                                     fiscal_data_fim: val,
                                     nexa_data_conclusao_lancamento: val,
-                                    prog_data_inicio: prev.prog_data_inicio || val,
-                                    pagamento_data_inicio: prev.pagamento_data_inicio || val
+                                    nexa_lancamento_concluido: !!val,
+                                    prog_data_inicio: (!prev.prog_data_inicio || prev.prog_data_inicio === prev.fiscal_data_fim) ? val : prev.prog_data_inicio,
+                                    pagamento_data_inicio: (!prev.pagamento_data_inicio || prev.pagamento_data_inicio === prev.fiscal_data_fim) ? val : prev.pagamento_data_inicio
                                   }));
                                 }} 
                               />
@@ -1285,10 +1371,27 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                           <div className="mb-3"><SlaBadge startDate={etapasDatas.pagamento_inicio} endDate={etapasDatas.pagamento_efetiva} slaDias={3} /></div>
 
                           <div className="space-y-3">
-                            {/* Data de início herdada do Fiscal */}
-                            <div className="p-2 rounded bg-green-50/60 border border-green-200 space-y-0.5">
-                              <span className="text-[9px] font-semibold text-green-700 uppercase block">Início (Herdada Fiscal)</span>
-                              <span className="text-xs font-bold text-green-900">{formatDateDisplay(etapasDatas.pagamento_inicio)}</span>
+                            {/* Data de início herdada do Fiscal (editável) */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-green-700 uppercase flex items-center justify-between">
+                                <span>Início (Pagamento)</span>
+                                {etapasDatas.pagamento_inicio_is_inherited && (
+                                  <span className="text-[9px] text-green-600 font-normal">Herdada Fiscal</span>
+                                )}
+                              </label>
+                              <Input 
+                                className="h-7 text-xs border-green-200 bg-green-50/20" 
+                                type="date" 
+                                value={(formData.pagamento_data_inicio || formData.prog_data_inicio || etapasDatas.pagamento_inicio || "").substring(0, 10)} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    pagamento_data_inicio: val,
+                                    prog_data_inicio: val
+                                  }));
+                                }} 
+                              />
                             </div>
 
                             {/* Status do Pagamento */}
@@ -1553,13 +1656,52 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                             />
                           </div>
 
-                          {/* Se houver data de conclusao historica, mostra sem exigir preenchimento */}
-                          {formData.nexa_data_fim && (
-                            <div className="p-2 rounded bg-zinc-50 border border-zinc-200 space-y-0.5">
-                              <span className="text-[9px] font-semibold text-zinc-500 uppercase block">Conclusão Nexa (Histórico)</span>
-                              <span className="text-xs font-medium text-zinc-800">{formatDateDisplay(formData.nexa_data_fim)}</span>
+                          {/* Checkbox de conclusão da etapa e Data de Conclusão */}
+                          <div className="mt-3 pt-2 border-t border-zinc-100 space-y-2">
+                            <label className="flex items-center justify-between cursor-pointer group">
+                              <span className="text-[10px] font-bold text-zinc-700 uppercase group-hover:text-cyan-600 transition-colors">Etapa concluída</span>
+                              <input 
+                                type="checkbox" 
+                                className="w-4 h-4 rounded border-zinc-300 text-cyan-600 focus:ring-cyan-500"
+                                checked={Boolean(formData.nexa_emitiu_nf && formData.nexa_anexada || formData.nexa_data_fim)}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  const todayStr = new Date().toISOString().slice(0, 10);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    nexa_emitiu_nf: checked,
+                                    nexa_anexada: checked,
+                                    nexa_data_fim: checked ? (prev.nexa_data_fim || todayStr) : '',
+                                    fiscal_data_inicio: checked ? (prev.fiscal_data_inicio || prev.nexa_data_fim || todayStr) : prev.fiscal_data_inicio
+                                  }));
+                                }}
+                              />
+                            </label>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-zinc-500 uppercase flex items-center justify-between">
+                                <span>Data de Conclusão (Nexa)</span>
+                                {Boolean(formData.nexa_data_fim) && (
+                                  <span className="text-[9px] text-cyan-600 font-normal">Editável</span>
+                                )}
+                              </label>
+                              <Input 
+                                className="h-7 text-xs border-zinc-200" 
+                                type="date" 
+                                value={(formData.nexa_data_fim || "").substring(0, 10)} 
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    nexa_data_fim: val,
+                                    fiscal_data_inicio: (!prev.fiscal_data_inicio || prev.fiscal_data_inicio === prev.nexa_data_fim) ? val : prev.fiscal_data_inicio,
+                                    nexa_emitiu_nf: !!val,
+                                    nexa_anexada: !!val
+                                  }));
+                                }} 
+                              />
                             </div>
-                          )}
+                          </div>
                         </div>
                       </div>
 
@@ -1654,14 +1796,35 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <div className="mb-3"><SlaBadge startDate={etapasDatas.fiscal_inicio} endDate={etapasDatas.fiscal_conclusao} slaDias={3} /></div>
 
                         <div className="space-y-3">
-                          {/* Data de início herdada do Nexa */}
-                          <div className="p-2 rounded bg-slate-50 border border-slate-200 space-y-0.5">
-                            <span className="text-[9px] font-semibold text-slate-600 uppercase block">Início (Herdada Nexa)</span>
-                            <span className="text-xs font-bold text-slate-900">{formatDateDisplay(etapasDatas.fiscal_inicio)}</span>
+                          {/* Data de início herdada do Nexa (editável) */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-slate-700 uppercase flex items-center justify-between">
+                              <span>Início (Fiscal)</span>
+                              {etapasDatas.fiscal_inicio_is_inherited && (
+                                <span className="text-[9px] text-slate-600 font-normal">Herdada Nexa</span>
+                              )}
+                            </label>
+                            <Input 
+                              className="h-7 text-xs border-slate-200 bg-slate-50/20" 
+                              type="date" 
+                              value={(formData.fiscal_data_inicio || etapasDatas.fiscal_inicio || "").substring(0, 10)} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  fiscal_data_inicio: val
+                                }));
+                              }} 
+                            />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-semibold text-zinc-500 uppercase">Data de Conclusão</label>
+                            <label className="text-[10px] font-semibold text-zinc-500 uppercase flex items-center justify-between">
+                              <span>Data de Conclusão (Fiscal)</span>
+                              {Boolean(formData.nexa_lancamento_concluido || formData.fiscal_data_fim) && (
+                                <span className="text-[9px] text-slate-600 font-normal">Editável</span>
+                              )}
+                            </label>
                             <Input 
                               className="h-7 text-xs border-zinc-200" 
                               type="date" 
@@ -1672,8 +1835,9 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                                   ...prev,
                                   fiscal_data_fim: val,
                                   nexa_data_conclusao_lancamento: val,
-                                  prog_data_inicio: prev.prog_data_inicio || val,
-                                  pagamento_data_inicio: prev.pagamento_data_inicio || val
+                                  nexa_lancamento_concluido: !!val,
+                                  prog_data_inicio: (!prev.prog_data_inicio || prev.prog_data_inicio === prev.fiscal_data_fim) ? val : prev.prog_data_inicio,
+                                  pagamento_data_inicio: (!prev.pagamento_data_inicio || prev.pagamento_data_inicio === prev.fiscal_data_fim) ? val : prev.pagamento_data_inicio
                                 }));
                               }} 
                             />
@@ -1815,10 +1979,27 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                         <div className="mb-3"><SlaBadge startDate={etapasDatas.pagamento_inicio} endDate={etapasDatas.pagamento_efetiva} slaDias={3} /></div>
 
                         <div className="space-y-3">
-                          {/* Data de início herdada do Fiscal */}
-                          <div className="p-2 rounded bg-green-50/60 border border-green-200 space-y-0.5">
-                            <span className="text-[9px] font-semibold text-green-700 uppercase block">Início (Herdada Fiscal)</span>
-                            <span className="text-xs font-bold text-green-900">{formatDateDisplay(etapasDatas.pagamento_inicio)}</span>
+                          {/* Data de início herdada do Fiscal (editável) */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-green-700 uppercase flex items-center justify-between">
+                              <span>Início (Pagamento)</span>
+                              {etapasDatas.pagamento_inicio_is_inherited && (
+                                <span className="text-[9px] text-green-600 font-normal">Herdada Fiscal</span>
+                              )}
+                            </label>
+                            <Input 
+                              className="h-7 text-xs border-green-200 bg-green-50/20" 
+                              type="date" 
+                              value={(formData.pagamento_data_inicio || formData.prog_data_inicio || etapasDatas.pagamento_inicio || "").substring(0, 10)} 
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  pagamento_data_inicio: val,
+                                  prog_data_inicio: val
+                                }));
+                              }} 
+                            />
                           </div>
 
                           {/* Status do Pagamento */}

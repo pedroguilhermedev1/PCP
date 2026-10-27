@@ -94,5 +94,13 @@
     "role": "OPERACIONAL",
     "cd_slug": "coc",
     "ativo": true
+  },
+  {
+    "id": "13",
+    "username": "pol.araruna",
+    "nome_completo": "Pol Araruna",
+    "role": "OPERACIONAL",
+    "cd_slug": "fortaleza",
+    "ativo": true
   }
 ]

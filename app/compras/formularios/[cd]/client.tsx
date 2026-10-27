@@ -114,8 +114,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const [responsavelOriginal, setResponsavelOriginal] = useState("");
   const isAjusteAllowed = (responsavelOriginal.toLowerCase() === 'pedro.queiroz' || responsavelOriginal.toLowerCase() === 'vando.sousa' || responsavelOriginal.toLowerCase() === 'felipe.castro') || responsavelOriginal.toLowerCase() === 'francisco.edson';
   const isExternaAllowed = isAjusteAllowed && cd.toLowerCase() === 'psd';
-  const isFabio = responsavelOriginal.toLowerCase() === 'fabio.pessoa';
-  const isGabriel = responsavelOriginal.toLowerCase() === 'gabriel.oliveira';
 
   useEffect(() => {
     const user = localStorage.getItem('pcp_user');
@@ -131,8 +129,6 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
       if ((user.toLowerCase() === 'pedro.queiroz' || user.toLowerCase() === 'vando.sousa' || user.toLowerCase() === 'felipe.castro') || user.toLowerCase() === 'francisco.edson') {
         setActiveTab('AJUSTE');
-      } else if (user.toLowerCase() === 'fabio.pessoa') {
-        setActiveTab('PENDENTES');
       }
       
       if (role === 'OPERACIONAL' && userCd && cd.toLowerCase() !== userCd.toLowerCase()) {
@@ -178,7 +174,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canApprove = isPrivileged || isFabio || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase());
+  const canApprove = isPrivileged || (userRole === 'OPERACIONAL' && userCD?.toLowerCase() === cd.toLowerCase());
 
   const formatNumeroDocumento = (m: InsumoMovimentacao) => {
     if (m.observacoes && m.observacoes.includes('Fatura ')) {
@@ -659,54 +655,36 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
         </div>
 
         <div className="flex flex-wrap gap-2 sm:gap-4 border-b border-transparent">
-          {!isFabio && (
-            <button 
-              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-              onClick={() => setActiveTab('NOVA')}
-            >
-              NOVA SOLICITAÇÃO
-            </button>
-          )}
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('NOVA')}
+          >
+            NOVA SOLICITAÇÃO
+          </button>
 
-          {!isGabriel && (
-            <button 
-              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-              onClick={() => setActiveTab('PENDENTES')}
-            >
-              APROVAÇÕES PENDENTES
-              {movimentacoes.length > 0 && (
-                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                  {movimentacoes.length}
-                </span>
-              )}
-            </button>
-          )}
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('PENDENTES')}
+          >
+            APROVAÇÕES PENDENTES
+            {movimentacoes.length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                {movimentacoes.length}
+              </span>
+            )}
+          </button>
 
-          {isFabio ? (
-            <button 
-              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-              onClick={() => setActiveTab('REPROVADAS')}
-            >
-              REPROVADAS
-              {movsReprovadas.length > 0 && (
-                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                  {movsReprovadas.length}
-                </span>
-              )}
-            </button>
-          ) : (
-            <button 
-              className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-              onClick={() => setActiveTab('REPROVADAS')}
-            >
-              PENDÊNCIAS
-              {movsPendenciasCriador.length > 0 && (
-                <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                  {movsPendenciasCriador.length}
-                </span>
-              )}
-            </button>
-          )}
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('REPROVADAS')}
+          >
+            PENDÊNCIAS
+            {movsPendenciasCriador.length > 0 && (
+              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                {movsPendenciasCriador.length}
+              </span>
+            )}
+          </button>
 
           <button 
             className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'CALENDARIO' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
@@ -761,7 +739,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                 <h2 className="text-xl font-bold text-zinc-800">
                   {activeTab === 'NOVA' ? (editingReprovadaId ? 'CORRIGIR SOLICITAÇÃO' : 'NOVA SOLICITAÇÃO') 
                     : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' 
-                    : activeTab === 'REPROVADAS' ? (isFabio ? 'SOLICITAÇÕES REPROVADAS' : 'PENDÊNCIAS EM ACOMPANHAMENTO')
+                    : activeTab === 'REPROVADAS' ? 'PENDÊNCIAS EM ACOMPANHAMENTO'
                     : activeTab === 'CALENDARIO' ? 'CALENDÁRIO DE ENTREGAS'
                     : 'AJUSTE DE ESTOQUE'}
                 </h2>
@@ -895,7 +873,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               </form>
             )}
 
-            {activeTab === 'PENDENTES' && !isGabriel && (
+            {activeTab === 'PENDENTES' && (
               <div className="p-0 overflow-x-auto w-full">
                 <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
                   <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
@@ -1034,101 +1012,8 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
               </div>
             )}
 
-            {/* Subaba REPROVADAS (para o perfil de recebimento - Fabio) */}
-            {activeTab === 'REPROVADAS' && isFabio && (
-              <div className="p-0 overflow-x-auto w-full">
-                <Table className="w-full bg-white/40 backdrop-blur-sm rounded-xl">
-                  <TableHeader className="bg-zinc-50/80 border-b border-zinc-200">
-                    <TableRow className="border-zinc-100 hover:bg-transparent">
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Data Criação</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Item / Insumo</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd Prevista</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Qtd Recebida</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Saldo Pendente</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Motivo da Reprovação</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Usuário</TableHead>
-                      <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 text-center">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movsReprovadas.map(m => {
-                      const { meta } = extrairMetaDeObservacoes(m.observacoes);
-                      const qtdPrevista = meta.quantidade_prevista ?? Number(m.quantidade);
-                      const qtdRecebida = meta.quantidade_recebida ?? 0;
-                      const saldoPendente = meta.saldo_pendente ?? (qtdPrevista - qtdRecebida);
-                      const docNum = formatNumeroDocumento(m);
-                      const dataCriacao = formatDataCriacao(m, meta);
-                      const ultimaReprovacao = meta.reprovacoes && meta.reprovacoes.length > 0 
-                        ? meta.reprovacoes[meta.reprovacoes.length - 1] 
-                        : null;
-
-                      return (
-                        <TableRow key={m.id} className="border-b border-zinc-100 hover:bg-red-50/40 transition-colors">
-                          <TableCell className="font-semibold text-xs text-zinc-800 whitespace-nowrap">
-                            {docNum}
-                          </TableCell>
-                          <TableCell className="text-zinc-600 text-xs whitespace-nowrap">
-                            {dataCriacao}
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-semibold text-zinc-900 text-xs">{m.item}</span>
-                          </TableCell>
-                          <TableCell className="text-center font-medium text-xs text-zinc-700">
-                            {qtdPrevista}
-                          </TableCell>
-                          <TableCell className="text-center font-medium text-xs text-emerald-700">
-                            {qtdRecebida}
-                          </TableCell>
-                          <TableCell className="text-center font-medium text-xs text-amber-700">
-                            {saldoPendente}
-                          </TableCell>
-                          <TableCell className="text-xs text-red-700 max-w-[200px]" style={{wordBreak: 'break-word'}}>
-                            {ultimaReprovacao ? (
-                              <div>
-                                <span className="font-semibold">{ultimaReprovacao.motivo}</span>
-                                <span className="block text-[10px] text-zinc-400 mt-0.5">
-                                  por {formatUserName(ultimaReprovacao.usuario)} em {new Date(ultimaReprovacao.data_hora).toLocaleDateString('pt-BR')}
-                                </span>
-                              </div>
-                            ) : (
-                              m.observacoes || 'Reprovado sem motivo detalhado'
-                            )}
-                          </TableCell>
-                          <TableCell className="text-zinc-600 text-xs whitespace-nowrap">
-                            {formatUserName(m.usuario)}
-                          </TableCell>
-                          <TableCell className="text-center whitespace-nowrap">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-purple-700 border-purple-200 hover:bg-purple-50 text-xs h-7 px-2.5 gap-1.5"
-                              onClick={() => handleReabrir(m.id)}
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              Reabrir solicitação
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {movsReprovadas.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center py-12 text-zinc-500">
-                          <div className="flex flex-col items-center justify-center space-y-2">
-                            <CheckCircle2 className="w-8 h-8 text-zinc-300" />
-                            <p>Nenhuma solicitação reprovada encontrada.</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {/* Subaba PENDÊNCIAS (para o perfil do usuário criador - Pedro, etc.) */}
-            {activeTab === 'REPROVADAS' && !isFabio && (
+            {/* Subaba PENDÊNCIAS */}
+            {activeTab === 'REPROVADAS' && (
               <div className="space-y-4">
                 {/* Filtro por categoria de pendência */}
                 <div className="flex flex-wrap gap-2 items-center bg-zinc-50 p-2 rounded-lg border border-zinc-200 text-xs">
@@ -1282,21 +1167,32 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                               </TableCell>
                               <TableCell className="text-center whitespace-nowrap">
                                 {m.status === 'REPROVADO' ? (
-                                  <Button
-                                    size="sm"
-                                    className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7 px-2.5"
-                                    onClick={() => {
-                                      setEditingReprovadaId(m.id);
-                                      setItem(m.item);
-                                      setCodigo(m.codigo || "");
-                                      setQuantidade(m.quantidade || "");
-                                      setSetor(m.setor || "");
-                                      setJustificativa(m.observacoes || "");
-                                      setActiveTab('NOVA');
-                                    }}
-                                  >
-                                    Corrigir
-                                  </Button>
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <Button
+                                      size="sm"
+                                      className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7 px-2.5"
+                                      onClick={() => {
+                                        setEditingReprovadaId(m.id);
+                                        setItem(m.item);
+                                        setCodigo(m.codigo || "");
+                                        setQuantidade(m.quantidade || "");
+                                        setSetor(m.setor || "");
+                                        setJustificativa(m.observacoes || "");
+                                        setActiveTab('NOVA');
+                                      }}
+                                    >
+                                      Corrigir
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-purple-700 border-purple-200 hover:bg-purple-50 text-xs h-7 px-2.5 gap-1"
+                                      onClick={() => handleReabrir(m.id)}
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      Reabrir
+                                    </Button>
+                                  </div>
                                 ) : (m.status === 'PARCIAL' || m.status === 'AGUARDANDO_CONFERENCIA') ? (
                                   <Button
                                     size="sm"
