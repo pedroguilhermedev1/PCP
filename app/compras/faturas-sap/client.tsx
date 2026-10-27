@@ -1,6 +1,6 @@
 "use client";
 
-import { Fatura, calcularStatus, calcularEtapa, calcularSLA, calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularStatus, calcularEtapa, calcularProgressoEtapas, calcularSLA, calcularViabilidadePagamento, getEtapaLabel, getEtapaColor, getStatusColor, getEtapaHexColor, getEtapaBadgeStyle } from "@/modules/compras/domain/Fatura";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [filterStatus, setFilterStatus] = useState<string[]>([defaultStatus]);
   const defaultStatusPagamento = searchParams.get('status_pagamento') || 'todos';
   const [filterStatusPagamento, setFilterStatusPagamento] = useState<string[]>([defaultStatusPagamento]);
+  const defaultEtapa = searchParams.get('etapa') || 'todos';
+  const [filterEtapa, setFilterEtapa] = useState<string[]>([defaultEtapa]);
   const [filterResponsavel, setFilterResponsavel] = useState<string[]>(['todos']);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -115,12 +117,30 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       if (!filterStatus.some(s => stat.toLowerCase() === s.toLowerCase())) return false;
     }
     
-    const filterEtapa = searchParams.get('filtro_etapa');
-    if (filterEtapa) {
+    if (!filterEtapa.includes("todos")) {
+      const prog = calcularProgressoEtapas(f);
+      const ult = prog.ultimoMarcoConcluido;
+      const ultLabel = getEtapaLabel(ult);
+      const prox = prog.proximaEtapa;
+      const proxLabel = getEtapaLabel(prox);
+      
+      const matchesEtapa = filterEtapa.some(e => {
+        const el = e.toLowerCase();
+        return (
+          el === prox.toLowerCase() || 
+          el === proxLabel.toLowerCase() ||
+          (ult !== '-' && (el === ult.toLowerCase() || el === ultLabel.toLowerCase()))
+        );
+      });
+      if (!matchesEtapa) return false;
+    }
+
+    const filterEtapaUrl = searchParams.get('filtro_etapa');
+    if (filterEtapaUrl) {
       const etapa = calcularEtapa(f);
       const isFinalizado = (etapa === 'Aguardando pagamento' || etapa === 'Pago');
-      if (filterEtapa === 'aguardando' && !isFinalizado) return false;
-      if (filterEtapa === 'em_aberto' && isFinalizado) return false;
+      if (filterEtapaUrl === 'aguardando' && !isFinalizado) return false;
+      if (filterEtapaUrl === 'em_aberto' && isFinalizado) return false;
     }
     
     const etapaExata = searchParams.get('etapa_exata');
@@ -250,43 +270,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Vencido': return 'bg-red-50 text-red-700 border-red-200';
-      case 'Pago': return 'bg-green-50 text-green-700 border-green-200';
-      case 'Pago (Vencida)': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'A vencer': return 'bg-purple-50 text-purple-700 border-purple-200';
-      default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
-    }
-  };
-
-  const getEtapaColor = (etapa: string) => {
-    switch (etapa) {
-      case 'Em andamento': return 'bg-zinc-50 text-zinc-700 border-zinc-200';
-      case 'Integração': return 'bg-red-50 text-red-700 border-red-200';
-      case 'HEFLO': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'ERP': return 'bg-zinc-50 text-zinc-700 border-zinc-200';
-      case 'V360': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Aguardando programação de pagamento': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'Aguardando pagamento': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'Aguardando lançamento fiscal': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'Aguardando emissão de Documento': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Aguardando PC Nexa': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'Pago': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      default: return 'bg-zinc-50 text-zinc-700 border-zinc-200';
-    }
-  };
-
-  const getEtapaLabel = (etapa: string) => {
-    switch (etapa) {
-      case 'Aguardando programação de pagamento': return 'Prog. de Pagamento';
-      case 'Aguardando lançamento fiscal': return 'Lançamento Fiscal';
-      case 'Aguardando emissão de Documento': return 'Emissão de Doc';
-      case 'Aguardando pagamento': return 'Pagamento';
-      case 'Aguardando PC Nexa': return 'PC Nexa';
-      default: return etapa;
-    }
-  };
+  // getStatusColor, getEtapaColor e getEtapaLabel são importados de @/modules/compras/domain/Fatura
 
   const faturasOrdenadas = faturasFiltradas.sort((a, b) => {
     const codeA = (a.codigo_fatura || a.tipo_documento || '').toLowerCase();
@@ -394,6 +378,23 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               onChange={setFilterStatus}
             />
             <MultiSelectFilter
+              label="Etapa"
+              options={[
+                {value: "todos", label: "Todas"},
+                {value: "Cadastro", label: "Cadastro"},
+                {value: "RC", label: "RC"},
+                {value: "Aprovação", label: "Aprovação"},
+                {value: "PC", label: "PC"},
+                {value: "Doc. Subs. Criado", label: "Doc. Subs. Criado"},
+                {value: "Nexa", label: "Nexa"},
+                {value: "Fiscal", label: "Fiscal"},
+                {value: "Prog. Pagamento", label: "Prog. Pagamento"},
+                {value: "Pago", label: "Pago"}
+              ]}
+              selectedValues={filterEtapa}
+              onChange={setFilterEtapa}
+            />
+            <MultiSelectFilter
               label="Resp."
               options={[{value: "todos", label: "Todos"}, ...uniqueResponsaveis.map(r => ({value: r, label: r}))]}
               selectedValues={filterResponsavel}
@@ -420,19 +421,21 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Código</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">CD</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Fornecedor</TableHead>
-              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Local</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
               <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Valor</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Vencimento</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status Fatura</TableHead>
-              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Etapa</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Etapa Concluída</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Próxima Etapa</TableHead>
               {canEditOrDelete && <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {faturasOrdenadas.map((f, index) => {
               const status = calcularStatus(f);
-              const etapa = calcularEtapa(f);
+              const progresso = calcularProgressoEtapas(f);
+              const concluida = progresso.ultimoMarcoConcluido;
+              const proxima = progresso.proximaEtapa;
 
               return (
                 <React.Fragment key={f.id}>
@@ -452,12 +455,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
-
                         <span>{f.fornecedor}</span>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-zinc-600">
-                      {f.filial || '-'}
                     </TableCell>
                     <TableCell>{f.numero_documento}</TableCell>
                     <TableCell className="text-right font-medium">
@@ -474,9 +473,30 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={cn("px-2.5 py-1 rounded-md text-xs font-medium border whitespace-nowrap", getEtapaColor(etapa))}>
-                        {getEtapaLabel(etapa)}
-                      </span>
+                      {concluida && concluida !== '-' ? (
+                        <span 
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap shadow-xs"
+                          style={getEtapaBadgeStyle(concluida)}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: getEtapaHexColor(concluida) }} />
+                          {getEtapaLabel(concluida)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400 font-medium px-2 py-1">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {proxima && proxima !== '-' ? (
+                        <span 
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap shadow-xs"
+                          style={getEtapaBadgeStyle(proxima)}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: getEtapaHexColor(proxima) }} />
+                          {getEtapaLabel(proxima)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400 font-medium px-2 py-1 italic">Concluído</span>
+                      )}
                     </TableCell>
                     {canEditOrDelete && (
                       <TableCell className="text-right">

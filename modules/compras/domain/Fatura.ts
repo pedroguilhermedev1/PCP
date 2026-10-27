@@ -2,7 +2,39 @@
 export type StatusFatura = 'A vencer' | 'Vencido' | 'Pago';
 // Status do Pagamento: Estágio no fluxo manual
 export type StatusPagamento = 'Em andamento' | 'Aguardando pagamento' | 'Pago' | 'ERP' | 'V360' | 'HEFLO';
-export type Etapa = 'Em andamento' | 'Cadastro do Documento' | 'Requisição de Compras' | 'Aprovação' | 'Inclusão no V360' | 'Pedido de Compras' | 'Aguardando emissão de Documento' | 'Aguardando lançamento fiscal' | 'Aguardando programação de pagamento' | 'Pagamento programado' | 'Aguardando pagamento' | 'Pago' | 'Aguardando PC Nexa';
+export type Etapa = 
+  | 'Em andamento' 
+  | 'Cadastro do Documento' 
+  | 'Cadastro do documento'
+  | 'Cadastro'
+  | 'Requisição de Compras' 
+  | 'Requisição de compras'
+  | 'RC'
+  | 'Aprovação' 
+  | 'Aprovação da RC'
+  | 'Inclusão no V360' 
+  | 'Pedido de Compras' 
+  | 'Pedido de compras (PC)'
+  | 'PC'
+  | 'Documento Subsequente'
+  | 'DOC subsequente criado'
+  | 'Doc. Subs. Criado'
+  | 'Aguardando emissão de Documento' 
+  | 'Nexa'
+  | 'Aguardando lançamento fiscal' 
+  | 'Lançamento Fiscal'
+  | 'Fiscal'
+  | 'Aguardando programação de pagamento' 
+  | 'Prog. de Pagamento'
+  | 'Programação de pagamento'
+  | 'Prog. Pagamento'
+  | 'Pagamento programado' 
+  | 'Aguardando pagamento' 
+  | 'Pagamento'
+  | 'Pagamento efetivo'
+  | 'Pago' 
+  | 'Aguardando PC Nexa'
+  | '-';
 
 export interface FaturaInsumo {
   codigo: string;
@@ -279,35 +311,455 @@ export function calcularStatus(fatura: Partial<Fatura>): string {
   return 'A vencer';
 }
 
-export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
-  if (fatura.is_sap) {
-    if (fatura.fluxo_iniciado_por === 'Nexa') {
-      if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
-      if (!fatura.nexa_pagamento_programado && fatura.status_pagamento !== 'Pago' && !fatura.nexa_pagamento_realizado) return 'Aguardando programação de pagamento';
-      if (!fatura.nexa_pagamento_realizado && fatura.status_pagamento !== 'Pago') return 'Aguardando pagamento';
-      return 'Pago';
+export interface ProgressoEtapas {
+  ultimoMarcoConcluido: string;
+  proximaEtapa: string;
+}
+
+export function calcularProgressoEtapas(fatura: Partial<Fatura>): ProgressoEtapas {
+  const ehFluxoNexa = fatura.fluxo_iniciado_por === 'Nexa';
+
+  if (ehFluxoNexa) {
+    // -------------------------------------------------------------
+    // FLUXO EXCLUSIVAMENTE NEXA (T1: Nexa, T2: Fiscal, T3: Pagamento)
+    // -------------------------------------------------------------
+    
+    // T3 Pagamento Realizado?
+    const isPago = Boolean(
+      fatura.data_pagamento_real ||
+      fatura.pagamento_data_fim ||
+      fatura.nexa_pagamento_realizado ||
+      fatura.status_pagamento === 'Pago'
+    );
+
+    if (isPago) {
+      return {
+        ultimoMarcoConcluido: 'Pagamento efetivo',
+        proximaEtapa: '-',
+      };
     }
 
-    if (fatura.doc_subsequente_criado) {
-      if (!fatura.nexa_emitiu_nf) return 'Aguardando emissão de Documento';
-      if (!fatura.nexa_lancamento_concluido) return 'Aguardando lançamento fiscal';
-      if (!fatura.nexa_pagamento_programado && fatura.status_pagamento !== 'Pago' && !fatura.nexa_pagamento_realizado) return 'Aguardando programação de pagamento';
-      if (!fatura.nexa_pagamento_realizado && fatura.status_pagamento !== 'Pago') return 'Aguardando pagamento';
-      return 'Pago';
+    // T3 Pagamento Programado?
+    const isProgramado = Boolean(
+      fatura.nexa_pagamento_programado ||
+      fatura.nexa_data_prevista_pagamento ||
+      fatura.prog_data_fim ||
+      fatura.status_pagamento === 'Aguardando pagamento'
+    );
+
+    // T2 Lançamento Fiscal Concluído?
+    const t2Concluido = Boolean(
+      fatura.nexa_lancamento_concluido ||
+      fatura.fiscal_data_fim ||
+      fatura.nexa_data_conclusao_lancamento
+    );
+
+    if (t2Concluido) {
+      if (isProgramado) {
+        return {
+          ultimoMarcoConcluido: 'Programação de pagamento',
+          proximaEtapa: 'Pagamento efetivo',
+        };
+      }
+      return {
+        ultimoMarcoConcluido: 'Fiscal',
+        proximaEtapa: 'Programação de pagamento',
+      };
     }
-    if (fatura.pedido_sap || fatura.data_pedido_sap) return 'Pedido de Compras';
-    if (fatura.rc_sap || fatura.data_rc_sap) return 'Requisição de Compras';
-    return 'Em andamento';
+
+    // T1 Nexa Concluído?
+    const t1Concluido = Boolean(
+      (fatura.nexa_emitiu_nf && fatura.nexa_anexada) ||
+      fatura.nexa_data_fim
+    );
+
+    if (t1Concluido) {
+      return {
+        ultimoMarcoConcluido: 'Nexa',
+        proximaEtapa: 'Fiscal',
+      };
+    }
+
+    // T1 Nexa em andamento?
+    const hasNexaIniciado = Boolean(
+      fatura.nexa_chamado?.trim() ||
+      fatura.nexa_data_envio ||
+      fatura.nexa_data_inicio
+    );
+
+    if (hasNexaIniciado) {
+      return {
+        ultimoMarcoConcluido: '-',
+        proximaEtapa: 'Nexa',
+      };
+    }
+
+    return {
+      ultimoMarcoConcluido: '-',
+      proximaEtapa: 'Cadastro do documento',
+    };
   }
 
-  if (fatura.status_pagamento === 'Pago') return 'Pago';
-  if (fatura.status_pagamento === 'Aguardando pagamento') return 'Aguardando pagamento';
-  if (fatura.status_pagamento === 'ERP') return 'Aprovação';
+  if (fatura.is_sap) {
+    // -------------------------------------------------------------
+    // FLUXO SAP + NEXA (T1: SAP, T2: Nexa, T3: Fiscal, T4: Pagamento)
+    // -------------------------------------------------------------
+
+    // T4 - Pagamento Realizado?
+    const isPago = Boolean(
+      fatura.data_pagamento_real ||
+      fatura.pagamento_data_fim ||
+      fatura.nexa_pagamento_realizado ||
+      fatura.status_pagamento === 'Pago'
+    );
+
+    if (isPago) {
+      return {
+        ultimoMarcoConcluido: 'Pagamento efetivo',
+        proximaEtapa: '-',
+      };
+    }
+
+    // T4 - Pagamento Programado?
+    const isProgramado = Boolean(
+      fatura.nexa_pagamento_programado ||
+      fatura.nexa_data_prevista_pagamento ||
+      fatura.prog_data_fim ||
+      fatura.status_pagamento === 'Aguardando pagamento'
+    );
+
+    // T3 - Fiscal Concluído?
+    const t3FiscalConcluido = Boolean(
+      fatura.nexa_lancamento_concluido ||
+      fatura.fiscal_data_fim ||
+      fatura.nexa_data_conclusao_lancamento
+    );
+
+    // T2 - Nexa Concluído?
+    const t2NexaConcluido = Boolean(
+      (fatura.nexa_emitiu_nf && fatura.nexa_anexada) ||
+      fatura.nexa_data_fim
+    );
+
+    // T1 - Marco 4: DOC subsequente criado (checkbox marcado ou número preenchido)
+    const marco4DocSubsequente = Boolean(
+      fatura.doc_subsequente_criado ||
+      fatura.numero_doc_subsequente?.trim()
+    );
+
+    // T1 - Marco 3: Pedido de compras criado (número do pedido ou data)
+    const marco3Pedido = Boolean(
+      (fatura.pedido_sap && fatura.pedido_sap.trim()) ||
+      fatura.data_pedido_sap ||
+      fatura.pc_data_fim
+    );
+
+    // T1 - Marco 2: Aprovação da RC (data de aprovação)
+    const marco2Aprovacao = Boolean(
+      fatura.data_aprovacao ||
+      fatura.aprovacao_data_fim
+    );
+
+    // T1 - Marco 1: Requisição de compras criada (número da RC ou data)
+    const marco1RC = Boolean(
+      (fatura.rc_sap && fatura.rc_sap.trim()) ||
+      fatura.data_rc_sap ||
+      fatura.rc_data_inicio
+    );
+
+    // Avaliação cronológica progressiva:
+    if (!marco1RC) {
+      return {
+        ultimoMarcoConcluido: '-',
+        proximaEtapa: 'Cadastro do documento',
+      };
+    }
+
+    if (!marco2Aprovacao) {
+      return {
+        ultimoMarcoConcluido: 'Requisição de compras',
+        proximaEtapa: 'Aprovação da RC',
+      };
+    }
+
+    if (!marco3Pedido) {
+      return {
+        ultimoMarcoConcluido: 'Aprovação da RC',
+        proximaEtapa: 'Pedido de compras (PC)',
+      };
+    }
+
+    if (!marco4DocSubsequente) {
+      return {
+        ultimoMarcoConcluido: 'Pedido de compras (PC)',
+        proximaEtapa: 'DOC subsequente criado',
+      };
+    }
+
+    if (!t2NexaConcluido) {
+      return {
+        ultimoMarcoConcluido: 'DOC subsequente criado',
+        proximaEtapa: 'Nexa',
+      };
+    }
+
+    if (!t3FiscalConcluido) {
+      return {
+        ultimoMarcoConcluido: 'Nexa',
+        proximaEtapa: 'Fiscal',
+      };
+    }
+
+    if (isProgramado) {
+      return {
+        ultimoMarcoConcluido: 'Programação de pagamento',
+        proximaEtapa: 'Pagamento efetivo',
+      };
+    }
+
+    return {
+      ultimoMarcoConcluido: 'Fiscal',
+      proximaEtapa: 'Programação de pagamento',
+    };
+  }
+
+  // -------------------------------------------------------------
+  // FLUXO LEGADO 1.0 (não SAP e não Nexa)
+  // -------------------------------------------------------------
+  if (fatura.status_pagamento === 'Pago') {
+    return { ultimoMarcoConcluido: 'Pagamento efetivo', proximaEtapa: '-' };
+  }
+  if (fatura.status_pagamento === 'Aguardando pagamento') {
+    return { ultimoMarcoConcluido: 'Programação de pagamento', proximaEtapa: 'Pagamento efetivo' };
+  }
+  if (fatura.v360 && fatura.data_abertura_v360) {
+    return { ultimoMarcoConcluido: 'Aprovação da RC', proximaEtapa: 'Programação de pagamento' };
+  }
+  if (fatura.erp && fatura.data_aprovacao) {
+    return { ultimoMarcoConcluido: 'Requisição de compras', proximaEtapa: 'Aprovação da RC' };
+  }
+  if (fatura.heflo && fatura.data_abertura_heflo) {
+    return { ultimoMarcoConcluido: '-', proximaEtapa: 'Requisição de compras' };
+  }
+  return {
+    ultimoMarcoConcluido: '-',
+    proximaEtapa: 'Cadastro do documento',
+  };
+}
+
+export function calcularEtapa(fatura: Partial<Fatura>): Etapa {
+  const p = calcularProgressoEtapas(fatura);
+  if (p.proximaEtapa === '-') return 'Pago';
+  return p.proximaEtapa as Etapa;
+}
+
+export function getEtapaHexColor(etapa: string): string {
+  if (!etapa || etapa === '-') return '#808080';
+  const clean = etapa.trim();
+  switch (clean) {
+    case 'Cadastro do documento':
+    case 'Cadastro do Documento':
+    case 'Cadastro':
+    case 'Em andamento':
+      return '#808080'; // Cinza
+
+    case 'Requisição de compras':
+    case 'Requisição de Compras':
+    case 'RC':
+    case 'HEFLO':
+    case 'Aprovação da RC':
+    case 'Aprovação':
+    case 'ERP':
+    case 'Pedido de compras (PC)':
+    case 'Pedido de compras':
+    case 'Pedido de Compras':
+    case 'PC':
+    case 'Aguardando PC Nexa':
+    case 'DOC subsequente criado':
+    case 'Doc. Subs. Criado':
+    case 'Documento subsequente':
+    case 'Documento subsequente criado':
+    case 'Documento Subsequente':
+      return '#7E57C2'; // Roxo (todas as 4 etapas do SAP)
+
+    case 'Nexa':
+    case 'Aguardando emissão de Documento':
+      return '#1976D2'; // Azul escuro
+
+    case 'Fiscal':
+    case 'Lançamento Fiscal':
+    case 'Lançamento fiscal':
+    case 'Aguardando lançamento fiscal':
+      return '#E53935'; // Vermelho
+
+    case 'Programação de pagamento':
+    case 'Programação de Pagamento':
+    case 'Prog. de Pagamento':
+    case 'Prog. Pagamento':
+    case 'Aguardando programação de pagamento':
+    case 'V360':
+      return '#F9A825'; // Amarelo
+
+    case 'Pagamento efetivo':
+    case 'Pagamento':
+    case 'Aguardando pagamento':
+    case 'Pago':
+      return '#1B5E20'; // Verde escuro
+
+    default:
+      return '#808080';
+  }
+}
+
+export function getEtapaBadgeStyle(etapa: string): { backgroundColor: string; borderColor: string; color: string } {
+  const hex = getEtapaHexColor(etapa);
   
-  if (fatura.v360 && fatura.data_abertura_v360) return 'Inclusão no V360';
-  if (fatura.erp && fatura.data_aprovacao) return 'Aprovação';
-  if (fatura.heflo && fatura.data_abertura_heflo) return 'Requisição de Compras';
-  return 'Cadastro do Documento';
+  if (hex === '#F9A825') {
+    // Amarelo: fundo amarelo suave, borda amarela, texto escuro de alto contraste
+    return {
+      backgroundColor: 'rgba(249, 168, 37, 0.16)',
+      borderColor: 'rgba(249, 168, 37, 0.60)',
+      color: '#7f4b00',
+    };
+  }
+  if (hex === '#7E57C2') {
+    // Roxo: fundo suave, borda roxa, texto roxo escuro legível
+    return {
+      backgroundColor: 'rgba(126, 87, 194, 0.14)',
+      borderColor: 'rgba(126, 87, 194, 0.50)',
+      color: '#512DA8',
+    };
+  }
+  if (hex === '#1976D2') {
+    // Azul escuro Nexa:
+    return {
+      backgroundColor: 'rgba(25, 118, 210, 0.14)',
+      borderColor: 'rgba(25, 118, 210, 0.50)',
+      color: '#0D47A1',
+    };
+  }
+  if (hex === '#E53935') {
+    // Vermelho Fiscal:
+    return {
+      backgroundColor: 'rgba(229, 57, 53, 0.14)',
+      borderColor: 'rgba(229, 57, 53, 0.50)',
+      color: '#B71C1C',
+    };
+  }
+  if (hex === '#1B5E20') {
+    // Verde escuro Pagamento:
+    return {
+      backgroundColor: 'rgba(27, 94, 32, 0.14)',
+      borderColor: 'rgba(27, 94, 32, 0.50)',
+      color: '#1B5E20',
+    };
+  }
+  // Cinza Cadastro / Padrão:
+  return {
+    backgroundColor: 'rgba(128, 128, 128, 0.14)',
+    borderColor: 'rgba(128, 128, 128, 0.40)',
+    color: '#424242',
+  };
+}
+
+export function getEtapaLabel(etapa: string): string {
+  if (!etapa || etapa === '-') return '-';
+  switch (etapa) {
+    case 'Cadastro do Documento':
+    case 'Cadastro do documento':
+    case 'Cadastro':
+    case 'Em andamento':
+      return 'Cadastro';
+
+    case 'Requisição de Compras':
+    case 'Requisição de compras':
+    case 'RC':
+    case 'HEFLO':
+      return 'RC';
+
+    case 'Aprovação da RC':
+    case 'Aprovação':
+    case 'ERP':
+      return 'Aprovação';
+
+    case 'Pedido de Compras':
+    case 'Pedido de compras':
+    case 'Pedido de compras (PC)':
+    case 'PC':
+    case 'Aguardando PC Nexa':
+      return 'PC';
+
+    case 'Documento Subsequente':
+    case 'Documento subsequente':
+    case 'Documento subsequente criado':
+    case 'DOC subsequente criado':
+    case 'Doc. Subs. Criado':
+      return 'Doc. Subs. Criado';
+
+    case 'Nexa':
+    case 'Aguardando emissão de Documento':
+      return 'Nexa';
+
+    case 'Aguardando lançamento fiscal':
+    case 'Lançamento Fiscal':
+    case 'Lançamento fiscal':
+    case 'Fiscal':
+      return 'Fiscal';
+
+    case 'Aguardando programação de pagamento':
+    case 'Prog. de Pagamento':
+    case 'Programação de Pagamento':
+    case 'Programação de pagamento':
+    case 'Prog. Pagamento':
+    case 'V360':
+      return 'Prog. Pagamento';
+
+    case 'Aguardando pagamento':
+    case 'Pagamento':
+    case 'Pagamento efetivo':
+    case 'Pago':
+      return 'Pago';
+
+    default:
+      return etapa;
+  }
+}
+
+export function getEtapaColor(etapa: string): string {
+  const hex = getEtapaHexColor(etapa);
+  switch (hex) {
+    case '#7E57C2':
+      return 'bg-[#7E57C2]/15 text-[#512DA8] border-[#7E57C2]/50';
+    case '#1976D2':
+      return 'bg-[#1976D2]/15 text-[#0D47A1] border-[#1976D2]/50';
+    case '#E53935':
+      return 'bg-[#E53935]/15 text-[#B71C1C] border-[#E53935]/50';
+    case '#F9A825':
+      return 'bg-[#F9A825]/20 text-[#7f4b00] border-[#F9A825]/60';
+    case '#1B5E20':
+      return 'bg-[#1B5E20]/15 text-[#1B5E20] border-[#1B5E20]/50';
+    case '#808080':
+    default:
+      return 'bg-[#808080]/15 text-[#424242] border-[#808080]/40';
+  }
+}
+
+export function getStatusColor(status: string): string {
+  switch (status) {
+    case 'Vencido':
+    case 'Vencida':
+      return 'bg-red-50 text-red-700 border-red-200'; // vermelho
+    case 'Pago':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200'; // verde
+    case 'Pago (Vencida)':
+    case 'Pago (vencida)':
+      return 'bg-teal-50 text-teal-700 border-teal-200'; // verde-petróleo
+    case 'A vencer':
+    case 'A Vencer':
+      return 'bg-blue-50 text-blue-700 border-blue-200'; // azul
+    default:
+      return 'bg-zinc-50 text-zinc-700 border-zinc-200';
+  }
 }
 
 export type SLAStatus = 'Dentro do prazo' | 'Próximo do vencimento' | 'Atrasado';
@@ -368,7 +820,7 @@ export function calcularDiasRestantesUteis(data_vencimento: string): number {
 export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
   const etapa = calcularEtapa(fatura);
   
-  if (etapa === 'Aguardando pagamento' || etapa === 'Pago') {
+  if (etapa === 'Aguardando pagamento' || etapa === 'Pago' || etapa === 'Pagamento efetivo' || etapa === '-') {
     return null; // Operação concluída
   }
 
@@ -389,16 +841,45 @@ export function calcularSLA(fatura: Partial<Fatura>): SLAStatus | null {
   let startDateStr = '';
   let limiteDias = 0;
 
-  if (fatura.is_sap) {
-    if (etapa === 'Cadastro do Documento') {
+  if (fatura.is_sap && fatura.fluxo_iniciado_por !== 'Nexa') {
+    if (etapa === 'Cadastro do Documento' || etapa === 'Cadastro do documento') {
       startDateStr = fatura.data_recebimento || '';
       limiteDias = 1;
-    } else if (etapa === 'Requisição de Compras') {
+    } else if (etapa === 'Requisição de Compras' || etapa === 'Requisição de compras') {
+      startDateStr = fatura.data_recebimento || '';
+      limiteDias = 1;
+    } else if (etapa === 'Aprovação da RC' || etapa === 'Aprovação') {
       startDateStr = fatura.data_rc_sap || '';
-      limiteDias = 3;
-    } else if (etapa === 'Pedido de Compras') {
+      limiteDias = 1;
+    } else if (etapa === 'Pedido de Compras' || etapa === 'Pedido de compras (PC)') {
+      startDateStr = fatura.data_aprovacao || '';
+      limiteDias = 1;
+    } else if (etapa === 'Documento Subsequente' || etapa === 'DOC subsequente criado') {
       startDateStr = fatura.data_pedido_sap || '';
-      limiteDias = 2;
+      limiteDias = 1;
+    } else if (etapa === 'Nexa') {
+      startDateStr = fatura.data_pedido_sap || fatura.nexa_data_inicio || '';
+      limiteDias = 1;
+    } else if (etapa === 'Aguardando lançamento fiscal' || etapa === 'Lançamento Fiscal' || etapa === 'Fiscal') {
+      startDateStr = fatura.nexa_data_fim || fatura.fiscal_data_inicio || '';
+      limiteDias = 3;
+    } else if (etapa === 'Aguardando programação de pagamento' || etapa === 'Prog. de Pagamento' || etapa === 'Programação de pagamento') {
+      startDateStr = fatura.fiscal_data_fim || fatura.prog_data_inicio || '';
+      limiteDias = 3;
+    }
+  } else if (fatura.fluxo_iniciado_por === 'Nexa') {
+    if (etapa === 'Cadastro do Documento' || etapa === 'Cadastro do documento') {
+      startDateStr = fatura.data_recebimento || '';
+      limiteDias = 1;
+    } else if (etapa === 'Nexa') {
+      startDateStr = fatura.nexa_data_envio || fatura.nexa_data_inicio || fatura.data_recebimento || '';
+      limiteDias = 1;
+    } else if (etapa === 'Aguardando lançamento fiscal' || etapa === 'Lançamento Fiscal' || etapa === 'Fiscal') {
+      startDateStr = fatura.nexa_data_fim || fatura.fiscal_data_inicio || '';
+      limiteDias = 3;
+    } else if (etapa === 'Aguardando programação de pagamento' || etapa === 'Prog. de Pagamento' || etapa === 'Programação de pagamento') {
+      startDateStr = fatura.fiscal_data_fim || fatura.prog_data_inicio || '';
+      limiteDias = 3;
     }
   } else {
     if (etapa === 'Cadastro do Documento') {

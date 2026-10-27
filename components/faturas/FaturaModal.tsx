@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Fatura, calcularStatus, calcularEtapa } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularStatus, calcularEtapa, getEtapaLabel, getEtapaColor, getStatusColor, getEtapaHexColor } from "@/modules/compras/domain/Fatura";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, Plus } from "lucide-react";
@@ -557,44 +557,37 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                 </div>
 
                 <div className={cn("p-3 rounded-md border space-y-1 transition-colors", 
-                  autoStatus === 'Vencido' ? 'bg-red-100 border-red-200' :
-                  autoStatus === 'Pago' ? 'bg-green-100 border-green-200' :
-                  autoStatus === 'A vencer' ? 'bg-purple-200 border-purple-200' :
-                  'bg-zinc-100 border-zinc-200'
+                  autoStatus === 'Vencido' ? 'bg-red-500 border-red-600 text-white' :
+                  autoStatus === 'Pago' ? 'bg-emerald-600 border-emerald-700 text-white' :
+                  autoStatus === 'Pago (Vencida)' ? 'bg-teal-600 border-teal-700 text-white' :
+                  autoStatus === 'A vencer' ? 'bg-blue-600 border-blue-700 text-white' :
+                  'bg-zinc-600 border-zinc-700 text-white'
                 )}>
-                  <span className={cn("text-[10px] font-bold uppercase tracking-widest block",
-                    autoStatus === 'Vencido' ? 'text-red-700' :
-                    autoStatus === 'Pago' ? 'text-green-700' :
-                    autoStatus === 'A vencer' ? 'text-purple-900' :
-                    'text-zinc-600'
-                  )}>Status (Auto)</span>
-                  <span className={cn("text-sm font-bold",
-                    autoStatus === 'Vencido' ? 'text-red-900' :
-                    autoStatus === 'Pago' ? 'text-green-900' :
-                    autoStatus === 'A vencer' ? 'text-purple-900' :
-                    'text-zinc-900'
-                  )}>{autoStatus?.toUpperCase()}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest block text-white/80">Status (Auto)</span>
+                  <span className="text-sm font-bold text-white">{autoStatus?.toUpperCase()}</span>
                 </div>
 
-                <div className={cn("p-3 rounded-md border space-y-1 transition-colors",
-                  autoEtapa === 'Cadastro do Documento' ? 'bg-red-500 border-red-600' :
-                  autoEtapa === 'Requisição de Compras' ? 'bg-blue-500 border-blue-600' :
-                  autoEtapa === 'Aprovação' ? 'bg-zinc-500 border-zinc-600' :
-                  autoEtapa === 'Inclusão no V360' ? 'bg-orange-500 border-orange-600' :
-                  autoEtapa === 'Pedido de Compras' ? 'bg-purple-500 border-purple-600' :
-                  autoEtapa === 'Aguardando pagamento' ? 'bg-green-300 border-green-400' :
-                  autoEtapa === 'Pago' ? 'bg-green-700 border-green-800' :
-                  'bg-zinc-500 border-zinc-600'
-                )}>
-                  <span className={cn("text-[10px] font-bold uppercase tracking-widest block",
-                    autoEtapa === 'Aguardando pagamento' ? 'text-green-900' :
-                    'text-white/80'
-                  )}>Etapa (Auto)</span>
-                  <span className={cn("text-sm font-bold",
-                    autoEtapa === 'Aguardando pagamento' ? 'text-green-900' :
-                    'text-white'
-                  )}>{autoEtapa?.toUpperCase()}</span>
-                </div>
+                {(() => {
+                  const etapaHex = getEtapaHexColor(autoEtapa);
+                  const isAmarelo = etapaHex === '#F9A825';
+                  return (
+                    <div 
+                      className="p-3 rounded-md border space-y-1 transition-colors shadow-xs"
+                      style={{
+                        backgroundColor: etapaHex,
+                        borderColor: etapaHex,
+                        color: isAmarelo ? '#212121' : '#FFFFFF'
+                      }}
+                    >
+                      <span className={cn("text-[10px] font-bold uppercase tracking-widest block", isAmarelo ? "text-zinc-800" : "text-white/85")}>
+                        Etapa (Auto)
+                      </span>
+                      <span className={cn("text-sm font-bold", isAmarelo ? "text-zinc-950" : "text-white")}>
+                        {getEtapaLabel(autoEtapa)?.toUpperCase()}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </section>
             
