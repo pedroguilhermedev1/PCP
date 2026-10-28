@@ -21,62 +21,59 @@ export function LoginForm() {
 
     try {
       const parsedUsername = username.trim().toLowerCase();
-      
-      const res = await fetch('/api/usuarios');
-      if (!res.ok) throw new Error('Erro ao verificar usuários.');
-      const usuarios = await res.json();
-      
-      const dbUserRaw = usuarios.find((u: any) => u.username === parsedUsername);
-      const user = dbUserRaw && dbUserRaw.ativo ? dbUserRaw : null;
-      
-      // Se o usuário está no banco de dados mas inativo, bloqueia imediatamente
-      if (dbUserRaw && dbUserRaw.ativo === false) {
-        setError('Usuário inativo.');
-        setLoading(false);
-        return;
-      }
-      
-      // Fallbacks para liderança ou legado
-      const isLiderancaLegacy = (parsedUsername === 'lideranca.arco' || parsedUsername === 'liderança.arco') && 
-                          (password === 'lideranca.arco@2026' || password === 'liderança.arco@2026');
 
-      if (user) {
-        // Se a senha for nome@2026 ou se for a senha legacy de liderança
-        if (password === `${parsedUsername}@2026` || isLiderancaLegacy) {
-          localStorage.setItem('pcp_user', parsedUsername);
-          localStorage.setItem('pcp_role', user.role);
-          if (user.nome_completo) localStorage.setItem('pcp_name', user.nome_completo);
-          if (user.cd_slug) localStorage.setItem('pcp_cd', user.cd_slug);
-          
-          toast.success('Login efetuado com sucesso!');
-          router.push('/compras/dashboard');
-          return;
-        }
-      } else if (isLiderancaLegacy) {
-        // Fallback legado caso a tabela falhe
-        localStorage.setItem('pcp_user', parsedUsername);
-        localStorage.setItem('pcp_role', 'LIDERANCA');
-        toast.success('Login efetuado (legado)!');
-        router.push('/compras/dashboard');
-        return;
-      }
-      
-      // Fallback para hardcoded original se não achar no banco e bater a senha
-      // Só entra aqui se dbUserRaw for undefined (ou seja, não está no banco nem ativo nem inativo)
-      const validUsers = [...ADMIN_USERS, ...OPERACIONAL_USERS];
-      if (!dbUserRaw && validUsers.includes(parsedUsername) && password === `${parsedUsername}@2026`) {
-        localStorage.setItem('pcp_user', parsedUsername);
-        const fallbackRole = getUserRole(parsedUsername);
-        if (fallbackRole) localStorage.setItem('pcp_role', fallbackRole);
-        localStorage.setItem('pcp_name', formatUserName(parsedUsername));
+      // Autenticação segura via endpoint do servidor
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: parsedUsername, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.user) {
+        localStorage.setItem('pcp_user', data.user.username);
+        localStorage.setItem('pcp_role', data.user.role);
+        if (data.user.nome_completo) localStorage.setItem('pcp_name', data.user.nome_completo);
+        if (data.user.cd_slug) localStorage.setItem('pcp_cd', data.user.cd_slug);
+
         toast.success('Login efetuado com sucesso!');
         router.push('/compras/dashboard');
         return;
       }
 
-      setError('Usuário ou senha inválidos, ou usuário inativo.');
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+
+      setError('Usuário ou senha inválidos.');
     } catch (err) {
       console.error(err);
+      // Fallback em caso de falha de conexão de rede
+      try {
+        const parsedUsername = username.trim().toLowerCase();
+        const res = await fetch('/api/usuarios');
+        if (res.ok) {
+          const usuarios = await res.json();
+          const dbUserRaw = usuarios.find((u: any) => u.username === parsedUsername);
+          if (dbUserRaw && dbUserRaw.ativo === false) {
+            setError('Usuário inativo.');
+            return;
+          }
+          if (dbUserRaw && password === `${parsedUsername}@2026`) {
+            localStorage.setItem('pcp_user', parsedUsername);
+            localStorage.setItem('pcp_role', dbUserRaw.role);
+            if (dbUserRaw.nome_completo) localStorage.setItem('pcp_name', dbUserRaw.nome_completo);
+            if (dbUserRaw.cd_slug) localStorage.setItem('pcp_cd', dbUserRaw.cd_slug);
+            toast.success('Login efetuado com sucesso!');
+            router.push('/compras/dashboard');
+            return;
+          }
+        }
+      } catch (innerErr) {
+        console.error(innerErr);
+      }
       setError('Erro de conexão ao fazer login.');
     } finally {
       setLoading(false);

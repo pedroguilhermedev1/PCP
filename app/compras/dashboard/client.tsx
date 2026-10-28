@@ -2,7 +2,7 @@
 
 import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun, Eye } from "lucide-react";
 import React, { useState, useMemo, useEffect } from "react";
-import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes, calcularViabilidadePagamento } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes, calcularViabilidadePagamento, getStatusColor, getEtapaColor, getEtapaLabel } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -333,7 +333,7 @@ export function DashboardClient({
       const cdLower = m.cd?.toLowerCase() || '';
       if (['raizes', 'curitiba'].includes(cdLower)) return false;
 
-      if (userCD !== "todos" && cdLower !== userCD.toLowerCase()) return false;
+      if (userCD && userCD !== "todos" && cdLower !== userCD.toLowerCase()) return false;
       return true;
     }).length;
   }, [movimentacoes, userCD]);
@@ -542,8 +542,8 @@ export function DashboardClient({
                       </div>
                     </div>
 
-                    {/* Lista de Faturas em vez do Gantt */}
-                    <div className="mt-8 mb-8 bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
+                    {/* Lista de Faturas em vez do Gantt (Ocultada visualmente a pedido) */}
+                    <div className="hidden mt-8 mb-8 bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
                       <div className="p-4 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
                         <h3 className="text-sm font-bold text-zinc-800 uppercase">Lista de Faturas</h3>
                         <span className="text-xs font-medium text-zinc-500">{filteredFaturas.filter(f => {
@@ -703,12 +703,12 @@ export function DashboardClient({
                   <InsumoCard 
                     title="Aprovações Pendentes"
                     value={entradasPendentesCount}
-                    subtitle={userCD === "todos" ? "Filtre por CD para habilitar o atalho" : "Movimentações aguardando aprovação"}
+                    subtitle={userCD && userCD !== "todos" ? "Movimentações aguardando aprovação" : "Filtre por CD para habilitar o atalho"}
                     icon={Package}
                     colorClass="text-orange-600"
-                    borderClass={userCD === "todos" ? "border-orange-200" : "border-orange-200 cursor-pointer hover:shadow-md transition-all"}
+                    borderClass={userCD && userCD !== "todos" ? "border-orange-200 cursor-pointer hover:shadow-md transition-all" : "border-orange-200"}
                     bgClass="bg-orange-50/20"
-                    onClick={userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
+                    onClick={userCD && userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
                   />
                 </div>
               </div>
@@ -797,9 +797,9 @@ export function DashboardClient({
             setFaturaToTransfer={() => {}}
             handleEdit={() => {}}
             setSelectedStage={setSelectedStage}
-            getStatusColor={(s) => 'gray'}
-            getEtapaColor={(e) => 'gray'}
-            getEtapaLabel={(e) => e}
+            getStatusColor={getStatusColor}
+            getEtapaColor={getEtapaColor}
+            getEtapaLabel={getEtapaLabel}
           />
         )}
 

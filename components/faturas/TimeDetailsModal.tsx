@@ -1,5 +1,5 @@
 import React from 'react';
-import { Fatura, calcularSlaDinamico, getEtapasDatas, calcularTempoDias, parseObservacoes } from '@/modules/compras/domain/Fatura';
+import { Fatura, calcularSlaDinamico, getEtapasDatas, calcularTempoDias, parseObservacoes, isFaturaEfetivamentePaga } from '@/modules/compras/domain/Fatura';
 import { Button } from '@/components/ui/button';
 import { X, Clock, User, Calendar, CheckCircle, Info, Timer, AlertTriangle } from 'lucide-react';
 import { formatUserName } from '@/lib/roles';
@@ -231,6 +231,7 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
   }
 
   const projecao = calcularViabilidadePagamento(fatura);
+  const efetivamentePaga = isFaturaEfetivamentePaga(fatura);
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -256,7 +257,7 @@ export function TimeDetailsModal({ isOpen, onClose, fatura, stage }: TimeDetails
             </div>
           ))}
           
-          {projecao && Object.keys(projecao).length > 0 && (
+          {!efetivamentePaga && projecao && !projecao.isEfetivamentePaga && (projecao.proximaSextaNormal || projecao.possivelQuartaExcecao || projecao.janelaPerdida) && (
             <div className="mt-4 pt-4 border-t border-zinc-200 space-y-3">
               <h4 className="text-sm font-bold text-zinc-700 flex items-center gap-2">
                 <Timer className="w-4 h-4"/> Projeção e Viabilidade de Pagamento

@@ -1228,7 +1228,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
             {/* Subaba CALENDÁRIO */}
             {activeTab === 'CALENDARIO' && (
-              <SolicitacoesCalendario cd={cd} />
+              <SolicitacoesCalendario cd={cd} userRole={userRole} userCD={userCD} />
             )}
 
             {activeTab === 'AJUSTE' && isAjusteAllowed && (

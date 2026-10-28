@@ -13,7 +13,8 @@
     "nome_completo": "Vando Sousa",
     "role": "ADMIN",
     "cd_slug": null,
-    "ativo": true
+    "ativo": false,
+    "updated_at": "2026-10-28T14:01:12.400Z"
   },
   {
     "id": "3",
@@ -97,10 +98,12 @@
   },
   {
     "id": "13",
-    "username": "pol.araruna",
-    "nome_completo": "Pol Araruna",
+    "username": "paul.araruna",
+    "nome_completo": "Paul Araruna",
     "role": "OPERACIONAL",
     "cd_slug": "fortaleza",
-    "ativo": true
+    "ativo": true,
+    "updated_at": "2026-10-28T14:02:25.655Z",
+    "password_hash": "ae748adce9d2e74079fc1230c86bb801ecfd60c80ac43aa43eb86d4693a21b5e"
   }
 ]

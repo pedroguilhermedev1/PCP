@@ -530,26 +530,6 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   <h3 className="text-sm font-semibold text-zinc-800 uppercase tracking-wider flex items-center gap-2">
                     Itens da Fatura
                   </h3>
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                      const current = formData.insumos || [];
-                      setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1, tipo_item: 'Insumo' }]});
-                    }} className="gap-2">
-                      <Plus className="w-4 h-4" /> Insumo
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                      const current = formData.insumos || [];
-                      setFormData({...formData, insumos: [...current, { codigo: 'SRV-MANUAL', item: '', quantidade: 1, tipo_item: 'Serviço' }]});
-                    }} className="gap-2">
-                      <Plus className="w-4 h-4" /> Serviço
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => {
-                      const current = formData.insumos || [];
-                      setFormData({...formData, insumos: [...current, { codigo: 'TAX-MANUAL', item: '', quantidade: 1, tipo_item: 'Imposto/Taxa' }]});
-                    }} className="gap-2">
-                      <Plus className="w-4 h-4" /> Imposto/Taxa
-                    </Button>
-                  </div>
                 </div>
 
                 {(!formData.insumos || formData.insumos.length === 0) ? (
@@ -694,6 +674,27 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                     ))}
                   </div>
                 )}
+
+                <div className="flex flex-wrap justify-end gap-2 pt-3 border-t border-zinc-100">
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const current = formData.insumos || [];
+                    setFormData({...formData, insumos: [...current, { codigo: '', item: '', quantidade: 1, tipo_item: 'Insumo' }]});
+                  }} className="gap-2">
+                    <Plus className="w-4 h-4" /> Insumo
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const current = formData.insumos || [];
+                    setFormData({...formData, insumos: [...current, { codigo: 'SRV-MANUAL', item: '', quantidade: 1, tipo_item: 'Serviço' }]});
+                  }} className="gap-2">
+                    <Plus className="w-4 h-4" /> Serviço
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const current = formData.insumos || [];
+                    setFormData({...formData, insumos: [...current, { codigo: 'TAX-MANUAL', item: '', quantidade: 1, tipo_item: 'Imposto/Taxa' }]});
+                  }} className="gap-2">
+                    <Plus className="w-4 h-4" /> Imposto/Taxa
+                  </Button>
+                </div>
               </section>
             )}
 

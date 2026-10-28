@@ -920,6 +920,25 @@ export interface ProjecaoPagamento {
   slasFaltantes?: number;
   etapasPendentes?: string[];
   diasSegurancaFaltantes?: number;
+  isEfetivamentePaga?: boolean;
+}
+
+export function isFaturaEfetivamentePaga(fatura: Partial<Fatura>): boolean {
+  const fAny = fatura as any;
+  if (fAny.pagamento_parcial === true || (fAny.saldo_pendente !== undefined && Number(fAny.saldo_pendente) > 0)) {
+    return false;
+  }
+  if (fatura.status_pagamento === 'Pago' || fatura.nexa_pagamento_realizado) {
+    return true;
+  }
+  if (fatura.data_pagamento_real && typeof fatura.data_pagamento_real === 'string' && fatura.data_pagamento_real.trim().length > 0) {
+    return true;
+  }
+  const statusCalc = calcularStatus(fatura);
+  if (statusCalc === 'Pago' || statusCalc === 'Pago (Vencida)' || statusCalc === 'Pago (vencida)') {
+    return true;
+  }
+  return false;
 }
 
 export function proximaSextaDisponivel(dataReferencia: Date): Date {
@@ -939,6 +958,14 @@ export function formatarDataBrasileira(d: Date): string {
 }
 
 export function calcularViabilidadePagamento(fatura: Partial<Fatura>): ProjecaoPagamento {
+  if (isFaturaEfetivamentePaga(fatura)) {
+    return {
+      isEfetivamentePaga: true,
+      statusViabilidade: 'viavel',
+      vencimentoUltrapassado: false
+    };
+  }
+
   if (!fatura.data_vencimento) {
     return {
       statusViabilidade: avaliarSlaDaEtapaAtual(fatura)

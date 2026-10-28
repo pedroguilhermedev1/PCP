@@ -5,9 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign, Copy, Eye } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { FaturaModal } from "@/components/faturas/FaturaModal";
+import { FaturaDetailsModal } from "@/components/faturas/FaturaDetailsModal";
+import { TimeDetailsModal } from "@/components/faturas/TimeDetailsModal";
+import { getFaturaPeriodosAction } from "../faturas-sap/periodos-actions";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
 import { toast } from "sonner";
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
@@ -20,6 +23,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
   const [faturaToEdit, setFaturaToEdit] = useState<Fatura | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [expandedFaturaId, setExpandedFaturaId] = useState<string | null>(null);
+  const [selectedStage, setSelectedStage] = useState<{fatura: any, stage: string} | null>(null);
+  const [faturaPeriodos, setFaturaPeriodos] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState("");
 
   const searchParams = useSearchParams();
@@ -448,6 +453,23 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     {canEditOrDelete && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            title="Visualizar Detalhes" 
+                            onClick={async (e) => { 
+                              e.stopPropagation(); 
+                              setExpandedFaturaId(f.id);
+                              try {
+                                const periodos = await getFaturaPeriodosAction(f.id);
+                                setFaturaPeriodos(periodos);
+                              } catch (err) {
+                                setFaturaPeriodos([]);
+                              }
+                            }}
+                          >
+                            <Eye className="w-4 h-4 text-purple-600" />
+                          </Button>
                           <Button variant="ghost" size="icon" title="Duplicar Fatura" onClick={(e) => { e.stopPropagation(); handleDuplicate(f); }}>
                             <Copy className="w-4 h-4 text-blue-500" />
                           </Button>
@@ -462,7 +484,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     )}
                   </TableRow>
                   
-                  {expandedFaturaId === f.id && (
+                  {false && expandedFaturaId === f.id && (
                     <TableRow className="bg-zinc-50 animate-in fade-in slide-in-from-top-2 duration-300">
                       <TableCell colSpan={canEditOrDelete ? 10 : 9} className="p-0 border-b">
                         <div className="p-6">
@@ -609,6 +631,30 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
         </Table>
       </div>
       
+      {selectedStage && (
+        <TimeDetailsModal
+          isOpen={!!selectedStage}
+          onClose={() => setSelectedStage(null)}
+          fatura={selectedStage.fatura}
+          stage={selectedStage.stage}
+        />
+      )}
+
+      <FaturaDetailsModal
+        isOpen={!!expandedFaturaId}
+        onClose={() => { setExpandedFaturaId(null); setFaturaPeriodos([]); }}
+        fatura={faturas.find(f => f.id === expandedFaturaId) || null}
+        faturaPeriodos={faturaPeriodos}
+        canEditOrDelete={canEditOrDelete}
+        handleDuplicate={handleDuplicate}
+        setFaturaToTransfer={() => {}}
+        handleEdit={handleEdit}
+        setSelectedStage={setSelectedStage}
+        getStatusColor={getStatusColor}
+        getEtapaColor={getEtapaColor}
+        getEtapaLabel={getEtapaLabel}
+      />
+
       {isModalOpen && (
         <FaturaModal 
           isOpen={isModalOpen} 

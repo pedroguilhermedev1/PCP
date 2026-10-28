@@ -1,9 +1,10 @@
 import React from 'react';
-import { Fatura, calcularStatus, calcularEtapa, getEtapasDatas, calcularTempoDias, parseObservacoes } from "@/modules/compras/domain/Fatura";
+import { Fatura, calcularStatus, calcularEtapa, getEtapasDatas, calcularTempoDias, parseObservacoes, isFaturaEfetivamentePaga } from "@/modules/compras/domain/Fatura";
 import { formatCNPJ, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Copy, ArrowRightLeft, Edit, FileText, Clock, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatUserName } from "@/lib/roles";
 
 const formatDateDisplay = (dateStr?: string) => {
   if (!dateStr) return 'S/ Data';
@@ -633,129 +634,474 @@ export function FaturaDetailsModal({
                               </div>
                               
                               {(() => {
-                                // Build unified history
-                                let history: any[] = [];
-                                const addEvent = (cycle: number | string, code: string, name: string, startDate: any, endDate: any, slaDias: number, responsavel: any) => {
-                                  if (startDate) {
-                                    history.push({
-                                      cycle: cycle,
-                                      codigo: code,
-                                      nome: name,
-                                      data_inicio: startDate,
-                                      data_fim: endDate,
-                                      sla_dias: slaDias,
-                                      responsavel: responsavel || 'Sistema',
-                                      is_ocorrencia: code.includes('.')
-                                    });
+                                const ehFluxoNexa = fatura.fluxo_iniciado_por === 'Nexa' || !fatura.is_sap;
+                                const datas = getEtapasDatas(fatura);
+                                const obs = parseObservacoes(fatura.observacoes);
+                                const efetivamentePaga = isFaturaEfetivamentePaga(fatura);
+
+                                const tempoRcAprov = calcularTempoDias(datas.sap_rc_criacao, datas.sap_rc_aprovacao);
+                                const tempoSapNexa = calcularTempoDias(datas.sap_rc_aprovacao || datas.sap_pc_geracao, datas.nexa_abertura);
+                                const tempoNexaFiscal = calcularTempoDias(datas.nexa_abertura, datas.fiscal_conclusao);
+                                const tempoFiscalPagto = calcularTempoDias(datas.fiscal_conclusao, datas.pagamento_efetiva || datas.pagamento_prevista);
+
+                                // Helper para cálculo de dias úteis entre datas
+                                const calcDiasUteis = (dInicioStr?: string, dFimStr?: string): number | null => {
+                                  if (!dInicioStr) return null;
+                                  const start = new Date(dInicioStr.includes('T') ? dInicioStr : dInicioStr + 'T00:00:00');
+                                  const end = dFimStr ? new Date(dFimStr.includes('T') ? dFimStr : dFimStr + 'T00:00:00') : new Date();
+                                  start.setHours(0,0,0,0);
+                                  end.setHours(0,0,0,0);
+                                  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+                                  if (end < start) return 0;
+                                  let dias = 0;
+                                  let cur = new Date(start);
+                                  while (cur < end) {
+                                    cur.setDate(cur.getDate() + 1);
+                                    const dw = cur.getDay();
+                                    if (dw !== 0 && dw !== 6) dias++;
                                   }
+                                  return dias;
                                 };
 
-                                if (fatura.is_sap) {
-                                  if (fatura.fluxo_iniciado_por !== 'Nexa') {
-                                    addEvent(0, 'T1', 'SAP (RC, Aprovação, PC)', fatura.rc_data_inicio || fatura.data_recebimento, fatura.pc_data_fim || fatura.data_pedido_sap, 3, fatura.responsavel_t1);
-                                    addEvent(0, 'T2', 'Nexa (Chamado)', fatura.nexa_data_inicio || fatura.data_pedido_sap, fatura.nexa_data_fim || fatura.nexa_data_envio, 1, 'Nexa');
-                                    addEvent(0, 'T3', 'Fiscal', fatura.fiscal_data_inicio || fatura.nexa_data_envio, fatura.fiscal_data_fim || fatura.nexa_data_conclusao_lancamento, 3, fatura.usuario_nexa_lancamento);
-                                    addEvent(0, 'T4', 'Pagamento', fatura.prog_data_inicio || fatura.nexa_data_prevista_pagamento, fatura.pagamento_data_fim || fatura.data_pagamento_real, 3, 'Financeiro');
-                                  } else {
-                                    addEvent(0, 'T1', 'Nexa / Solicitação', fatura.nexa_data_inicio || fatura.nexa_data_envio, fatura.nexa_data_fim, 1, fatura.responsavel_t1);
-                                    addEvent(0, 'T2', 'Requisição / Pedido (Nexa)', fatura.req_nexa_data_inicio || fatura.nexa_rc_data, fatura.req_nexa_data_fim || fatura.data_pc_nexa, 2, 'Suprimentos');
-                                    addEvent(0, 'T3', 'Lançamento Fiscal', fatura.fiscal_data_inicio || fatura.nexa_data_envio, fatura.fiscal_data_fim || fatura.nexa_data_conclusao_lancamento, 1, fatura.usuario_nexa_lancamento);
-                                    addEvent(0, 'T4', 'Pagamento', fatura.prog_data_inicio || fatura.nexa_data_prevista_pagamento, fatura.pagamento_data_fim || fatura.data_pagamento_real, 3, 'Financeiro');
-                                  }
+                                interface TimelineItem {
+                                  codigo: string;
+                                  titulo: string;
+                                  subtitulo: string;
+                                  data_inicio?: string;
+                                  data_inicio_herdada?: boolean;
+                                  data_fim?: string;
+                                  sla_dias: number;
+                                  responsavel: string;
+                                  status: 'concluido' | 'em_andamento' | 'pendente';
+                                  dias_utilizados: number | null;
+                                  estourou_sla: boolean;
+                                  eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }>;
+                                  motivo?: string;
+                                  observacao?: string;
+                                  is_ocorrencia?: boolean;
                                 }
 
-                                if (fatura.ocorrencias && fatura.ocorrencias.length > 0) {
-                                  const sortedOcs = [...fatura.ocorrencias].sort((a, b) => new Date(a.data_envio || 0).getTime() - new Date(b.data_envio || 0).getTime());
-                                  sortedOcs.forEach((oc, index) => {
-                                    const cycle = index + 1;
-                                    addEvent(cycle, oc.t_destino_codigo, `Ocorrência (${oc.t_destino}) - ${oc.motivo}`, oc.destino_data_inicio || oc.data_envio, oc.destino_data_fim, 1, oc.destino_responsavel);
-                                    addEvent(cycle, oc.t_origem_retorno_codigo, `Retorno (${oc.t_origem})`, oc.origem_data_inicio, oc.origem_data_fim, 1, oc.origem_responsavel);
+                                let items: TimelineItem[] = [];
+
+                                if (!ehFluxoNexa) {
+                                  // ========================================================
+                                  // FLUXO 1: SAP + Nexa (Sequência completa: T1 → T2 → T3 → T4)
+                                  // ========================================================
+
+                                  // --- T1: SAP (RC, Aprovação, PC) ---
+                                  const t1Inicio = datas.sap_rc_criacao || fatura.rc_data_inicio || fatura.data_rc_sap || fatura.data_recebimento;
+                                  const t1Fim = datas.sap_pc_geracao || fatura.data_pedido_sap || fatura.pc_data_fim;
+                                  const t1Concluido = Boolean(datas.sap_pc_geracao || fatura.pedido_sap || fatura.doc_subsequente_criado);
+                                  const t1EmAndamento = !t1Concluido && Boolean(t1Inicio || datas.sap_rc_aprovacao || fatura.rc_sap);
+                                  const t1Status: 'concluido' | 'em_andamento' | 'pendente' = t1Concluido ? 'concluido' : (t1EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t1Dias = calcDiasUteis(t1Inicio, t1Fim);
+                                  const t1Sla = 3;
+
+                                  const t1Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Nº RC', valor: fatura.rc_sap || 'Pendente', destaque: !!fatura.rc_sap },
+                                    { label: 'Criação da RC', valor: formatDateDisplay(datas.sap_rc_criacao) },
+                                    { label: 'Aprovação da RC', valor: datas.sap_rc_aprovacao ? formatDateDisplay(datas.sap_rc_aprovacao) : 'Pendente', destaque: !!datas.sap_rc_aprovacao },
+                                    { label: 'Nº Pedido (PC)', valor: fatura.pedido_sap || 'Pendente', destaque: !!fatura.pedido_sap },
+                                    { label: 'Geração do PC', valor: datas.sap_pc_geracao ? formatDateDisplay(datas.sap_pc_geracao) : 'Pendente' },
+                                    { label: 'Doc. Subsequente', valor: fatura.doc_subsequente_criado ? 'Criado' : 'Pendente', destaque: fatura.doc_subsequente_criado }
+                                  ];
+                                  if (tempoRcAprov !== null) {
+                                    t1Eventos.push({ label: 'Criação → Aprovação', valor: `${tempoRcAprov} dia(s)` });
+                                  }
+
+                                  items.push({
+                                    codigo: 'T1',
+                                    titulo: 'SAP (RC, Aprovação, PC)',
+                                    subtitulo: 'Requisição de Compras, Aprovação e Geração do Pedido',
+                                    data_inicio: t1Inicio,
+                                    data_fim: t1Concluido ? t1Fim : undefined,
+                                    sla_dias: t1Sla,
+                                    responsavel: fatura.responsavel_t1 || fatura.responsavel || 'Suprimentos / PCP',
+                                    status: t1Status,
+                                    dias_utilizados: t1Dias,
+                                    estourou_sla: t1Dias !== null && t1Dias > t1Sla,
+                                    eventos: t1Eventos
+                                  });
+
+                                  // --- T2: Nexa (Chamado) ---
+                                  const t2Inicio = fatura.nexa_data_inicio || datas.sap_pc_geracao || datas.sap_rc_aprovacao || datas.nexa_abertura;
+                                  const t2Fim = datas.nexa_conclusao || fatura.nexa_data_fim || (fatura.nexa_chamado && datas.nexa_abertura ? datas.nexa_abertura : undefined);
+                                  const t2Concluido = Boolean(fatura.nexa_chamado || datas.nexa_abertura || fatura.nexa_data_envio || fatura.nexa_emitiu_nf || datas.fiscal_inicio);
+                                  const t2EmAndamento = !t2Concluido && (t1Concluido || Boolean(fatura.nexa_data_inicio));
+                                  const t2Status: 'concluido' | 'em_andamento' | 'pendente' = t2Concluido ? 'concluido' : (t2EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t2Dias = calcDiasUteis(t2Inicio, t2Fim);
+                                  const t2Sla = 1;
+
+                                  const t2Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Chamado / Ticket', valor: fatura.nexa_chamado || 'Aguardando abertura', destaque: !!fatura.nexa_chamado },
+                                    { label: 'Data Abertura', valor: datas.nexa_abertura ? formatDateDisplay(datas.nexa_abertura) : 'Não registrada' },
+                                    { label: 'Doc. Emitido?', valor: fatura.nexa_emitiu_nf ? 'Sim' : 'Não' },
+                                    { label: 'Doc. Anexado?', valor: fatura.nexa_anexada ? 'Sim' : 'Não' }
+                                  ];
+                                  if (tempoSapNexa !== null) {
+                                    t2Eventos.push({ label: 'SAP → Nexa', valor: `${tempoSapNexa} dia(s)` });
+                                  }
+
+                                  items.push({
+                                    codigo: 'T2',
+                                    titulo: 'Nexa (Abertura / Chamado)',
+                                    subtitulo: 'Abertura do Chamado e Anexo de Documentos',
+                                    data_inicio: t2Inicio,
+                                    data_inicio_herdada: !fatura.nexa_data_inicio && !!(datas.sap_pc_geracao || datas.sap_rc_aprovacao),
+                                    data_fim: t2Concluido ? t2Fim : undefined,
+                                    sla_dias: t2Sla,
+                                    responsavel: 'Nexa / Operação',
+                                    status: t2Status,
+                                    dias_utilizados: t2Dias,
+                                    estourou_sla: t2Dias !== null && t2Dias > t2Sla,
+                                    eventos: t2Eventos
+                                  });
+
+                                  // --- T3: Lançamento Fiscal ---
+                                  const t3Inicio = fatura.fiscal_data_inicio || datas.nexa_abertura || datas.nexa_inicio;
+                                  const t3Fim = datas.fiscal_conclusao || fatura.fiscal_data_fim || fatura.nexa_data_conclusao_lancamento;
+                                  const t3Concluido = Boolean(fatura.nexa_lancamento_concluido || datas.fiscal_conclusao);
+                                  const t3EmAndamento = !t3Concluido && t2Concluido;
+                                  const t3Status: 'concluido' | 'em_andamento' | 'pendente' = t3Concluido ? 'concluido' : (t3EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t3Dias = calcDiasUteis(t3Inicio, t3Fim);
+                                  const t3Sla = 3;
+
+                                  const t3Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Lançamento Concluído?', valor: fatura.nexa_lancamento_concluido ? 'Sim' : 'Não', destaque: fatura.nexa_lancamento_concluido },
+                                    { label: 'Conclusão Fiscal', valor: datas.fiscal_conclusao ? formatDateDisplay(datas.fiscal_conclusao) : 'Pendente' },
+                                    { label: 'Usuário Fiscal', valor: formatUserName(fatura.usuario_nexa_lancamento) || 'Não atribuído' }
+                                  ];
+                                  if (tempoNexaFiscal !== null) {
+                                    t3Eventos.push({ label: 'Nexa → Fiscal', valor: `${tempoNexaFiscal} dia(s)` });
+                                  }
+                                  if (obs.fiscal_observacao) {
+                                    t3Eventos.push({ label: 'Observação', valor: obs.fiscal_observacao });
+                                  }
+
+                                  items.push({
+                                    codigo: 'T3',
+                                    titulo: 'Lançamento Fiscal',
+                                    subtitulo: 'Validação e Escrituração Fiscal no Nexa',
+                                    data_inicio: t3Inicio,
+                                    data_inicio_herdada: !fatura.fiscal_data_inicio && !!(datas.nexa_abertura || datas.nexa_inicio),
+                                    data_fim: t3Concluido ? t3Fim : undefined,
+                                    sla_dias: t3Sla,
+                                    responsavel: formatUserName(fatura.usuario_nexa_lancamento) || 'Fiscal',
+                                    status: t3Status,
+                                    dias_utilizados: t3Dias,
+                                    estourou_sla: t3Dias !== null && t3Dias > t3Sla,
+                                    eventos: t3Eventos
+                                  });
+
+                                  // --- T4: Programação e Pagamento ---
+                                  const t4Inicio = fatura.pagamento_data_inicio || fatura.prog_data_inicio || datas.fiscal_conclusao;
+                                  const t4Fim = datas.pagamento_efetiva || fatura.data_pagamento_real || fatura.pagamento_data_fim;
+                                  const t4Concluido = efetivamentePaga;
+                                  const t4EmAndamento = !t4Concluido && (t3Concluido || Boolean(fatura.nexa_pagamento_programado || datas.pagamento_prevista));
+                                  const t4Status: 'concluido' | 'em_andamento' | 'pendente' = t4Concluido ? 'concluido' : (t4EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t4Dias = calcDiasUteis(t4Inicio, t4Fim);
+                                  const t4Sla = 3;
+
+                                  const t4Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Status do Pagamento', valor: datas.pagamento_status, destaque: t4Concluido },
+                                    { label: 'Previsão Pagamento', valor: datas.pagamento_prevista ? formatDateDisplay(datas.pagamento_prevista) : 'Não programada' },
+                                    { label: 'Pagamento Efetivo', valor: datas.pagamento_efetiva ? formatDateDisplay(datas.pagamento_efetiva) : 'Pendente', destaque: t4Concluido },
+                                    { label: 'Forma de Pagamento', valor: fatura.forma_pagamento || '-' }
+                                  ];
+                                  if (tempoFiscalPagto !== null) {
+                                    t4Eventos.push({ label: 'Fiscal → Pagamento', valor: `${tempoFiscalPagto} dia(s)` });
+                                  }
+                                  if (obs.pagamento_observacao) {
+                                    t4Eventos.push({ label: 'Observação', valor: obs.pagamento_observacao });
+                                  }
+
+                                  items.push({
+                                    codigo: 'T4',
+                                    titulo: 'Programação e Pagamento',
+                                    subtitulo: 'Programação Financeira e Baixa Efetiva',
+                                    data_inicio: t4Inicio,
+                                    data_inicio_herdada: !fatura.pagamento_data_inicio && !fatura.prog_data_inicio && !!datas.fiscal_conclusao,
+                                    data_fim: t4Concluido ? t4Fim : undefined,
+                                    sla_dias: t4Sla,
+                                    responsavel: 'Financeiro',
+                                    status: t4Status,
+                                    dias_utilizados: t4Dias,
+                                    estourou_sla: t4Dias !== null && t4Dias > t4Sla,
+                                    eventos: t4Eventos
+                                  });
+
+                                } else {
+                                  // ========================================================
+                                  // FLUXO 2: Somente Nexa (Sequência completa: T1 → T2 → T3)
+                                  // ========================================================
+
+                                  // --- T1: Nexa / Solicitação ---
+                                  const t1Inicio = fatura.nexa_data_inicio || datas.nexa_abertura || fatura.data_recebimento;
+                                  const t1Fim = datas.nexa_conclusao || fatura.nexa_data_fim || datas.nexa_abertura;
+                                  const t1Concluido = Boolean(fatura.nexa_chamado || datas.nexa_abertura || datas.nexa_conclusao || datas.fiscal_inicio);
+                                  const t1EmAndamento = !t1Concluido && Boolean(t1Inicio);
+                                  const t1Status: 'concluido' | 'em_andamento' | 'pendente' = t1Concluido ? 'concluido' : (t1EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t1Dias = calcDiasUteis(t1Inicio, t1Fim);
+                                  const t1Sla = 1;
+
+                                  const t1Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Chamado / Ticket', valor: fatura.nexa_chamado || 'Aguardando abertura', destaque: !!fatura.nexa_chamado },
+                                    { label: 'Data de Abertura', valor: datas.nexa_abertura ? formatDateDisplay(datas.nexa_abertura) : 'Não registrada' },
+                                    { label: 'Doc. Emitido?', valor: fatura.nexa_emitiu_nf ? 'Sim' : 'Não' },
+                                    { label: 'Doc. Anexado?', valor: fatura.nexa_anexada ? 'Sim' : 'Não' },
+                                    { label: 'Responsável', valor: formatUserName(fatura.responsavel_t1) || 'Nexa / Operação' }
+                                  ];
+
+                                  items.push({
+                                    codigo: 'T1',
+                                    titulo: 'Nexa / Solicitação',
+                                    subtitulo: 'Abertura de Chamado no Nexa e Anexo de Documentos',
+                                    data_inicio: t1Inicio,
+                                    data_fim: t1Concluido ? t1Fim : undefined,
+                                    sla_dias: t1Sla,
+                                    responsavel: formatUserName(fatura.responsavel_t1) || 'Nexa / Operação',
+                                    status: t1Status,
+                                    dias_utilizados: t1Dias,
+                                    estourou_sla: t1Dias !== null && t1Dias > t1Sla,
+                                    eventos: t1Eventos
+                                  });
+
+                                  // --- T2: Lançamento Fiscal ---
+                                  const t2Inicio = fatura.fiscal_data_inicio || datas.nexa_abertura || datas.nexa_inicio;
+                                  const t2Fim = datas.fiscal_conclusao || fatura.fiscal_data_fim || fatura.nexa_data_conclusao_lancamento;
+                                  const t2Concluido = Boolean(fatura.nexa_lancamento_concluido || datas.fiscal_conclusao);
+                                  const t2EmAndamento = !t2Concluido && t1Concluido;
+                                  const t2Status: 'concluido' | 'em_andamento' | 'pendente' = t2Concluido ? 'concluido' : (t2EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t2Dias = calcDiasUteis(t2Inicio, t2Fim);
+                                  const t2Sla = 1;
+
+                                  const t2Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Lançamento Concluído?', valor: fatura.nexa_lancamento_concluido ? 'Sim' : 'Não', destaque: fatura.nexa_lancamento_concluido },
+                                    { label: 'Conclusão Fiscal', valor: datas.fiscal_conclusao ? formatDateDisplay(datas.fiscal_conclusao) : 'Pendente' },
+                                    { label: 'Usuário Fiscal', valor: formatUserName(fatura.usuario_nexa_lancamento) || 'Não atribuído' }
+                                  ];
+                                  if (tempoNexaFiscal !== null) {
+                                    t2Eventos.push({ label: 'Nexa → Fiscal', valor: `${tempoNexaFiscal} dia(s)` });
+                                  }
+                                  if (obs.fiscal_observacao) {
+                                    t2Eventos.push({ label: 'Observação', valor: obs.fiscal_observacao });
+                                  }
+
+                                  items.push({
+                                    codigo: 'T2',
+                                    titulo: 'Lançamento Fiscal',
+                                    subtitulo: 'Escrituração Fiscal e Conferência no Nexa',
+                                    data_inicio: t2Inicio,
+                                    data_inicio_herdada: !fatura.fiscal_data_inicio && !!(datas.nexa_abertura || datas.nexa_inicio),
+                                    data_fim: t2Concluido ? t2Fim : undefined,
+                                    sla_dias: t2Sla,
+                                    responsavel: formatUserName(fatura.usuario_nexa_lancamento) || 'Fiscal',
+                                    status: t2Status,
+                                    dias_utilizados: t2Dias,
+                                    estourou_sla: t2Dias !== null && t2Dias > t2Sla,
+                                    eventos: t2Eventos
+                                  });
+
+                                  // --- T3: Programação e Pagamento ---
+                                  const t3Inicio = fatura.pagamento_data_inicio || fatura.prog_data_inicio || datas.fiscal_conclusao;
+                                  const t3Fim = datas.pagamento_efetiva || fatura.data_pagamento_real || fatura.pagamento_data_fim;
+                                  const t3Concluido = efetivamentePaga;
+                                  const t3EmAndamento = !t3Concluido && (t2Concluido || Boolean(fatura.nexa_pagamento_programado || datas.pagamento_prevista));
+                                  const t3Status: 'concluido' | 'em_andamento' | 'pendente' = t3Concluido ? 'concluido' : (t3EmAndamento ? 'em_andamento' : 'pendente');
+                                  const t3Dias = calcDiasUteis(t3Inicio, t3Fim);
+                                  const t3Sla = 3;
+
+                                  const t3Eventos: Array<{ label: string; valor: string | React.ReactNode; destaque?: boolean }> = [
+                                    { label: 'Status do Pagamento', valor: datas.pagamento_status, destaque: t3Concluido },
+                                    { label: 'Previsão Pagamento', valor: datas.pagamento_prevista ? formatDateDisplay(datas.pagamento_prevista) : 'Não programada' },
+                                    { label: 'Pagamento Efetivo', valor: datas.pagamento_efetiva ? formatDateDisplay(datas.pagamento_efetiva) : 'Pendente', destaque: t3Concluido },
+                                    { label: 'Forma de Pagamento', valor: fatura.forma_pagamento || '-' }
+                                  ];
+                                  if (tempoFiscalPagto !== null) {
+                                    t3Eventos.push({ label: 'Fiscal → Pagamento', valor: `${tempoFiscalPagto} dia(s)` });
+                                  }
+                                  if (obs.pagamento_observacao) {
+                                    t3Eventos.push({ label: 'Observação', valor: obs.pagamento_observacao });
+                                  }
+
+                                  items.push({
+                                    codigo: 'T3',
+                                    titulo: 'Programação e Pagamento',
+                                    subtitulo: 'Programação Financeira e Quitação Efetiva',
+                                    data_inicio: t3Inicio,
+                                    data_inicio_herdada: !fatura.pagamento_data_inicio && !fatura.prog_data_inicio && !!datas.fiscal_conclusao,
+                                    data_fim: t3Concluido ? t3Fim : undefined,
+                                    sla_dias: t3Sla,
+                                    responsavel: 'Financeiro',
+                                    status: t3Status,
+                                    dias_utilizados: t3Dias,
+                                    estourou_sla: t3Dias !== null && t3Dias > t3Sla,
+                                    eventos: t3Eventos
                                   });
                                 }
 
-                                history.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
-
-                                // Add the old manual periodos for legacy compatibility
-                                if (faturaPeriodos && faturaPeriodos.length > 0) {
-                                  faturaPeriodos.forEach((p, idx) => {
-                                    history.push({
-                                      cycle: 0,
-                                      codigo: 'Man',
-                                      nome: `Manual: ${p.etapa_nome} (${p.time_responsavel})`,
-                                      data_inicio: p.data_inicio,
-                                      data_fim: p.data_termino,
-                                      sla_dias: p.sla_dias,
-                                      responsavel: p.usuario_transferencia || 'Sistema',
-                                      is_ocorrencia: false,
-                                      motivo: p.motivo_transferencia,
-                                      observacao: p.observacao_transferencia
+                                // Ocorrências registradas
+                                if (fatura.ocorrencias && fatura.ocorrencias.length > 0) {
+                                  fatura.ocorrencias.forEach((oc, index) => {
+                                    const ocInicio = oc.destino_data_inicio || oc.data_envio;
+                                    const ocFim = oc.destino_data_fim;
+                                    const ocDias = calcDiasUteis(ocInicio, ocFim);
+                                    items.push({
+                                      codigo: oc.t_destino_codigo || `OC.${index + 1}`,
+                                      titulo: `Ocorrência (${oc.t_destino || 'Retorno'})`,
+                                      subtitulo: oc.motivo || 'Ocorrência registrada no fluxo',
+                                      data_inicio: ocInicio,
+                                      data_fim: ocFim,
+                                      sla_dias: 1,
+                                      responsavel: oc.destino_responsavel || 'Operação',
+                                      status: ocFim ? 'concluido' : 'em_andamento',
+                                      dias_utilizados: ocDias,
+                                      estourou_sla: ocDias !== null && ocDias > 1,
+                                      eventos: [
+                                        { label: 'Origem', valor: oc.t_origem || '-' },
+                                        { label: 'Destino', valor: oc.t_destino || '-' },
+                                        { label: 'Motivo', valor: oc.motivo || '-' }
+                                      ],
+                                      is_ocorrencia: true,
+                                      motivo: oc.motivo
                                     });
                                   });
-                                  history.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
-                                }
-
-                                if (history.length === 0) {
-                                  return (
-                                    <div className="p-6 bg-zinc-50 rounded-lg text-center text-zinc-500 text-sm border border-dashed border-zinc-300">
-                                      Nenhum histórico registrado ainda. O sistema gravará as etapas automaticamente conforme o andamento do fluxo.
-                                    </div>
-                                  );
                                 }
 
                                 return (
-                                  <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
-                                    {history.map((ev, idx) => {
-                                      const dInicio = new Date(ev.data_inicio);
-                                      const dTermino = ev.data_fim ? new Date(ev.data_fim) : new Date();
-                                      
-                                      // Get business days difference
-                                      let diasAdicionados = 0;
-                                      let curr = new Date(dInicio.getTime());
-                                      curr.setHours(0,0,0,0);
-                                      const end = new Date(dTermino.getTime());
-                                      end.setHours(0,0,0,0);
-                                      
-                                      while (curr < end) {
-                                        curr.setDate(curr.getDate() + 1);
-                                        if (curr.getDay() !== 0 && curr.getDay() !== 6) diasAdicionados++;
-                                      }
-                                      
-                                      const estourouSLA = diasAdicionados > ev.sla_dias;
-                                      const pendente = !ev.data_fim;
+                                  <div className="relative pl-6 space-y-5 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+                                    {items.map((item, idx) => {
+                                      const isConcluido = item.status === 'concluido';
+                                      const isEmAndamento = item.status === 'em_andamento';
+                                      const atrasado = item.estourou_sla;
+
+                                      const nodeBg = isConcluido 
+                                        ? (atrasado ? 'bg-red-600 text-white border-red-200' : 'bg-emerald-600 text-white border-emerald-200')
+                                        : isEmAndamento 
+                                          ? 'bg-amber-500 text-white border-amber-200 ring-4 ring-amber-100' 
+                                          : 'bg-zinc-200 text-zinc-600 border-zinc-300';
+
+                                      const badgeClass = isConcluido 
+                                        ? (atrasado ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+                                        : isEmAndamento 
+                                          ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                          : 'bg-zinc-100 text-zinc-600 border-zinc-200';
+
+                                      const badgeText = isConcluido 
+                                        ? (atrasado ? 'Concluído com Atraso' : 'Concluído no Prazo')
+                                        : isEmAndamento 
+                                          ? 'Em Andamento' 
+                                          : 'Aguardando Início';
 
                                       return (
-                                        <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                          <div className={cn("flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10", pendente ? "bg-amber-400" : (estourouSLA ? "bg-red-500" : (ev.is_ocorrencia ? "bg-purple-500" : "bg-emerald-500")))}>
-                                            <span className="text-[10px] font-bold text-white">{ev.codigo}</span>
+                                        <div key={idx} className="relative group">
+                                          {/* Indicador do nó no eixo vertical */}
+                                          <div className={cn(
+                                            "absolute -left-6 top-1.5 w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold shadow-xs z-10 transition-transform",
+                                            nodeBg
+                                          )}>
+                                            {item.codigo}
                                           </div>
-                                          
-                                          <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-                                            <div className="flex justify-between items-start mb-2">
+
+                                          {/* Card do histórico da etapa */}
+                                          <div className="bg-white rounded-xl border border-zinc-200 shadow-xs hover:border-zinc-300 transition-all p-5">
+                                            {/* Cabeçalho do Card */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-100">
                                               <div>
-                                                <span className={cn("text-[10px] font-bold uppercase tracking-widest block mb-1", ev.is_ocorrencia ? "text-purple-600" : "text-zinc-500")}>
-                                                  Ciclo {ev.cycle} {ev.is_ocorrencia && '(Retorno)'}
-                                                </span>
-                                                <h4 className="text-sm font-bold text-zinc-800">{ev.nome}</h4>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="font-bold text-zinc-900 text-sm">{item.titulo}</span>
+                                                  {item.is_ocorrencia && (
+                                                    <span className="text-[10px] font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                                      Ocorrência
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                <p className="text-xs text-zinc-500 mt-0.5">{item.subtitulo}</p>
                                               </div>
-                                              <div className="text-right">
-                                                <span className={cn("px-2 py-1 rounded text-[9px] font-bold uppercase whitespace-nowrap", pendente ? "bg-amber-100 text-amber-700" : (estourouSLA ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"))}>
-                                                  {ev.sla_dias > 0 ? `SLA: ${ev.sla_dias}d | Usado: ${diasAdicionados}d` : 'Sem SLA'}
+                                              <div className="flex items-center gap-2">
+                                                <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full border", badgeClass)}>
+                                                  {badgeText}
                                                 </span>
                                               </div>
-                                            </div>
-                                            
-                                            <div className="flex flex-col gap-1 text-[11px] text-zinc-600 mt-3 p-2 bg-zinc-50 rounded border border-zinc-100">
-                                              <div className="flex justify-between"><span>Início:</span> <span className="font-medium text-zinc-800">{dInicio.toLocaleDateString('pt-BR')}</span></div>
-                                              <div className="flex justify-between"><span>Término:</span> <span className="font-medium text-zinc-800">{ev.data_fim ? new Date(ev.data_fim).toLocaleDateString('pt-BR') : 'Pendente'}</span></div>
-                                              <div className="flex justify-between mt-1 pt-1 border-t border-zinc-200"><span>Responsável:</span> <span className="font-medium">{ev.responsavel}</span></div>
                                             </div>
 
-                                            {(ev.motivo || ev.observacao) && (
-                                              <div className="mt-2 text-[10px] text-zinc-600 italic border-l-2 border-zinc-300 pl-2">
-                                                {ev.motivo && <span className="font-semibold block">{ev.motivo}</span>}
-                                                {ev.observacao}
+                                            {/* Grid: Início, Conclusão, Duração e SLA */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 text-xs bg-zinc-50/70 rounded-lg p-3 my-3 border border-zinc-100">
+                                              <div>
+                                                <span className="text-zinc-500 text-[11px] block font-medium">Data de Início</span>
+                                                <span className="font-semibold text-zinc-800">
+                                                  {item.data_inicio ? (
+                                                    <>
+                                                      {formatDateDisplay(item.data_inicio)}
+                                                      {item.data_inicio_herdada && (
+                                                        <span className="ml-1 text-[10px] text-zinc-400 font-normal">(herdada)</span>
+                                                      )}
+                                                    </>
+                                                  ) : (
+                                                    <span className="text-zinc-400 font-normal">Aguardando início</span>
+                                                  )}
+                                                </span>
                                               </div>
-                                            )}
+
+                                              <div>
+                                                <span className="text-zinc-500 text-[11px] block font-medium">Data de Conclusão</span>
+                                                <span className="font-semibold text-zinc-800">
+                                                  {item.data_fim ? (
+                                                    formatDateDisplay(item.data_fim)
+                                                  ) : isConcluido ? (
+                                                    <span className="text-emerald-700 font-medium">Concluído</span>
+                                                  ) : isEmAndamento ? (
+                                                    <span className="text-amber-700 font-medium">Em andamento</span>
+                                                  ) : (
+                                                    <span className="text-zinc-400 font-normal">Pendente</span>
+                                                  )}
+                                                </span>
+                                              </div>
+
+                                              <div>
+                                                <span className="text-zinc-500 text-[11px] block font-medium">Duração & SLA</span>
+                                                <span className="font-semibold text-zinc-800">
+                                                  {item.dias_utilizados !== null ? (
+                                                    <span className={atrasado ? "text-red-600" : "text-emerald-700"}>
+                                                      {item.dias_utilizados} {item.dias_utilizados === 1 ? 'dia útil' : 'dias úteis'}
+                                                      <span className="text-zinc-400 font-normal text-[10px] ml-1">
+                                                        (SLA: {item.sla_dias}d)
+                                                      </span>
+                                                    </span>
+                                                  ) : (
+                                                    <span className="text-zinc-400 font-normal">
+                                                      SLA padrão: {item.sla_dias} {item.sla_dias === 1 ? 'dia' : 'dias'}
+                                                    </span>
+                                                  )}
+                                                </span>
+                                              </div>
+                                            </div>
+
+                                            {/* Eventos e Movimentações Relevantes */}
+                                            <div>
+                                              <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 block mb-2">
+                                                Eventos e Movimentações Relevantes
+                                              </span>
+                                              <div className="flex flex-wrap gap-2">
+                                                {item.eventos.map((ev, eIdx) => (
+                                                  <div 
+                                                    key={eIdx}
+                                                    className={cn(
+                                                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border transition-colors",
+                                                      ev.destaque 
+                                                        ? "bg-purple-50 text-purple-900 border-purple-200 font-medium" 
+                                                        : "bg-white text-zinc-700 border-zinc-200"
+                                                    )}
+                                                  >
+                                                    <span className="text-zinc-400 text-[11px] font-normal">{ev.label}:</span>
+                                                    <span className="font-semibold">{ev.valor}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                              <div className="mt-2 text-[11px] text-zinc-400 flex items-center justify-between">
+                                                <span>Responsável: <strong className="text-zinc-600 font-medium">{item.responsavel}</strong></span>
+                                              </div>
+                                            </div>
                                           </div>
                                         </div>
                                       );

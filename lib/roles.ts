@@ -74,7 +74,7 @@ export function formatUserName(username?: string): string {
   if (normalized === 'rafael.soares') return 'Rafael Soares';
   if (normalized === 'fabio.pessoa') return 'Fábio Pessoa';
   if (normalized === 'gabriel.oliveira') return 'Gabriel Oliveira';
-  if (normalized === 'pol.araruna') return 'Pol Araruna';
+  if (normalized === 'pol.araruna') return 'Paul Araruna';
 
   if (normalized === 'psd.arco') return 'PSD';
   if (normalized === 'coc.arco') return 'COC';
