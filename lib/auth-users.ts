@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 export const JSON_FILE_PATH = path.join(process.cwd(), 'data', 'usuarios.json');
+export const DELETED_USERS_FILE_PATH = path.join(process.cwd(), 'data', 'deleted_users.json');
 
 const SALT = 'pcp_hub_auth_salt_2026';
 
@@ -31,6 +32,44 @@ export interface UserRecord {
   password_hash?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export function readDeletedUsers(): string[] {
+  try {
+    if (!fs.existsSync(DELETED_USERS_FILE_PATH)) return [];
+    const raw = fs.readFileSync(DELETED_USERS_FILE_PATH, 'utf8');
+    return JSON.parse(raw) || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export function markUserDeleted(username: string): void {
+  try {
+    const list = readDeletedUsers();
+    const clean = username.toLowerCase().trim();
+    if (!list.includes(clean)) {
+      list.push(clean);
+      const dir = path.dirname(DELETED_USERS_FILE_PATH);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(DELETED_USERS_FILE_PATH, JSON.stringify(list, null, 2), 'utf8');
+    }
+  } catch (err) {
+    console.error('Erro ao salvar deleted_users.json:', err);
+  }
+}
+
+export function unmarkUserDeleted(username: string): void {
+  try {
+    const list = readDeletedUsers();
+    const clean = username.toLowerCase().trim();
+    const filtered = list.filter(u => u !== clean);
+    const dir = path.dirname(DELETED_USERS_FILE_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(DELETED_USERS_FILE_PATH, JSON.stringify(filtered, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Erro ao atualizar deleted_users.json:', err);
+  }
 }
 
 export function readLocalUsers(): UserRecord[] {

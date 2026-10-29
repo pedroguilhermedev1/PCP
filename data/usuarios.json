@@ -1,20 +1,11 @@
 [
   {
-    "id": "1",
-    "username": "pedro.queiroz",
-    "nome_completo": "Pedro Queiroz",
-    "role": "SUPERADMIN",
-    "cd_slug": null,
+    "id": "12",
+    "username": "coc.arco",
+    "nome_completo": "COC",
+    "role": "OPERACIONAL",
+    "cd_slug": "coc",
     "ativo": true
-  },
-  {
-    "id": "2",
-    "username": "vando.sousa",
-    "nome_completo": "Vando Sousa",
-    "role": "ADMIN",
-    "cd_slug": null,
-    "ativo": false,
-    "updated_at": "2026-10-28T14:01:12.400Z"
   },
   {
     "id": "3",
@@ -22,46 +13,6 @@
     "nome_completo": "Débora Mota",
     "role": "ADMIN",
     "cd_slug": null,
-    "ativo": true
-  },
-  {
-    "id": "4",
-    "username": "raphael.ramiro",
-    "nome_completo": "Raphael Ramiro",
-    "role": "ADMIN",
-    "cd_slug": null,
-    "ativo": true
-  },
-  {
-    "id": "5",
-    "username": "francisco.edson",
-    "nome_completo": "Francisco Edson",
-    "role": "ADMIN",
-    "cd_slug": null,
-    "ativo": true
-  },
-  {
-    "id": "6",
-    "username": "lideranca.arco",
-    "nome_completo": "Liderança Arco",
-    "role": "LIDERANCA",
-    "cd_slug": null,
-    "ativo": true
-  },
-  {
-    "id": "7",
-    "username": "raphael.farrao",
-    "nome_completo": "Raphael Farrão",
-    "role": "OPERACIONAL",
-    "cd_slug": "jundiai",
-    "ativo": true
-  },
-  {
-    "id": "8",
-    "username": "rafael.soares",
-    "nome_completo": "Rafael Soares",
-    "role": "OPERACIONAL",
-    "cd_slug": "nse",
     "ativo": true
   },
   {
@@ -73,6 +24,14 @@
     "ativo": true
   },
   {
+    "id": "5",
+    "username": "francisco.edson",
+    "nome_completo": "Francisco Edson",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
     "id": "10",
     "username": "gabriel.oliveira",
     "nome_completo": "Gabriel Oliveira",
@@ -81,19 +40,11 @@
     "ativo": true
   },
   {
-    "id": "11",
-    "username": "psd.arco",
-    "nome_completo": "PSD",
-    "role": "OPERACIONAL",
-    "cd_slug": "psd",
-    "ativo": true
-  },
-  {
-    "id": "12",
-    "username": "coc.arco",
-    "nome_completo": "COC",
-    "role": "OPERACIONAL",
-    "cd_slug": "coc",
+    "id": "6",
+    "username": "lideranca.arco",
+    "nome_completo": "Liderança Arco",
+    "role": "LIDERANCA",
+    "cd_slug": null,
     "ativo": true
   },
   {
@@ -105,5 +56,45 @@
     "ativo": true,
     "updated_at": "2026-10-28T14:02:25.655Z",
     "password_hash": "ae748adce9d2e74079fc1230c86bb801ecfd60c80ac43aa43eb86d4693a21b5e"
+  },
+  {
+    "id": "1",
+    "username": "pedro.queiroz",
+    "nome_completo": "Pedro Queiroz",
+    "role": "SUPERADMIN",
+    "cd_slug": null,
+    "ativo": true
+  },
+  {
+    "id": "11",
+    "username": "psd.arco",
+    "nome_completo": "PSD",
+    "role": "OPERACIONAL",
+    "cd_slug": "psd",
+    "ativo": true
+  },
+  {
+    "id": "8",
+    "username": "rafael.soares",
+    "nome_completo": "Rafael Soares",
+    "role": "OPERACIONAL",
+    "cd_slug": "nse",
+    "ativo": true
+  },
+  {
+    "id": "7",
+    "username": "raphael.farrao",
+    "nome_completo": "Raphael Farrão",
+    "role": "OPERACIONAL",
+    "cd_slug": "jundiai",
+    "ativo": true
+  },
+  {
+    "id": "4",
+    "username": "raphael.ramiro",
+    "nome_completo": "Raphael Ramiro",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true
   }
 ]

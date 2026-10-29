@@ -78,17 +78,21 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="flex flex-col h-full bg-zinc-50 overflow-hidden">
-      <div className="bg-white border-b border-zinc-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-purple-600" />
-            Configurações Globais
-          </h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            Gerencie os cadastros base do sistema.
-          </p>
+      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <Settings className="w-7 h-7" strokeWidth={2.5} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">
+              Configurações Globais
+            </h1>
+            <p className="text-sm text-zinc-500">
+              Gerencie os cadastros base do sistema.
+            </p>
+          </div>
         </div>
-      </div>
+      </header>
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto space-y-6">

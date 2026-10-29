@@ -58,20 +58,21 @@ export default function LixeiraPage() {
 
   return (
     <RoleGuard allowedRoles={['ADMIN']}>
-      <div className="flex-1 overflow-auto bg-zinc-50/50 p-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+              <Trash2 className="w-7 h-7" strokeWidth={2.5} />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-                <Trash2 className="w-6 h-6 text-red-600" />
-                Lixeira de Registros
-              </h1>
-              <p className="text-zinc-500 mt-1">Gerencie itens que foram apagados do sistema. Eles podem ser restaurados ou excluídos permanentemente.</p>
+              <h1 className="text-xl font-bold text-zinc-900 leading-tight">Lixeira de Registros</h1>
+              <p className="text-sm text-zinc-500">Gerencie itens que foram apagados do sistema. Eles podem ser restaurados ou excluídos permanentemente.</p>
             </div>
           </div>
+        </header>
 
-          <div className="grid gap-6">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full space-y-6">
+          <div className="grid gap-6 w-full">
             
             {/* INSUMOS APAGADOS */}
             <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden flex flex-col">

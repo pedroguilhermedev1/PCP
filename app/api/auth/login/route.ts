@@ -31,10 +31,6 @@ export async function POST(request: Request) {
       // 1. Se o usuário tiver password_hash cadastrado
       if (user.password_hash) {
         passwordValid = verifyPassword(password, user.password_hash);
-        // Fallback de transição se a senha digitada for a padrão antiga
-        if (!passwordValid && (password === `${cleanUsername}@2026` || isLiderancaLegacy)) {
-          passwordValid = true;
-        }
       } else {
         // 2. Sem hash definido ainda -> aceita senha padrão username@2026 ou liderança
         if (password === `${cleanUsername}@2026` || isLiderancaLegacy) {

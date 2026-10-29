@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { readLocalUsers, writeLocalUsers, hashPassword, UserRecord } from '@/lib/auth-users';
+import { 
+  readLocalUsers, 
+  writeLocalUsers, 
+  hashPassword, 
+  UserRecord, 
+  readDeletedUsers, 
+  markUserDeleted, 
+  unmarkUserDeleted 
+} from '@/lib/auth-users';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,10 +35,12 @@ function sanitizeUser(u: UserRecord) {
 
 export async function GET() {
   const localUsers = readLocalUsers();
+  const deletedUsers = readDeletedUsers();
   const supabase = getSupabase();
 
   if (!supabase) {
-    return NextResponse.json(localUsers.map(sanitizeUser), { status: 200 });
+    const validUsers = localUsers.filter(u => !deletedUsers.includes((u.username || '').toLowerCase()));
+    return NextResponse.json(validUsers.map(sanitizeUser), { status: 200 });
   }
 
   try {
@@ -39,29 +49,46 @@ export async function GET() {
       .select('*')
       .order('username', { ascending: true });
 
-    if (error || !supaUsers || supaUsers.length === 0) {
-      return NextResponse.json(localUsers.map(sanitizeUser), { status: 200 });
-    }
-
-    // Mesclar: base Supabase, e os dados locais sobrescrevem para garantir persistência imediata
-    const map = new Map<string, any>();
-    supaUsers.forEach((u: any) => {
-      if (u.username) map.set(u.username.toLowerCase(), u);
-    });
+    // Filtrar deleted users e mesclar com prioridade absoluta para dados locais
+    const localMap = new Map<string, UserRecord>();
     localUsers.forEach((u: UserRecord) => {
-      if (u.username) {
-        map.set(u.username.toLowerCase(), { ...map.get(u.username.toLowerCase()), ...u });
+      if (u.username && !deletedUsers.includes(u.username.toLowerCase())) {
+        localMap.set(u.username.toLowerCase(), u);
       }
     });
 
-    const merged = Array.from(map.values())
-      .map(sanitizeUser)
+    if (supaUsers && Array.isArray(supaUsers)) {
+      supaUsers.forEach((su: any) => {
+        if (!su.username) return;
+        const lower = su.username.toLowerCase();
+        if (deletedUsers.includes(lower)) return;
+        
+        // Se ainda não existir nos dados locais, adiciona
+        if (!localMap.has(lower)) {
+          localMap.set(lower, {
+            id: su.id || crypto.randomUUID(),
+            username: su.username,
+            nome_completo: su.nome_completo || null,
+            role: su.role || 'OPERACIONAL',
+            cd_slug: su.cd_slug || null,
+            ativo: typeof su.ativo === 'boolean' ? su.ativo : true,
+            created_at: su.created_at || new Date().toISOString()
+          });
+        }
+      });
+    }
+
+    const merged = Array.from(localMap.values())
       .sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
-    return NextResponse.json(merged, { status: 200 });
+    // Persistir estado sincronizado
+    writeLocalUsers(merged);
+
+    return NextResponse.json(merged.map(sanitizeUser), { status: 200 });
   } catch (error: any) {
     console.error('Erro ao consultar Supabase, usando fallback local:', error.message);
-    return NextResponse.json(localUsers.map(sanitizeUser), { status: 200 });
+    const validUsers = localUsers.filter(u => !deletedUsers.includes((u.username || '').toLowerCase()));
+    return NextResponse.json(validUsers.map(sanitizeUser), { status: 200 });
   }
 }
 
@@ -94,6 +121,7 @@ export async function POST(request: Request) {
       created_at: new Date().toISOString()
     };
 
+    unmarkUserDeleted(cleanUsername);
     localUsers.push(newUser);
     writeLocalUsers(localUsers);
 
@@ -230,6 +258,7 @@ export async function DELETE(request: Request) {
     }
 
     const updatedUsers = localUsers.filter(u => u.id !== targetUser.id && u.username?.toLowerCase() !== targetUser.username.toLowerCase());
+    markUserDeleted(targetUser.username);
     writeLocalUsers(updatedUsers);
 
     // Tentar deletar no Supabase por username

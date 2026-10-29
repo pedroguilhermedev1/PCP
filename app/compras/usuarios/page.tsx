@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { 
+  Users,
   Shield, 
   Plus, 
   Edit2, 
@@ -337,33 +338,24 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-zinc-50/50 p-6 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Cabeçalho */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <Users className="w-7 h-7" strokeWidth={2.5} />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 tracking-tight flex items-center gap-2.5">
-              <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
-                <Shield className="w-6 h-6" />
-              </div>
-              Gestão de Acessos e Permissões
-            </h1>
-            <p className="text-zinc-500 mt-1 text-sm">
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Gestão de Acessos</h1>
+            <p className="text-sm text-zinc-500">
               Cadastre e gerencie os usuários, credenciais, cargos e filiais com persistência e segurança.
             </p>
           </div>
-          <Button 
-            onClick={handleOpenNewModal}
-            className="bg-purple-700 hover:bg-purple-800 text-white shadow-md shadow-purple-500/20 px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Usuário
-          </Button>
         </div>
+      </header>
 
-        {/* Barra de Filtros e Busca */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
+      <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full space-y-6">
+        {/* Barra de Filtros, Busca e Ações */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm w-full">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input 
@@ -375,28 +367,39 @@ export default function UsuariosPage() {
             />
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <span className="text-xs font-medium text-zinc-500">Filtrar Cargo:</span>
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="h-9 px-3 text-xs bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-            >
-              <option value="ALL">Todos os Cargos</option>
-              <option value="SUPERADMIN">Super Admin</option>
-              <option value="ADMIN">Admin</option>
-              <option value="LIDERANCA">Liderança Operacional</option>
-              <option value="OPERACIONAL">Operacional</option>
-              <option value="REPORTS">Reports</option>
-            </select>
-            <div className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-semibold">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-zinc-500 whitespace-nowrap">Filtrar Cargo:</span>
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="h-9 px-3 text-xs bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-700 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+              >
+                <option value="ALL">Todos os Cargos</option>
+                <option value="SUPERADMIN">Super Admin</option>
+                <option value="ADMIN">Admin</option>
+                <option value="LIDERANCA">Liderança Operacional</option>
+                <option value="OPERACIONAL">Operacional</option>
+                <option value="REPORTS">Reports</option>
+              </select>
+            </div>
+            
+            <div className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-xs font-semibold whitespace-nowrap">
               {filteredUsuarios.length} {filteredUsuarios.length === 1 ? 'usuário' : 'usuários'}
             </div>
+
+            <Button 
+              onClick={handleOpenNewModal}
+              className="bg-purple-700 hover:bg-purple-800 text-white shadow-sm px-4 py-2 h-9 rounded-lg flex items-center gap-2 cursor-pointer transition-all ml-2 whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Novo Usuário
+            </Button>
           </div>
         </div>
 
         {/* Tabela de Usuários */}
-        <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden w-full">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-zinc-600">
               <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 text-xs font-semibold uppercase tracking-wider">
