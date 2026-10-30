@@ -375,6 +375,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
               <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Valor</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Vencimento</TableHead>
+              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Prog. Pagamento</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status Fatura</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Etapa Concluída</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Próxima Etapa</TableHead>
@@ -418,6 +419,21 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                       <div className="flex flex-col">
                         <span>{f.data_vencimento?.split('-').reverse().join('/')}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {(() => {
+                        const raw = f.nexa_data_prevista_pagamento || f.prog_data_fim;
+                        if (!raw) return <span className="text-xs text-zinc-400 font-medium">-</span>;
+                        const clean = raw.substring(0, 10);
+                        let formatted = clean;
+                        if (clean.includes('-')) {
+                          const parts = clean.split('-');
+                          if (parts.length === 3 && parts[0].length === 4) {
+                            formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                          }
+                        }
+                        return <span className="font-medium text-xs text-zinc-700">{formatted}</span>;
+                      })()}
                     </TableCell>
                     <TableCell>
                       <span className={cn("px-2.5 py-1 rounded-md text-xs font-medium border", getStatusColor(status))}>
@@ -486,7 +502,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                   
                   {false && expandedFaturaId === f.id && (
                     <TableRow className="bg-zinc-50 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <TableCell colSpan={canEditOrDelete ? 10 : 9} className="p-0 border-b">
+                      <TableCell colSpan={canEditOrDelete ? 12 : 11} className="p-0 border-b">
                         <div className="p-6">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                             <h3 className="text-lg font-bold text-purple-900">Detalhes da Fatura</h3>
@@ -622,7 +638,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             })}
             {faturasOrdenadas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEditOrDelete ? 9 : 8} className="text-center py-8 text-zinc-500">
+                <TableCell colSpan={canEditOrDelete ? 12 : 11} className="text-center py-8 text-zinc-500">
                   Nenhuma fatura encontrada.
                 </TableCell>
               </TableRow>
