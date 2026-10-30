@@ -394,7 +394,7 @@ export function DashboardClient({
                 onClick={() => setActiveTab('faturas2')}
                 className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
               >
-                Faturas 2.0
+                Faturas
               </button>
               <button
                 onClick={() => setActiveTab('performance')}
@@ -487,10 +487,10 @@ export function DashboardClient({
                     </div>
                   </div>
 
-                  {/* 3. Fluxo de Faturas 2.0 — Tempos e SLA */}
+                  {/* 3. Fluxo de Faturas — Tempos e SLA */}
                   <div className="flex items-center gap-2 mb-6">
                     <FileText className="w-5 h-5 text-purple-600" />
-                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas 2.0 — Tempos e SLA <span className="text-sm font-normal text-zinc-500">(Novo Motor)</span></h2>
+                    <h2 className="text-lg font-bold text-zinc-800">Fluxo de Faturas — Tempos e SLA <span className="text-sm font-normal text-zinc-500">(Novo Motor)</span></h2>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">

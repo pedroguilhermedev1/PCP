@@ -212,7 +212,7 @@ export default function ApresentacaoSemanalClient({ faturas }: { faturas: Fatura
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-black text-purple-900 tracking-tight uppercase">Performance de Faturas 2.0</h1>
+            <h1 className="text-3xl font-black text-purple-900 tracking-tight uppercase">Performance de Faturas</h1>
             
             <div className="flex items-center gap-2">
               <select 

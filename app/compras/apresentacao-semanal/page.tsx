@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 export const metadata = {
   title: "Apresentação Semanal | PCP Hub",
-  description: "Apresentação executiva semanal de performance do processo Faturas 2.0",
+  description: "Apresentação executiva semanal de performance do processo de Faturas",
 };
 
 export default async function ApresentacaoSemanalPage() {

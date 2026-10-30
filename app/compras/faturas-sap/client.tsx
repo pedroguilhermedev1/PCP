@@ -299,7 +299,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             <DollarSign className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas 2.0 - {categoria}</h1>
+            <h1 className="text-xl font-bold text-zinc-900 leading-tight">Faturas - {categoria}</h1>
             <p className="text-sm text-zinc-500">Gestão e acompanhamento de faturas.</p>
           </div>
         </div>
@@ -404,7 +404,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
-        <h2 className="text-lg font-semibold text-purple-900">Lista de Faturas 2.0</h2>
+        <h2 className="text-lg font-semibold text-purple-900">Lista de Faturas</h2>
         {categoria !== 'Todas' && (
           <Button onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" />
@@ -424,7 +424,6 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Documento</TableHead>
               <TableHead className="text-right text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Valor</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Vencimento</TableHead>
-              <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Prog. Pagamento</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12">Status Fatura</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Etapa Concluída</TableHead>
               <TableHead className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider h-12 whitespace-nowrap">Próxima Etapa</TableHead>
@@ -437,6 +436,25 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
               const progresso = calcularProgressoEtapas(f);
               const concluida = progresso.ultimoMarcoConcluido;
               const proxima = progresso.proximaEtapa;
+
+              const isProgPagamento = getEtapaLabel(concluida) === 'Prog. Pagamento';
+              let dataProgTooltip: string | undefined = undefined;
+              if (isProgPagamento) {
+                const rawDate = f.nexa_data_prevista_pagamento || f.prog_data_fim;
+                if (rawDate) {
+                  const clean = rawDate.substring(0, 10);
+                  if (clean.includes('-')) {
+                    const parts = clean.split('-');
+                    if (parts.length === 3 && parts[0].length === 4) {
+                      dataProgTooltip = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    } else {
+                      dataProgTooltip = clean;
+                    }
+                  } else {
+                    dataProgTooltip = clean;
+                  }
+                }
+              }
 
               return (
                 <React.Fragment key={f.id}>
@@ -468,31 +486,20 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                         <span>{f.data_vencimento?.split('-').reverse().join('/')}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {(() => {
-                        const raw = f.nexa_data_prevista_pagamento || f.prog_data_fim;
-                        if (!raw) return <span className="text-xs text-zinc-400 font-medium">-</span>;
-                        const clean = raw.substring(0, 10);
-                        let formatted = clean;
-                        if (clean.includes('-')) {
-                          const parts = clean.split('-');
-                          if (parts.length === 3 && parts[0].length === 4) {
-                            formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                          }
-                        }
-                        return <span className="font-medium text-xs text-zinc-700">{formatted}</span>;
-                      })()}
-                    </TableCell>
                     <TableCell>
                       <span className={cn("px-2.5 py-1 rounded-md text-xs font-medium border whitespace-nowrap", getStatusColor(status))}>
                         {status}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell title={dataProgTooltip}>
                       {concluida && concluida !== '-' ? (
                         <span 
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap shadow-xs"
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border whitespace-nowrap shadow-xs",
+                            isProgPagamento && dataProgTooltip ? "cursor-help" : ""
+                          )}
                           style={getEtapaBadgeStyle(concluida)}
+                          title={dataProgTooltip}
                         >
                           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: getEtapaHexColor(concluida) }} />
                           {getEtapaLabel(concluida)}
@@ -536,7 +543,7 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
             })}
             {faturasOrdenadas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEditOrDelete ? 12 : 11} className="text-center py-8 text-zinc-500">
+                <TableCell colSpan={canEditOrDelete ? 11 : 10} className="text-center py-8 text-zinc-500">
                   Nenhuma fatura encontrada.
                 </TableCell>
               </TableRow>
