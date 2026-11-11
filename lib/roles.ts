@@ -9,6 +9,7 @@ export const OPERACIONAL_USERS = [
   'rafael.soares',
   'psd.arco',
   'coc.arco',
+  'diego.dias',
   'fabio.pessoa',
   'gabriel.oliveira',
   'pol.araruna'
@@ -72,6 +73,7 @@ export function formatUserName(username?: string): string {
   
   if (normalized === 'raphael.farrao') return 'Raphael Farrão';
   if (normalized === 'rafael.soares') return 'Rafael Soares';
+  if (normalized === 'diego.dias') return 'Diego Dias';
   if (normalized === 'fabio.pessoa') return 'Fábio Pessoa';
   if (normalized === 'gabriel.oliveira') return 'Gabriel Oliveira';
   if (normalized === 'pol.araruna') return 'Paul Araruna';
@@ -102,7 +104,7 @@ export function getUserCD(username?: string): string | null {
   
   if (['raphael.farrao', 'jundiai.arco'].includes(normalized)) return 'jundiai';
   if (['rafael.soares', 'nse.arco'].includes(normalized)) return 'nse';
-  if (['fabio.pessoa', 'gabriel.oliveira', 'pol.araruna', 'fortaleza.arco'].includes(normalized)) return 'fortaleza';
+  if (['diego.dias', 'fabio.pessoa', 'gabriel.oliveira', 'pol.araruna', 'fortaleza.arco'].includes(normalized)) return 'fortaleza';
   if (normalized === 'psd.arco') return 'psd';
   if (normalized === 'coc.arco') return 'coc';
 

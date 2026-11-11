@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, CheckCircle2, AlertCircle, MessageCircle, MessageSquare, Settings2, Calendar, RotateCcw, Send, History, AlertTriangle, FileText, CheckCheck, X, Clock, ArrowRight } from "lucide-react";
+import { Box, CheckCircle2, AlertCircle, MessageCircle, MessageSquare, Settings2, Calendar, RotateCcw, Send, History, AlertTriangle, FileText, CheckCheck, X, Clock, ArrowRight, Truck } from "lucide-react";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSearchParams } from "next/navigation";
 import { getUserRole, getUserCD } from "@/lib/roles";
 import { SolicitacoesCalendario } from "@/components/solicitacoes/SolicitacoesCalendario";
+import { RecebimentoTab } from "@/components/solicitacoes/RecebimentoTab";
 import { extrairMetaDeObservacoes, formatarPeriodoEstimado } from "@/lib/previsaoRecebimento";
 
 const cd_names_map: Record<string, string> = {
@@ -30,7 +31,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
   const { movimentacoes: movsReprovadas, refresh: refreshReprovadas } = useInsumosMovimentacoes(cd, undefined, 'REPROVADO');
   const { movimentacoes: movsPendenciasCriador, refresh: refreshPendenciasCriador } = useInsumosMovimentacoes(cd, undefined, 'REPROVADO,PARCIAL,AGUARDANDO_CONFERENCIA,ENCERRADO');
 
-  const [activeTab, setActiveTab] = useState<'NOVA' | 'PENDENTES' | 'REPROVADAS' | 'CALENDARIO' | 'AJUSTE' | 'EXTERNA'>('PENDENTES');
+  const [activeTab, setActiveTab] = useState<'RECEBIMENTO' | 'NOVA' | 'CALENDARIO' | 'PENDENTES' | 'REPROVADAS' | 'AJUSTE' | 'EXTERNA'>('RECEBIMENTO');
   const [filterPendencia, setFilterPendencia] = useState<'TODAS' | 'REPROVADA' | 'PARCIAL' | 'AGUARDANDO_CONFERENCIA' | 'ENCERRADO'>('TODAS');
   const [editingReprovadaId, setEditingReprovadaId] = useState<string | null>(null);
 
@@ -88,8 +89,12 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam === 'pendentes') {
-      setActiveTab('PENDENTES');
+    if (tabParam === 'recebimento' || tabParam === 'pendentes') {
+      setActiveTab('RECEBIMENTO');
+    } else if (tabParam === 'expedicao' || tabParam === 'nova') {
+      setActiveTab('NOVA');
+    } else if (tabParam === 'calendario') {
+      setActiveTab('CALENDARIO');
     }
   }, [searchParams]);
 
@@ -656,34 +661,18 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
 
         <div className="flex flex-wrap gap-2 sm:gap-4 border-b border-transparent">
           <button 
-            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'RECEBIMENTO' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
+            onClick={() => setActiveTab('RECEBIMENTO')}
+          >
+            <Truck className="w-4 h-4" />
+            RECEBIMENTO
+          </button>
+
+          <button 
+            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
             onClick={() => setActiveTab('NOVA')}
           >
-            NOVA SOLICITAÇÃO
-          </button>
-
-          <button 
-            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'PENDENTES' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-            onClick={() => setActiveTab('PENDENTES')}
-          >
-            APROVAÇÕES PENDENTES
-            {movimentacoes.length > 0 && (
-              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                {movimentacoes.length}
-              </span>
-            )}
-          </button>
-
-          <button 
-            className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex gap-2 items-center ${activeTab === 'REPROVADAS' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
-            onClick={() => setActiveTab('REPROVADAS')}
-          >
-            PENDÊNCIAS
-            {movsPendenciasCriador.length > 0 && (
-              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                {movsPendenciasCriador.length}
-              </span>
-            )}
+            EXPEDIÇÃO
           </button>
 
           <button 
@@ -734,36 +723,60 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
           )}
 
           <div className="w-full">
-            <div className="pb-4 mb-6 border-b border-zinc-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h2 className="text-xl font-bold text-zinc-800">
-                  {activeTab === 'NOVA' ? (editingReprovadaId ? 'CORRIGIR SOLICITAÇÃO' : 'NOVA SOLICITAÇÃO') 
-                    : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' 
-                    : activeTab === 'REPROVADAS' ? 'PENDÊNCIAS EM ACOMPANHAMENTO'
-                    : activeTab === 'CALENDARIO' ? 'CALENDÁRIO DE ENTREGAS'
-                    : 'AJUSTE DE ESTOQUE'}
-                </h2>
-                {activeTab === 'NOVA' && (
-                  <p className="text-sm text-zinc-500 mt-1">
-                    Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
-                  </p>
-                )}
-                {activeTab === 'PENDENTES' && (
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Conferência e recebimento de insumos com acompanhamento de entregas parciais e prazos estimados.
-                  </p>
-                )}
-                {activeTab === 'CALENDARIO' && (
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Visualização mensal das faixas contínuas de entrega previstas para as faturas deste CD.
-                  </p>
-                )}
+            {activeTab !== 'NOVA' && (
+              <div className="pb-4 mb-6 border-b border-zinc-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-800">
+                    {activeTab === 'RECEBIMENTO' ? 'RECEBIMENTO DE INSUMOS'
+                      : activeTab === 'PENDENTES' ? 'APROVAÇÕES PENDENTES' 
+                      : activeTab === 'REPROVADAS' ? 'PENDÊNCIAS EM ACOMPANHAMENTO'
+                      : activeTab === 'CALENDARIO' ? 'CALENDÁRIO DE PREVISÕES'
+                      : 'AJUSTE DE ESTOQUE'}
+                  </h2>
+                  {activeTab === 'RECEBIMENTO' && (
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Registro de materiais recebidos fisicamente e incorporados diretamente ao saldo disponível do CD.
+                    </p>
+                  )}
+                  {activeTab === 'PENDENTES' && (
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Conferência e recebimento de insumos com acompanhamento de entregas parciais e prazos estimados.
+                    </p>
+                  )}
+                  {activeTab === 'CALENDARIO' && (
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Visualização mensal das faixas contínuas de entrega previstas para as faturas deste CD.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {activeTab === 'RECEBIMENTO' && (
+              <RecebimentoTab
+                cd={cd}
+                cdName={cdName}
+                insumos={insumos}
+                responsavel={responsavel}
+                onSuccess={refreshAll}
+              />
+            )}
 
             {activeTab === 'NOVA' && (
-              <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
-                <div className="space-y-4">
+              <div className="max-w-4xl mx-auto w-full">
+                <div className="pb-4 mb-6 border-b border-zinc-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-800">
+                      {editingReprovadaId ? 'CORRIGIR EXPEDIÇÃO' : 'EXPEDIÇÃO DE MATERIAIS'}
+                    </h2>
+                    <p className="text-sm text-zinc-500 mt-1">
+                      Responsável identificado automaticamente: <span className="font-semibold text-purple-700">{responsavel}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 sm:p-8 rounded-2xl border border-zinc-200 shadow-sm">
+                  <div className="space-y-4">
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -871,6 +884,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
                   )}
                 </div>
               </form>
+            </div>
             )}
 
             {activeTab === 'PENDENTES' && (

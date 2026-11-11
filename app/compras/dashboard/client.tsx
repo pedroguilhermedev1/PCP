@@ -1,10 +1,11 @@
 "use client";
 
-import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun, Eye } from "lucide-react";
+import { LayoutDashboard, FileText, Package, AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Layers, BarChart2, Moon, Sun, Eye, Truck, Calendar } from "lucide-react";
 import React, { useState, useMemo, useEffect } from "react";
 import { Fatura, calcularEtapa, calcularSLA, calcularStatus, calcularDiasRestantes, calcularViabilidadePagamento, getStatusColor, getEtapaColor, getEtapaLabel } from "@/modules/compras/domain/Fatura";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { calcularDatasPrevisao } from "@/lib/previsaoRecebimento";
 
 import { FaturasGantt } from "@/components/faturas/FaturasGantt";
 import { FaturaDetailsModal } from "@/components/faturas/FaturaDetailsModal";
@@ -338,6 +339,91 @@ export function DashboardClient({
     }).length;
   }, [movimentacoes, userCD]);
 
+  const formatBrDate = (dateStr?: string | null) => {
+    if (!dateStr) return "-";
+    const clean = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.split(" ")[0];
+    const parts = clean.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  };
+
+  const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
+
+  const previsoesChegadaOperacional = useMemo(() => {
+    const cdAlvo = (userRole === 'OPERACIONAL' && userCD ? userCD : (insCD !== 'todos' ? insCD : '')).toLowerCase();
+    
+    const list: Array<{
+      id: string;
+      fornecedor: string;
+      cd: string;
+      dataInicio: string;
+      dataFim: string;
+      diasMin: number;
+      diasMax: number;
+      numeroDocumento?: string;
+      itensResumo?: string;
+    }> = [];
+
+    for (const fat of faturas as any[]) {
+      if (fat.categoria !== 'Material') continue;
+      const statusFat = String(fat.status || '').toUpperCase();
+      if (statusFat.includes('CANCELAD') || statusFat.includes('EXCLUID')) continue;
+
+      const rawInsumos = Array.isArray(fat.insumos) ? fat.insumos : [];
+      const metaObj: any = rawInsumos.find((i: any) => i && i._meta) || {};
+      const subPrevisao: any = metaObj.previsao_recebimento || {};
+      const fatCd = formatCd(fat.cd || metaObj.cd || rawInsumos[0]?.cd || '');
+
+      if (cdAlvo && fatCd !== cdAlvo) continue;
+
+      let diasMin = fat.previsao_recebimento_dias_min ?? metaObj.previsao_recebimento_dias_min ?? subPrevisao.dias_min;
+      let diasMax = fat.previsao_recebimento_dias_max ?? metaObj.previsao_recebimento_dias_max ?? subPrevisao.dias_max;
+      let dataInicio = fat.previsao_recebimento_data_inicio ?? metaObj.previsao_recebimento_data_inicio ?? subPrevisao.data_inicio;
+      let dataFim = fat.previsao_recebimento_data_fim ?? metaObj.previsao_recebimento_data_fim ?? subPrevisao.data_fim;
+
+      if ((!dataInicio || !dataFim) && diasMin && diasMax) {
+        const baseDate = fat.data_criacao || (fat as any).created_at || (fat as any).data_recebimento;
+        if (baseDate) {
+          const calc = calcularDatasPrevisao(baseDate, Number(diasMin), Number(diasMax));
+          if (!dataInicio) dataInicio = calc.data_inicio;
+          if (!dataFim) dataFim = calc.data_fim;
+        }
+      }
+
+      if (!dataInicio || !dataFim) continue;
+
+      let cleanInicio = dataInicio.includes('T') ? dataInicio.split('T')[0] : dataInicio.split(' ')[0];
+      let cleanFim = dataFim.includes('T') ? dataFim.split('T')[0] : dataFim.split(' ')[0];
+
+      if (cleanInicio > cleanFim) {
+        const temp = cleanInicio;
+        cleanInicio = cleanFim;
+        cleanFim = temp;
+      }
+
+      const validInsumos = rawInsumos.filter((i: any) => i && !i._meta);
+      const itensNomes = Array.from(new Set(validInsumos.map((i: any) => i.item || i.descricao || '').filter(Boolean))) as string[];
+      const itensResumo = itensNomes.length > 0 ? itensNomes.slice(0, 2).join(', ') + (itensNomes.length > 2 ? ` (+${itensNomes.length - 2})` : '') : '';
+
+      const rawId = String(fat.id || '');
+      const doc = fat.numero_documento || (rawId.includes('__') ? rawId.split('__')[0] : rawId);
+
+      list.push({
+        id: String(fat.id),
+        fornecedor: fat.fornecedor || 'Fornecedor não informado',
+        cd: fatCd,
+        dataInicio: cleanInicio,
+        dataFim: cleanFim,
+        diasMin: Number(diasMin) || 1,
+        diasMax: Number(diasMax) || 1,
+        numeroDocumento: doc,
+        itensResumo
+      });
+    }
+
+    return list.sort((a, b) => a.dataInicio.localeCompare(b.dataInicio));
+  }, [faturas, userRole, userCD, insCD]);
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-transparent">
       <header className="glass-panel px-8 py-5 flex items-center justify-between flex-shrink-0 z-10 relative">
@@ -369,60 +455,62 @@ export function DashboardClient({
         )}
       </header>
       
-      <div className="px-8 pt-6 pb-0 flex flex-col gap-5">
-        {isAdmin && (
-          <div className="flex gap-6 border-b border-zinc-200 w-full">
-            <button
-              onClick={() => handleMainTabChange('gerencial')}
-              className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'gerencial' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
-            >
-              Gerencial
-            </button>
-            <button
-              onClick={() => handleMainTabChange('operacional')}
-              className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'operacional' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
-            >
-              Operacional
-            </button>
-          </div>
-        )}
-        
-        <div className="flex flex-wrap gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
-          {mainTab === 'gerencial' && isAdmin && (
-            <>
+      {userRole !== 'OPERACIONAL' && (
+        <div className="px-8 pt-6 pb-0 flex flex-col gap-5">
+          {isAdmin && (
+            <div className="flex gap-6 border-b border-zinc-200 w-full">
               <button
-                onClick={() => setActiveTab('faturas2')}
-                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+                onClick={() => handleMainTabChange('gerencial')}
+                className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'gerencial' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
               >
-                Faturas
+                Gerencial
               </button>
               <button
-                onClick={() => setActiveTab('performance')}
-                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'performance' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+                onClick={() => handleMainTabChange('operacional')}
+                className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'operacional' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
               >
-                Performance Semanal
+                Operacional
               </button>
-            </>
+            </div>
           )}
           
-          {mainTab === 'operacional' && (
-            <>
-              <button
-                onClick={() => setActiveTab('insumos')}
-                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'insumos' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
-              >
-                Insumos
-              </button>
-              <button
-                onClick={() => setActiveTab('movimentacoes')}
-                className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'movimentacoes' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
-              >
-                Movimentações
-              </button>
-            </>
-          )}
+          <div className="flex flex-wrap gap-2 p-1 bg-zinc-100/80 border border-zinc-200 rounded-lg w-fit">
+            {mainTab === 'gerencial' && isAdmin && (
+              <>
+                <button
+                  onClick={() => setActiveTab('faturas2')}
+                  className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'faturas2' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+                >
+                  Faturas
+                </button>
+                <button
+                  onClick={() => setActiveTab('performance')}
+                  className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'performance' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+                >
+                  Performance Semanal
+                </button>
+              </>
+            )}
+            
+            {mainTab === 'operacional' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('insumos')}
+                  className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'insumos' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+                >
+                  Insumos
+                </button>
+                <button
+                  onClick={() => setActiveTab('movimentacoes')}
+                  className={`px-5 py-2 rounded-md font-semibold text-[13px] transition-all ${activeTab === 'movimentacoes' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200/60' : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50'}`}
+                >
+                  Movimentações
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1 p-6 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-12">
@@ -675,43 +763,190 @@ export function DashboardClient({
             </>
           )}
 
-          {/* Sessão Insumos (Entradas e Aprovações) */}
+          {/* Sessão Insumos */}
           {(activeTab === 'insumos') && (
             <div>
-              <div className="mb-12">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-zinc-400" />
-                    <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
+              {userRole === 'OPERACIONAL' ? (
+                <div className="space-y-8 mb-12">
+                  {/* Cabeçalho da Visão Operacional */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-purple-100 text-purple-700 rounded-lg">
+                        <Package className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-zinc-800">
+                          Situação do Estoque e Previsões {userCD && userCD !== 'todos' ? `— CD ${userCD.toUpperCase()}` : ''}
+                        </h2>
+                        <p className="text-xs text-zinc-500">Indicadores de cobertura física e datas previstas de entregas.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <SelectFilter 
+                        label="CD"
+                        value={userCD} 
+                        onChange={(e) => {
+                          setUserCD(e.target.value);
+                          setInsCD(e.target.value);
+                        }}
+                        disabled={userRole === 'OPERACIONAL'}
+                        options={[
+                          { value: "todos", label: "Todos" },
+                          ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 1. Os 3 cards da aba de movimentações solicitados: Situação Normal, Alerta e Críticos */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <InsumoCard 
+                      title="Itens em Situação Normal" 
+                      value={insumosStats.confortaveis} 
+                      subtitle="Acima do Lead Time + 3 dias" 
+                      icon={CheckCircle} 
+                      colorClass="text-emerald-600" 
+                      borderClass="border-emerald-200 cursor-pointer hover:shadow-md transition-all" 
+                      bgClass="bg-emerald-50/20" 
+                      onClick={() => { const cdPath = userCD !== 'todos' ? userCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`); }} 
+                    />
+                    <InsumoCard 
+                      title="Itens em Alerta" 
+                      value={insumosStats.alertas} 
+                      subtitle="Entre Lead Time e +3 dias" 
+                      icon={AlertTriangle} 
+                      colorClass="text-amber-500" 
+                      borderClass="border-amber-200 cursor-pointer hover:shadow-md transition-all" 
+                      bgClass="bg-amber-50/20" 
+                      onClick={() => { const cdPath = userCD !== 'todos' ? userCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} 
+                    />
+                    <InsumoCard 
+                      title="Itens Críticos" 
+                      value={insumosStats.criticos} 
+                      subtitle="Cobertura ≤ Lead Time" 
+                      icon={AlertTriangle} 
+                      colorClass="text-red-600" 
+                      borderClass="border-red-200 cursor-pointer hover:shadow-md transition-all" 
+                      bgClass="bg-red-50/20" 
+                      onClick={() => { const cdPath = userCD !== 'todos' ? userCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} 
+                    />
+                  </div>
+
+                  {/* 2. Card grande horizontalmente para informar as datas dos insumos que chegarão */}
+                  <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
+                    <div className="p-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-purple-100 text-purple-700 rounded-xl">
+                          <Truck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-zinc-900 text-base leading-tight">Próximas Chegadas de Fornecedores</h3>
+                          <p className="text-xs text-zinc-500">Janelas estimadas de entrega para organizar o recebimento do CD.</p>
+                        </div>
+                      </div>
+
+                      <span className="text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                        {previsoesChegadaOperacional.length} {previsoesChegadaOperacional.length === 1 ? 'previsão ativa' : 'previsões ativas'}
+                      </span>
+                    </div>
+
+                    <div className="p-5">
+                      {previsoesChegadaOperacional.length === 0 ? (
+                        <div className="p-8 text-center text-zinc-400">
+                          <Truck className="w-8 h-8 mx-auto mb-2 text-zinc-300 stroke-1" />
+                          <p className="text-sm font-semibold text-zinc-600">Nenhuma entrega de fornecedor prevista para os próximos dias</p>
+                          <p className="text-xs text-zinc-400 mt-1">Quando houver pedidos de compras com prazos estimados para este CD, as previsões aparecerão aqui.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {previsoesChegadaOperacional.map((prev) => (
+                            <div 
+                              key={prev.id} 
+                              className="p-4 rounded-xl border border-zinc-200/80 bg-zinc-50/60 hover:bg-purple-50/40 hover:border-purple-200 transition-all flex flex-col justify-between gap-3 shadow-2xs"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="truncate pr-1">
+                                  <span className="text-[10px] uppercase font-bold text-zinc-400 block tracking-wider">Fornecedor</span>
+                                  <p className="font-bold text-zinc-900 text-sm truncate">{prev.fornecedor}</p>
+                                  {prev.itensResumo && (
+                                    <p className="text-[11px] text-zinc-500 truncate mt-0.5" title={prev.itensResumo}>
+                                      {prev.itensResumo}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {prev.numeroDocumento && (
+                                    <span 
+                                      className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200"
+                                      title={`Número do Documento / NF: ${prev.numeroDocumento}`}
+                                    >
+                                      NF {prev.numeroDocumento}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-200/70 text-zinc-700 shrink-0">
+                                    {prev.cd.toUpperCase()}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="p-2.5 bg-white rounded-lg border border-purple-100 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-purple-600 shrink-0" />
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-zinc-400 block">Previsão de Chegada</span>
+                                    <p className="text-xs font-black text-purple-950">
+                                      {formatBrDate(prev.dataInicio)} a {formatBrDate(prev.dataFim)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded shrink-0">
+                                  {prev.diasMin === prev.diasMax ? `${prev.diasMin}d úteis` : `${prev.diasMin} a ${prev.diasMax}d úteis`}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-12">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-zinc-400" />
+                      <h2 className="text-lg font-bold text-zinc-800">Entradas e Aprovações</h2>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <SelectFilter 
+                        label="CD"
+                        value={userCD} 
+                        onChange={(e) => setUserCD(e.target.value)}
+                        disabled={userRole === 'OPERACIONAL'}
+                        options={[
+                          { value: "todos", label: "Todos" },
+                          ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
+                        ]}
+                      />
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <SelectFilter 
-                      label="CD"
-                      value={userCD} 
-                      onChange={(e) => setUserCD(e.target.value)}
-                      disabled={userRole === 'OPERACIONAL'}
-                      options={[
-                        { value: "todos", label: "Todos" },
-                        ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
-                      ]}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <InsumoCard 
+                      title="Aprovações Pendentes"
+                      value={entradasPendentesCount}
+                      subtitle={userCD && userCD !== "todos" ? "Movimentações aguardando aprovação" : "Filtre por CD para habilitar o atalho"}
+                      icon={Package}
+                      colorClass="text-orange-600"
+                      borderClass={userCD && userCD !== "todos" ? "border-orange-200 cursor-pointer hover:shadow-md transition-all" : "border-orange-200"}
+                      bgClass="bg-orange-50/20"
+                      onClick={userCD && userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
                     />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <InsumoCard 
-                    title="Aprovações Pendentes"
-                    value={entradasPendentesCount}
-                    subtitle={userCD && userCD !== "todos" ? "Movimentações aguardando aprovação" : "Filtre por CD para habilitar o atalho"}
-                    icon={Package}
-                    colorClass="text-orange-600"
-                    borderClass={userCD && userCD !== "todos" ? "border-orange-200 cursor-pointer hover:shadow-md transition-all" : "border-orange-200"}
-                    bgClass="bg-orange-50/20"
-                    onClick={userCD && userCD !== "todos" ? () => router.push(`/compras/formularios/${userCD.toLowerCase()}?tab=pendentes`) : undefined}
-                  />
-                </div>
-              </div>
+              )}
             </div>
           )}
 

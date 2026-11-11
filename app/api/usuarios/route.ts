@@ -1,23 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { 
-  readLocalUsers, 
-  writeLocalUsers, 
+  getSyncedUsers, 
+  saveSyncedUsers, 
   hashPassword, 
-  UserRecord, 
-  readDeletedUsers, 
-  markUserDeleted, 
-  unmarkUserDeleted 
+  UserRecord 
 } from '@/lib/auth-users';
 
 export const dynamic = 'force-dynamic';
-
-const getSupabase = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zwvajnsmylaebxfeypeo.supabase.co';
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp3dmFqbnNteWxhZWJ4ZmV5cGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwODEyNzksImV4cCI6MjA5MzY1NzI3OX0.vl359IIHkx-oE4Z1CzenYAPcvlZWYqgAwoX8xa6mVTw';
-  if (!supabaseUrl || !supabaseKey) return null;
-  return createClient(supabaseUrl, supabaseKey);
-};
 
 function sanitizeUser(u: UserRecord) {
   return {
@@ -34,61 +23,16 @@ function sanitizeUser(u: UserRecord) {
 }
 
 export async function GET() {
-  const localUsers = readLocalUsers();
-  const deletedUsers = readDeletedUsers();
-  const supabase = getSupabase();
-
-  if (!supabase) {
-    const validUsers = localUsers.filter(u => !deletedUsers.includes((u.username || '').toLowerCase()));
-    return NextResponse.json(validUsers.map(sanitizeUser), { status: 200 });
-  }
-
   try {
-    const { data: supaUsers, error } = await supabase
-      .from('usuarios_permissoes')
-      .select('*')
-      .order('username', { ascending: true });
-
-    // Filtrar deleted users e mesclar com prioridade absoluta para dados locais
-    const localMap = new Map<string, UserRecord>();
-    localUsers.forEach((u: UserRecord) => {
-      if (u.username && !deletedUsers.includes(u.username.toLowerCase())) {
-        localMap.set(u.username.toLowerCase(), u);
-      }
-    });
-
-    if (supaUsers && Array.isArray(supaUsers)) {
-      supaUsers.forEach((su: any) => {
-        if (!su.username) return;
-        const lower = su.username.toLowerCase();
-        if (deletedUsers.includes(lower)) return;
-        
-        // Se ainda não existir nos dados locais, adiciona
-        if (!localMap.has(lower)) {
-          localMap.set(lower, {
-            id: su.id || crypto.randomUUID(),
-            username: su.username,
-            nome_completo: su.nome_completo || null,
-            role: su.role || 'OPERACIONAL',
-            cd_slug: su.cd_slug || null,
-            ativo: typeof su.ativo === 'boolean' ? su.ativo : true,
-            created_at: su.created_at || new Date().toISOString()
-          });
-        }
-      });
-    }
-
-    const merged = Array.from(localMap.values())
+    const { users, deleted } = await getSyncedUsers();
+    const deletedLower = deleted.map(d => d.toLowerCase());
+    const validUsers = users
+      .filter(u => u.username && !deletedLower.includes(u.username.toLowerCase()))
       .sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
-    // Persistir estado sincronizado
-    writeLocalUsers(merged);
-
-    return NextResponse.json(merged.map(sanitizeUser), { status: 200 });
-  } catch (error: any) {
-    console.error('Erro ao consultar Supabase, usando fallback local:', error.message);
-    const validUsers = localUsers.filter(u => !deletedUsers.includes((u.username || '').toLowerCase()));
     return NextResponse.json(validUsers.map(sanitizeUser), { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -102,9 +46,9 @@ export async function POST(request: Request) {
     }
 
     const cleanUsername = username.toLowerCase().trim().replace(/\s+/g, '');
-    const localUsers = readLocalUsers();
+    const { users, deleted } = await getSyncedUsers();
 
-    if (localUsers.some(u => u.username?.toLowerCase() === cleanUsername)) {
+    if (users.some(u => u.username?.toLowerCase() === cleanUsername)) {
       return NextResponse.json({ error: 'Este nome de usuário já está cadastrado.' }, { status: 400 });
     }
 
@@ -121,27 +65,10 @@ export async function POST(request: Request) {
       created_at: new Date().toISOString()
     };
 
-    unmarkUserDeleted(cleanUsername);
-    localUsers.push(newUser);
-    writeLocalUsers(localUsers);
+    const updatedDeleted = deleted.filter(d => d.toLowerCase() !== cleanUsername);
+    const updatedUsers = [...users, newUser];
 
-    // Tentar persistir no Supabase (se acessível)
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase
-          .from('usuarios_permissoes')
-          .insert([{
-            username: newUser.username,
-            nome_completo: newUser.nome_completo,
-            role: newUser.role,
-            cd_slug: newUser.cd_slug,
-            ativo: newUser.ativo
-          }]);
-      } catch (err: any) {
-        console.warn('Supabase insert notice (salvo localmente com sucesso):', err.message);
-      }
-    }
+    await saveSyncedUsers(updatedUsers, updatedDeleted);
 
     return NextResponse.json(sanitizeUser(newUser), { status: 201 });
   } catch (error: any) {
@@ -159,21 +86,20 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const localUsers = readLocalUsers();
-    const index = localUsers.findIndex(u => u.id === id || u.username?.toLowerCase() === id.toLowerCase());
+    const { users, deleted } = await getSyncedUsers();
+    const index = users.findIndex(u => u.id === id || u.username?.toLowerCase() === id.toLowerCase());
 
     if (index === -1) {
       return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
     }
 
-    const existingUser = localUsers[index];
-    const oldUsername = existingUser.username;
-
+    const existingUser = users[index];
     let targetUsername = existingUser.username;
+
     if (body.username && typeof body.username === 'string') {
       const cleanNewUsername = body.username.toLowerCase().trim().replace(/\s+/g, '');
       if (cleanNewUsername !== existingUser.username.toLowerCase()) {
-        const usernameConflict = localUsers.some(
+        const usernameConflict = users.some(
           (u, idx) => idx !== index && u.username?.toLowerCase() === cleanNewUsername
         );
         if (usernameConflict) {
@@ -201,27 +127,10 @@ export async function PUT(request: Request) {
       updatedUser.password_hash = hashPassword(body.password.trim());
     }
 
-    localUsers[index] = updatedUser;
-    writeLocalUsers(localUsers);
+    const newUsersList = [...users];
+    newUsersList[index] = updatedUser;
 
-    // Tentar atualizar no Supabase por username
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase
-          .from('usuarios_permissoes')
-          .update({
-            username: updatedUser.username,
-            nome_completo: updatedUser.nome_completo,
-            role: updatedUser.role,
-            cd_slug: updatedUser.cd_slug,
-            ativo: updatedUser.ativo
-          })
-          .eq('username', oldUsername);
-      } catch (err: any) {
-        console.warn('Supabase update notice (atualizado localmente com sucesso):', err.message);
-      }
-    }
+    await saveSyncedUsers(newUsersList, deleted);
 
     return NextResponse.json(sanitizeUser(updatedUser), { status: 200 });
   } catch (error: any) {
@@ -238,8 +147,8 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID ou username é obrigatório.' }, { status: 400 });
     }
 
-    const localUsers = readLocalUsers();
-    const targetUser = localUsers.find(u => u.id === id || u.username?.toLowerCase() === id.toLowerCase());
+    const { users, deleted } = await getSyncedUsers();
+    const targetUser = users.find(u => u.id === id || u.username?.toLowerCase() === id.toLowerCase());
 
     if (!targetUser) {
       return NextResponse.json({ error: 'Usuário não encontrado.' }, { status: 404 });
@@ -251,28 +160,17 @@ export async function DELETE(request: Request) {
     }
 
     if (targetUser.role === 'SUPERADMIN') {
-      const activeSuperAdmins = localUsers.filter(u => u.role === 'SUPERADMIN' && u.ativo);
+      const activeSuperAdmins = users.filter(u => u.role === 'SUPERADMIN' && u.ativo);
       if (activeSuperAdmins.length <= 1) {
         return NextResponse.json({ error: 'Não é permitido excluir o único Super Admin ativo do sistema.' }, { status: 403 });
       }
     }
 
-    const updatedUsers = localUsers.filter(u => u.id !== targetUser.id && u.username?.toLowerCase() !== targetUser.username.toLowerCase());
-    markUserDeleted(targetUser.username);
-    writeLocalUsers(updatedUsers);
+    const cleanUsername = targetUser.username.toLowerCase();
+    const updatedUsers = users.filter(u => u.id !== targetUser.id && u.username?.toLowerCase() !== cleanUsername);
+    const updatedDeleted = Array.from(new Set([...deleted, cleanUsername]));
 
-    // Tentar deletar no Supabase por username
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase
-          .from('usuarios_permissoes')
-          .delete()
-          .eq('username', targetUser.username);
-      } catch (err: any) {
-        console.warn('Supabase delete notice (removido localmente com sucesso):', err.message);
-      }
-    }
+    await saveSyncedUsers(updatedUsers, updatedDeleted);
 
     return NextResponse.json({ success: true, message: `Usuário ${targetUser.username} excluído com sucesso.` }, { status: 200 });
   } catch (error: any) {

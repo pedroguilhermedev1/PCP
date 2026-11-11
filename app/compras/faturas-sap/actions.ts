@@ -9,80 +9,9 @@ import { serializarObservacoesComMeta } from "@/lib/previsaoRecebimento";
 export async function saveFaturaAction(fatura: Object) {
   try {
     const faturaData = fatura as Fatura;
+    // O registro da compra salva todos os dados da fatura (insumos, quantidades, preços e metadados)
+    // para histórico e controle financeiro, SEM gerar solicitações ou movimentações de estoque.
     await faturaRepository.saveFatura(faturaData);
-    
-    const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
-    const formattedCd = formatCd(faturaData.cd || '');
-    
-    // Processamos insumos no estoque apenas para Fortaleza, Jundiaí e NSE (PSD roda por fora)
-    const validCds = ['fortaleza', 'jundiai', 'nse'];
-
-    if (faturaData.categoria === 'Material' && faturaData.insumos && faturaData.insumos.length > 0 && validCds.includes(formattedCd)) {
-      if (supabase) {
-        await supabase.from('estoque_movimentacoes')
-          .delete()
-          .eq('fatura_id', faturaData.id)
-          .eq('status', 'PENDENTE');
-        // 1. Fetch existing movements to prevent duplicating CONFIRMADO ones
-        const { data: existingMovs } = await supabase.from('estoque_movimentacoes')
-          .select('codigo, status')
-          .eq('fatura_id', faturaData.id);
-          
-        const confirmedCodigos = new Set((existingMovs || []).filter(m => m.status === 'CONFIRMADO').map(m => m.codigo));
-
-        // 2. Format CD function was moved outside
-        // 3. Filter valid insumos, ignoring the ones already confirmed
-        const validInsumos = faturaData.insumos
-          .filter(ins => !(ins as any)._meta && (!ins.tipo_item || ins.tipo_item === 'Insumo'))
-          .filter(ins => !confirmedCodigos.has(ins.codigo));
-
-        if (validInsumos.length > 0) {
-          // Fetch the empresa for each insumo
-          const insumoCodigos = validInsumos.map(ins => ins.codigo);
-          const { data: insumoDetails } = await supabase.from('estoque_insumos')
-            .select('codigo, cd, empresa')
-            .in('codigo', insumoCodigos);
-
-
-        const movimentacoes = validInsumos.map(insumo => {
-          const formattedCd = formatCd(faturaData.cd || '');
-          const detail = insumoDetails?.find(d => d.codigo === insumo.codigo && formatCd(d.cd) === formattedCd);
-          const obsTexto = `${faturaData.numero_documento ? 'Fatura ' + faturaData.numero_documento : 'Fatura não informada'} | Conta Protheus: ${insumo.conta_protheus || ''}`.trim();
-          const metaData = {
-            quantidade_prevista: insumo.quantidade,
-            quantidade_recebida: 0,
-            saldo_pendente: insumo.quantidade,
-            entregas: [],
-            previsao_dias_min: faturaData.previsao_recebimento_dias_min,
-            previsao_dias_max: faturaData.previsao_recebimento_dias_max,
-            previsao_data_inicio: faturaData.previsao_recebimento_data_inicio,
-            previsao_data_fim: faturaData.previsao_recebimento_data_fim,
-            data_criacao_original: faturaData.data_criacao || faturaData.created_at || faturaData.data_recebimento || new Date().toISOString()
-          };
-          const observacoesFinal = serializarObservacoesComMeta(obsTexto, metaData);
-
-          return {
-            tipo: 'Entrada',
-            codigo: insumo.codigo,
-            item: insumo.item,
-            cd: formattedCd,
-            empresa: detail?.empresa || 'PCP',
-            quantidade: insumo.quantidade,
-            usuario: faturaData.responsavel || 'Sistema Faturas',
-            observacoes: observacoesFinal,
-            status: 'PENDENTE',
-            fatura_id: faturaData.id,
-            tipo_envio: 'Principal',
-          };
-        });
-
-          const { error } = await supabase.from('estoque_movimentacoes').insert(movimentacoes);
-          if (error) {
-            console.error("Erro ao gerar entradas de insumos:", error);
-          }
-        }
-      }
-    }
 
     revalidatePath('/compras/faturas');
     revalidatePath('/compras/dashboard');

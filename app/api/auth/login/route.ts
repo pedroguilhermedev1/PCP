@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readLocalUsers, verifyPassword } from '@/lib/auth-users';
+import { getSyncedUsers, verifyPassword } from '@/lib/auth-users';
 import { ADMIN_USERS, OPERACIONAL_USERS, getUserRole, formatUserName } from '@/lib/roles';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,12 @@ export async function POST(request: Request) {
     }
 
     const cleanUsername = username.trim().toLowerCase();
-    const users = readLocalUsers();
+    const { users, deleted } = await getSyncedUsers();
+
+    if (deleted.some(d => d.toLowerCase() === cleanUsername)) {
+      return NextResponse.json({ error: 'Usuário não encontrado ou removido do sistema.' }, { status: 401 });
+    }
+
     const user = users.find(u => u.username?.toLowerCase() === cleanUsername);
 
     // Liderança legacy check

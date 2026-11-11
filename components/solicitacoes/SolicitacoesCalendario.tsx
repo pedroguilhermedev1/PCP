@@ -125,6 +125,91 @@ const CD_CONFIG: Record<string, {
   }
 };
 
+const SUPPLIER_PALETTES = [
+  {
+    barBg: 'bg-emerald-100/95',
+    barBorder: 'border-emerald-300',
+    barText: 'text-emerald-950',
+    barHover: 'hover:bg-emerald-200/90',
+    indicator: 'bg-emerald-600'
+  },
+  {
+    barBg: 'bg-blue-100/95',
+    barBorder: 'border-blue-300',
+    barText: 'text-blue-950',
+    barHover: 'hover:bg-blue-200/90',
+    indicator: 'bg-blue-600'
+  },
+  {
+    barBg: 'bg-purple-100/95',
+    barBorder: 'border-purple-300',
+    barText: 'text-purple-950',
+    barHover: 'hover:bg-purple-200/90',
+    indicator: 'bg-purple-600'
+  },
+  {
+    barBg: 'bg-amber-100/95',
+    barBorder: 'border-amber-300',
+    barText: 'text-amber-950',
+    barHover: 'hover:bg-amber-200/90',
+    indicator: 'bg-amber-600'
+  },
+  {
+    barBg: 'bg-indigo-100/95',
+    barBorder: 'border-indigo-300',
+    barText: 'text-indigo-950',
+    barHover: 'hover:bg-indigo-200/90',
+    indicator: 'bg-indigo-600'
+  },
+  {
+    barBg: 'bg-rose-100/95',
+    barBorder: 'border-rose-300',
+    barText: 'text-rose-950',
+    barHover: 'hover:bg-rose-200/90',
+    indicator: 'bg-rose-600'
+  },
+  {
+    barBg: 'bg-teal-100/95',
+    barBorder: 'border-teal-300',
+    barText: 'text-teal-950',
+    barHover: 'hover:bg-teal-200/90',
+    indicator: 'bg-teal-600'
+  },
+  {
+    barBg: 'bg-cyan-100/95',
+    barBorder: 'border-cyan-300',
+    barText: 'text-cyan-950',
+    barHover: 'hover:bg-cyan-200/90',
+    indicator: 'bg-cyan-600'
+  },
+  {
+    barBg: 'bg-orange-100/95',
+    barBorder: 'border-orange-300',
+    barText: 'text-orange-950',
+    barHover: 'hover:bg-orange-200/90',
+    indicator: 'bg-orange-600'
+  },
+  {
+    barBg: 'bg-violet-100/95',
+    barBorder: 'border-violet-300',
+    barText: 'text-violet-950',
+    barHover: 'hover:bg-violet-200/90',
+    indicator: 'bg-violet-600'
+  }
+];
+
+export function getSupplierColor(fornecedor?: string) {
+  if (!fornecedor) return SUPPLIER_PALETTES[0];
+  const clean = fornecedor.trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    hash = (hash << 5) - hash + clean.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % SUPPLIER_PALETTES.length;
+  return SUPPLIER_PALETTES[index];
+}
+
 const CD_OPTIONS = [
   { value: 'todos', label: 'Todos os CDs' },
   { value: 'fortaleza', label: 'Fortaleza' },
@@ -241,6 +326,19 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
       const listaEventos: PrevisaoEvento[] = [];
       const faturasProcessadas = new Set<string>();
 
+      // Mapa auxiliar para associar IDs e números de documentos de faturas a seus dados
+      const faturaMap = new Map<string, any>();
+      if (faturas && faturas.length > 0) {
+        for (const fat of faturas) {
+          if (fat.id) faturaMap.set(String(fat.id), fat);
+          if (fat.numero_documento) faturaMap.set(String(fat.numero_documento), fat);
+          const rawId = String(fat.id || '');
+          if (rawId.includes('__')) {
+            faturaMap.set(rawId.split('__')[0], fat);
+          }
+        }
+      }
+
       // A) Extrair períodos de faturas
       if (faturas && faturas.length > 0) {
         for (const fat of faturas) {
@@ -296,7 +394,12 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
             )
           );
 
-          if (nomesItens.length === 0) continue;
+          // Se não houver fornecedor ou identificação básica, continuar
+          let fornecedorNome = (fat.fornecedor || '').trim();
+          if (fornecedorNome.toUpperCase() === 'SAS') {
+            fornecedorNome = (metaObj.fornecedor || '').trim();
+          }
+          if (!fornecedorNome && nomesItens.length === 0) continue;
 
           // Verificar movimentações correspondentes para determinar status real de entrega
           const movsFatura = (movs || []).filter(m => m.fatura_id === fat.id);
@@ -429,24 +532,50 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
 
           const mCd = formatCd(m.cd || '');
           let docNum = 'Solicitação';
-          let fornecedor = 'Solicitação Interna';
+          let fornecedor = '';
 
-          // Extrair informações legíveis de observações
+          // 1. Prioridade: Buscar dados reais da fatura vinculada
+          const rawMFatId = m && m.fatura_id != null ? String(m.fatura_id) : '';
+          if (rawMFatId && faturaMap.has(rawMFatId)) {
+            const linkedFat = faturaMap.get(rawMFatId);
+            if (linkedFat?.fornecedor && linkedFat.fornecedor.trim().toUpperCase() !== 'SAS') {
+              fornecedor = linkedFat.fornecedor.trim();
+            }
+            if (linkedFat?.numero_documento) {
+              docNum = linkedFat.numero_documento;
+            }
+          }
+
+          // 2. Extrair informações legíveis de observações
           if (textoLegivel) {
             const parts = textoLegivel.split('|').map((p: string) => p.trim());
             for (const p of parts) {
-              if (p.startsWith('Fatura ')) {
+              if (p.startsWith('Fatura ') && docNum === 'Solicitação') {
                 docNum = p.replace('Fatura ', '').trim();
               } else if (p.toLowerCase().includes('fornecedor')) {
-                fornecedor = p.replace(/fornecedor:?/i, '').trim();
+                const parsedForn = p.replace(/fornecedor:?/i, '').trim();
+                if (parsedForn && parsedForn.toUpperCase() !== 'SAS' && !fornecedor) {
+                  fornecedor = parsedForn;
+                }
               }
             }
           }
 
-          if (m.empresa) fornecedor = m.empresa;
-          const rawMFatId = m && m.fatura_id != null ? String(m.fatura_id) : '';
+          // 3. Se ainda sem fornecedor mas tiver docNum, buscar no faturaMap
+          if (!fornecedor && docNum && docNum !== 'Solicitação' && faturaMap.has(docNum)) {
+            const linkedFat = faturaMap.get(docNum);
+            if (linkedFat?.fornecedor && linkedFat.fornecedor.trim().toUpperCase() !== 'SAS') {
+              fornecedor = linkedFat.fornecedor.trim();
+            }
+          }
+
           if (rawMFatId && docNum === 'Solicitação') {
             docNum = rawMFatId.includes('__') ? rawMFatId.split('__')[0] : rawMFatId;
+          }
+
+          // Nunca usar 'SAS' ou deixar vazio como fornecedor
+          if (!fornecedor || fornecedor.trim().toUpperCase() === 'SAS') {
+            fornecedor = 'Fornecedor Pendente';
           }
 
           const chave = `${mCd}__${docNum}__${cleanInicio}__${cleanFim}`;
@@ -827,7 +956,7 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
 
                 {/* Faixas contínuas de eventos na semana (Thick Horizontal Bars) */}
                 <div className="relative z-10 flex flex-col gap-1.5 py-1 px-1 mt-1">
-                  {weekEvents.slice(0, 4).map((ev, evIdx) => {
+                  {weekEvents.map((ev, evIdx) => {
                     // Calcular colunas de início e fim nesta semana (0 = Dom, 6 = Sáb)
                     const rawStart = week.findIndex(d => d.dateStr === ev.dataInicio);
                     const rawEnd = week.findIndex(d => d.dateStr === ev.dataFim);
@@ -840,13 +969,14 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                     const isSingleDay = colStart === colEnd;
 
                     const cdConfig = getCdConfig(ev.cd);
+                    const supplierColor = getSupplierColor(ev.fornecedor);
 
-                    // Estilo de cores conforme status e CD
+                    // Estilo de cores conforme fornecedor e status (cada fornecedor tem sua cor distinta)
                     let barColors = cn(
-                      cdConfig.barBg,
-                      cdConfig.barText,
-                      cdConfig.barBorder,
-                      cdConfig.barHover
+                      supplierColor.barBg,
+                      supplierColor.barText,
+                      supplierColor.barBorder,
+                      supplierColor.barHover
                     );
 
                     if (ev.status === 'CONCLUIDO') {
@@ -885,7 +1015,7 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                             endsThisWeek ? "rounded-r-md border-r-2" : "rounded-r-none border-r-0 opacity-95",
                             isSingleDay && "rounded-md"
                           )}
-                          title={`Previsão de Recebimento (${periodoLegivel})\nFornecedor: ${ev.fornecedor}\nCD: ${cdConfig.nome}\nItens: ${ev.itens.join(', ')}`}
+                          title={`Previsão de Recebimento (${periodoLegivel})\nFornecedor: ${ev.fornecedor}\nCD: ${cdConfig.nome}`}
                         >
                           {/* Seta indicando continuidade da semana anterior */}
                           {!startsThisWeek && (
@@ -912,13 +1042,9 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                             Previsão
                           </span>
 
-                          {/* Nome do Fornecedor e itens previstos */}
+                          {/* Nome do Fornecedor (apenas fornecedor, sem detalhamento de insumos ou quantidades) */}
                           <span className="truncate font-bold">
                             {ev.fornecedor}
-                          </span>
-
-                          <span className="hidden md:inline truncate text-[10px] opacity-80 ml-1.5">
-                            · {ev.itens.join(', ')}
                           </span>
 
                           {/* Indicador de status */}
@@ -1050,53 +1176,8 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                 <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg flex items-start gap-2 text-[11px] text-amber-800">
                   <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span>
-                    Esta faixa representa uma previsão estimada de chegada calculada em dias úteis. A entrega física pode ocorrer em qualquer dia dentro deste intervalo.
+                    Esta faixa representa uma previsão estimada de chegada do fornecedor calculada em dias úteis. A entrega física pode ocorrer em qualquer dia dentro deste intervalo.
                   </span>
-                </div>
-              </div>
-
-              {/* Lista detalhada de Itens Previstos */}
-              <div>
-                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block mb-2">
-                  Itens Previstos ({selectedEventModal.itens.length})
-                </span>
-                <div className="space-y-2">
-                  {selectedEventModal.detalhesItens && selectedEventModal.detalhesItens.length > 0 ? (
-                    selectedEventModal.detalhesItens.map((det, detIdx) => (
-                      <div 
-                        key={detIdx} 
-                        className="p-3 bg-zinc-50 rounded-lg border border-zinc-200/80 flex items-center justify-between text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-zinc-400 shrink-0" />
-                          <div>
-                            <p className="font-semibold text-zinc-800">{det.item}</p>
-                            {det.codigo && (
-                              <span className="text-[10px] text-zinc-400">Código: {det.codigo}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="font-bold text-zinc-700">
-                            Qtd: {det.quantidadePrevista || 0}
-                          </span>
-                          {det.saldoPendente !== undefined && det.saldoPendente > 0 && det.quantidadeRecebida !== undefined && det.quantidadeRecebida > 0 && (
-                            <span className="block text-[10px] text-amber-600 font-semibold">
-                              Saldo: {det.saldoPendente} pendente
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    selectedEventModal.itens.map((nome, nIdx) => (
-                      <div key={nIdx} className="p-2.5 bg-zinc-50 rounded-lg border border-zinc-200/70 text-xs font-medium text-zinc-800 flex items-center gap-2">
-                        <Package className="w-3.5 h-3.5 text-zinc-400" />
-                        <span>{nome}</span>
-                      </div>
-                    ))
-                  )}
                 </div>
               </div>
             </div>
@@ -1192,20 +1273,6 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                   <div className="text-xs text-zinc-600 bg-white p-2 rounded border border-zinc-200/80 flex items-center justify-between">
                     <span>Período: <strong>{formatBrDate(ev.dataInicio)} a {formatBrDate(ev.dataFim)}</strong></span>
                     <span className="text-[11px] text-purple-700 font-medium">({ev.diasMin} a {ev.diasMax} dias úteis)</span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
-                      Itens Previstos ({ev.itens.length})
-                    </span>
-                    <ul className="space-y-1">
-                      {ev.itens.map((item, itemIdx) => (
-                        <li key={itemIdx} className="text-xs text-zinc-700 flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 </div>
               ))}
