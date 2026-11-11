@@ -1,5 +1,5 @@
-export const ADMIN_USERS = [
-  'pedro.queiroz', 'vando.sousa', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco',
+2export const ADMIN_USERS = [
+  'pedro.queiroz', 'vando.sousa', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco', 'moises',
 ];
 
 export const REPORTS_USERS: string[] = [];
@@ -63,14 +63,15 @@ export function formatUserName(username?: string): string {
       return storedName;
     }
   }
-  
+
   if (normalized === 'pedro.queiroz') return 'Pedro Queiroz';
   if (normalized === 'felipe.castro') return 'Felipe Castro';
   if (normalized === 'vando.sousa') return 'Vando Sousa';
   if (normalized === 'debora.mota') return 'Débora Mota';
   if (normalized === 'raphael.ramiro') return 'Raphael Ramiro';
   if (normalized === 'francisco.edson') return 'Francisco Edson';
-  
+  if (normalized === 'moises' || normalized.startsWith('moises.')) return 'Moisés';
+
   if (normalized === 'raphael.farrao') return 'Raphael Farrão';
   if (normalized === 'rafael.soares') return 'Rafael Soares';
   if (normalized === 'diego.dias') return 'Diego Dias';
@@ -81,7 +82,7 @@ export function formatUserName(username?: string): string {
   if (normalized === 'psd.arco') return 'PSD';
   if (normalized === 'coc.arco') return 'COC';
   if (normalized === 'lideranca.arco' || normalized === 'liderança.arco') return 'Liderança Arco';
-  
+
   if (username.includes('.')) {
     return username.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
   }
@@ -101,7 +102,7 @@ export function getUserCD(username?: string): string | null {
       return storedCD;
     }
   }
-  
+
   if (['raphael.farrao', 'jundiai.arco'].includes(normalized)) return 'jundiai';
   if (['rafael.soares', 'nse.arco'].includes(normalized)) return 'nse';
   if (['diego.dias', 'fabio.pessoa', 'gabriel.oliveira', 'pol.araruna', 'fortaleza.arco'].includes(normalized)) return 'fortaleza';

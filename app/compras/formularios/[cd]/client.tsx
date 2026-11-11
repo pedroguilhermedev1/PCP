@@ -672,6 +672,7 @@ function FormulariosModuleClientInner({ cd }: { cd: string }) {
             className={`pb-3 px-2 font-medium text-sm transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'NOVA' ? 'border-purple-600 text-purple-700 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-700'}`}
             onClick={() => setActiveTab('NOVA')}
           >
+            <Send className="w-4 h-4" />
             EXPEDIÇÃO
           </button>
 

@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 
 interface Usuario {
   id: string
@@ -338,7 +339,8 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <RoleGuard allowedRoles={['SUPERADMIN']}>
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
@@ -841,6 +843,7 @@ export default function UsuariosPage() {
         </div>
       )}
 
-    </div>
+      </div>
+    </RoleGuard>
   )
 }

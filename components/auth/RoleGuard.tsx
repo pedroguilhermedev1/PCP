@@ -27,7 +27,7 @@ export function RoleGuard({
 
     const role = getUserRole(user);
 
-    if (role === 'SUPERADMIN') {
+    if (role === 'SUPERADMIN' && user.trim().toLowerCase() === 'pedro.queiroz') {
       setIsAllowed(true);
       return;
     }

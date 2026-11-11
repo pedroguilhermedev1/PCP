@@ -165,7 +165,7 @@ export function Sidebar() {
   }, []);
 
   const role = getUserRole(currentUser || '');
-  const isSuperAdmin = role === 'SUPERADMIN';
+  const isSuperAdmin = currentUser?.toLowerCase().trim() === 'pedro.queiroz';
   const isAdmin = isSuperAdmin || role === 'ADMIN';
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({

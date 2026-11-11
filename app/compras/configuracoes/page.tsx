@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Plus, Settings, AlertCircle, Edit2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { RoleGuard } from "@/components/auth/RoleGuard"
 
 export default function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState<'cds' | 'categorias'>('cds')
@@ -77,7 +78,8 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-zinc-50 overflow-hidden">
+    <RoleGuard allowedRoles={['SUPERADMIN']}>
+      <div className="flex flex-col h-full bg-zinc-50 overflow-hidden">
       <header className="bg-white border-b border-zinc-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
@@ -231,5 +233,6 @@ export default function ConfiguracoesPage() {
         </div>
       </div>
     </div>
+    </RoleGuard>
   )
 }

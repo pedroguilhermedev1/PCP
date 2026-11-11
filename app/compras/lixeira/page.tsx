@@ -57,7 +57,7 @@ export default function LixeiraPage() {
   }
 
   return (
-    <RoleGuard allowedRoles={['ADMIN']}>
+    <RoleGuard allowedRoles={['SUPERADMIN']}>
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <header className="bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
