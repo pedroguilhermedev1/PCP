@@ -1,4 +1,4 @@
-2export const ADMIN_USERS = [
+export const ADMIN_USERS = [
   'pedro.queiroz', 'vando.sousa', 'debora.mota', 'raphael.ramiro', 'francisco.edson', 'lideranca.arco', 'moises',
 ];
 
