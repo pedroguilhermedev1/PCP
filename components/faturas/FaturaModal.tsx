@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Fatura, calcularStatus, calcularEtapa, getEtapaLabel, getEtapaColor, getStatusColor, getEtapaHexColor } from "@/modules/compras/domain/Fatura";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, X, Tag, CheckCircle2 } from "lucide-react";
 import { cn, formatCNPJ } from "@/lib/utils";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
@@ -31,11 +31,15 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     status_pagamento: 'Em andamento',
     forma_pagamento: fatura?.forma_pagamento || 'Boleto',
     ...fatura,
-    cd: fatura?.cd || fatura?.insumos?.find(i => (i as any)._meta)?.cd || fatura?.insumos?.[0]?.cd || '',
-    codigo_fornecedor: fatura?.codigo_fornecedor || fatura?.insumos?.find(i => (i as any)._meta)?.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
+    cd: fatura?.cd || (fatura?.insumos?.find(i => (i as any)._meta) as any)?.cd || fatura?.insumos?.[0]?.cd || '',
+    codigo_fornecedor: fatura?.codigo_fornecedor || (fatura?.insumos?.find(i => (i as any)._meta) as any)?.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
     insumos: fatura?.insumos?.filter(i => !(i as any)._meta) || [],
+    categorias: fatura?.categorias || (fatura?.insumos?.find(i => (i as any)._meta) as any)?.categorias || [],
+    data_solicitacao: fatura?.data_solicitacao || (fatura?.insumos?.find(i => (i as any)._meta) as any)?.data_solicitacao || (isEditing ? (fatura?.data_recebimento || fatura?.data_emissao) : new Date().toISOString()),
   });
 
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [customCategoryInput, setCustomCategoryInput] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [contasProtheus, setContasProtheus] = useState<{conta_protheus: string, desc_conta_protheus: string}[]>([]);
   const [availableInsumos, setAvailableInsumos] = useState<any[]>([]);
@@ -71,6 +75,50 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
       setAvailableInsumos([]);
     }
   }, [isOpen, categoriaAtiva, formData.cd]);
+
+  useEffect(() => {
+    if (isOpen && categoriaAtiva === 'Material') {
+      supabase?.from('estoque_insumos')
+        .select('categoria')
+        .not('categoria', 'is', null)
+        .then(({ data }) => {
+          if (data) {
+            const unique = Array.from(new Set(
+              data.map((d: any) => typeof d.categoria === 'string' ? d.categoria.trim() : '').filter(Boolean)
+            )).sort();
+            setAvailableCategories(prev => Array.from(new Set([...prev, ...unique])).sort());
+          }
+        });
+
+      supabase?.from('categorias_insumos')
+        .select('nome')
+        .then(({ data }) => {
+          if (data) {
+            const unique = Array.from(new Set(
+              data.map((d: any) => typeof d.nome === 'string' ? d.nome.trim() : '').filter(Boolean)
+            )).sort();
+            setAvailableCategories(prev => Array.from(new Set([...prev, ...unique])).sort());
+          }
+        });
+    }
+  }, [isOpen, categoriaAtiva]);
+
+  const handleAddCategory = (catName: string) => {
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+    const current = formData.categorias || [];
+    if (!current.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      setFormData(prev => ({ ...prev, categorias: [...(prev.categorias || []), trimmed] }));
+    }
+    setCustomCategoryInput('');
+  };
+
+  const handleRemoveCategory = (catToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      categorias: (prev.categorias || []).filter(c => c.toLowerCase() !== catToRemove.toLowerCase())
+    }));
+  };
 
   if (!isOpen) return null;
 
@@ -109,11 +157,20 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
     }
 
     const currentInsumos = formData.insumos || [];
-    const metaObj = { _meta: true, cd: formData.cd, codigo_fornecedor: formData.codigo_fornecedor };
+    const dataSolicitacaoFinal = formData.data_solicitacao || (isEditing ? (fatura?.data_recebimento || fatura?.data_emissao) : new Date().toISOString());
+    const metaObj = { 
+      _meta: true, 
+      cd: formData.cd, 
+      codigo_fornecedor: formData.codigo_fornecedor,
+      categorias: formData.categorias || [],
+      data_solicitacao: dataSolicitacaoFinal
+    };
     
     const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
     const finalFatura = {
       ...formData,
+      categorias: formData.categorias || [],
+      data_solicitacao: dataSolicitacaoFinal,
       conta_contabil: formData.conta_contabil,
       descricao_contabil: formData.descricao_contabil,
       marca: formData.marca || 'PCP',
@@ -475,6 +532,127 @@ export function FaturaModal({ isOpen, onClose, fatura, categoriaAtiva, onSave }:
                   }} className="gap-2">
                     <Plus className="w-4 h-4" /> Imposto/Taxa
                   </Button>
+                </div>
+
+                {/* Bloco de Categorias */}
+                <div className="pt-4 border-t border-zinc-200/80 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 text-purple-600" /> Categorias
+                      </h4>
+                      <p className="text-[11px] text-zinc-500">
+                        Classifique os materiais desta fatura para identificação e rastreabilidade no Calendário. (Opcional)
+                      </p>
+                    </div>
+                    {formData.categorias && formData.categorias.length > 0 && (
+                      <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 self-start sm:self-auto">
+                        {formData.categorias.length} {formData.categorias.length === 1 ? 'categoria selecionada' : 'categorias selecionadas'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badges das Categorias Selecionadas */}
+                  {formData.categorias && formData.categorias.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 p-2.5 bg-zinc-50/80 border border-zinc-200 rounded-lg">
+                      {formData.categorias.map((cat, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-white border border-purple-200 text-purple-900 shadow-2xs group"
+                        >
+                          <span>{cat}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCategory(cat)}
+                            className="text-zinc-400 hover:text-red-600 transition-colors p-0.5 rounded cursor-pointer"
+                            title="Remover categoria"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-zinc-400 italic py-1">
+                      Nenhuma categoria selecionada para esta fatura.
+                    </div>
+                  )}
+
+                  {/* Campo de Seleção / Digitação Manual */}
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        value={customCategoryInput}
+                        onChange={(e) => setCustomCategoryInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCategory(customCategoryInput);
+                          }
+                        }}
+                        list="available-categories-list-manual"
+                        placeholder="Clique para ver categorias cadastradas ou digite uma nova..."
+                        className="text-xs h-9"
+                      />
+                      <datalist id="available-categories-list-manual">
+                        {availableCategories
+                          .filter(c => !(formData.categorias || []).some(sel => sel.toLowerCase() === c.toLowerCase()))
+                          .map((cat, idx) => (
+                            <option key={idx} value={cat} />
+                          ))}
+                      </datalist>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleAddCategory(customCategoryInput)}
+                      disabled={!customCategoryInput.trim()}
+                      className="text-xs h-9 px-3 gap-1 shrink-0 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Adicionar
+                    </Button>
+                  </div>
+
+                  {/* Sugestões Rápidas: Categorias cadastradas no banco */}
+                  {availableCategories.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                        Categorias cadastradas no PCP Hub (clique para alternar):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
+                        {availableCategories.map((cat, idx) => {
+                          const isSelected = (formData.categorias || []).some(sel => sel.toLowerCase() === cat.toLowerCase());
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  handleRemoveCategory(cat);
+                                } else {
+                                  handleAddCategory(cat);
+                                }
+                              }}
+                              className={cn(
+                                "text-[11px] px-2.5 py-1 rounded-md border transition-all text-left flex items-center gap-1 cursor-pointer",
+                                isSelected
+                                  ? "bg-purple-600 text-white border-purple-600 font-semibold shadow-2xs"
+                                  : "bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border-zinc-200"
+                              )}
+                            >
+                              {isSelected ? (
+                                <CheckCircle2 className="w-3 h-3 text-white shrink-0" />
+                              ) : (
+                                <Plus className="w-3 h-3 text-zinc-400 shrink-0" />
+                              )}
+                              <span>{cat}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
             )}

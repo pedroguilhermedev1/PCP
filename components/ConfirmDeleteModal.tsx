@@ -5,9 +5,11 @@ interface ConfirmDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
 }
 
-export function ConfirmDeleteModal({ isOpen, onClose, onConfirm }: ConfirmDeleteModalProps) {
+export function ConfirmDeleteModal({ isOpen, onClose, onConfirm, title, description }: ConfirmDeleteModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -15,7 +17,7 @@ export function ConfirmDeleteModal({ isOpen, onClose, onConfirm }: ConfirmDelete
       <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col border border-zinc-200">
         <div className="px-6 py-4 border-b border-zinc-200 flex items-center gap-3 bg-red-50/50">
           <AlertTriangle className="w-5 h-5 text-red-600" />
-          <h2 className="text-lg font-semibold text-zinc-800">Confirmação</h2>
+          <h2 className="text-lg font-semibold text-zinc-800">{title || "Confirmação"}</h2>
           <button onClick={onClose} className="ml-auto text-zinc-400 hover:text-zinc-600">
             <X className="w-5 h-5" />
           </button>
@@ -23,7 +25,7 @@ export function ConfirmDeleteModal({ isOpen, onClose, onConfirm }: ConfirmDelete
         
         <div className="p-6">
           <p className="text-zinc-600 text-sm">
-            Tem certeza que deseja excluir este registro? Esta ação não poderá ser desfeita.
+            {description || "Tem certeza que deseja excluir este registro? Esta ação não poderá ser desfeita."}
           </p>
         </div>
 

@@ -271,6 +271,10 @@ export interface Fatura {
     data_alteracao: string;
   }>;
 
+  // Categorias e Rastreabilidade no Calendário
+  categorias?: string[];
+  data_solicitacao?: string;
+
   // Calculados (Opcionais no model para persistência, mas gerados pela view/helper)
   status?: string;
   data_pagamento_ideal?: string;

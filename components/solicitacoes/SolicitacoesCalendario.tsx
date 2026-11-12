@@ -12,7 +12,8 @@ import {
   Truck, 
   Filter,
   Info,
-  CalendarDays
+  CalendarDays,
+  Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +33,9 @@ export interface PrevisaoEvento {
   id: string;
   faturaId?: string;
   numeroDocumento: string;
+  numeroNF?: string;
+  dataSolicitacao?: string;
+  categorias?: string[];
   fornecedor: string;
   cd: string;
   itens: string[];
@@ -315,7 +319,7 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
         .from('faturas')
         .select('*')
         .or('excluido.is.null,excluido.eq.false')
-        .order('created_at', { ascending: false });
+        .order('serial_id', { ascending: false });
 
       // 2. Buscar todas as movimentações de estoque (aprovações pendentes e histórico)
       const { data: movs, error: movErr } = await supabase
@@ -330,11 +334,19 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
       const faturaMap = new Map<string, any>();
       if (faturas && faturas.length > 0) {
         for (const fat of faturas) {
-          if (fat.id) faturaMap.set(String(fat.id), fat);
-          if (fat.numero_documento) faturaMap.set(String(fat.numero_documento), fat);
+          if (fat.id) {
+            faturaMap.set(String(fat.id), fat);
+            faturaMap.set(String(fat.id).toLowerCase(), fat);
+          }
+          if (fat.numero_documento) {
+            faturaMap.set(String(fat.numero_documento).trim(), fat);
+          }
           const rawId = String(fat.id || '');
           if (rawId.includes('__')) {
-            faturaMap.set(rawId.split('__')[0], fat);
+            const cleanId = rawId.split('__')[0];
+            faturaMap.set(cleanId, fat);
+            faturaMap.set(cleanId.toLowerCase(), fat);
+            faturaMap.set(cleanId.replace(/^F-/i, ''), fat);
           }
         }
       }
@@ -453,12 +465,27 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
           const rawFatId = fat && fat.id != null ? String(fat.id) : '';
           const fatDocNum = fat.numero_documento || (rawFatId.includes('__') ? rawFatId.split('__')[0] : rawFatId) || 'Sem número';
 
+          const fatCategorias: string[] = Array.isArray(fat.categorias) && fat.categorias.length > 0 
+            ? fat.categorias 
+            : (Array.isArray(metaObj.categorias) ? metaObj.categorias : []);
+
+          const fatDataSolicitacao: string = fat.data_solicitacao 
+            || metaObj.data_solicitacao 
+            || metaObj.previsao_recebimento?.data_criacao_original 
+            || metaObj.data_criacao_original 
+            || fat.data_recebimento 
+            || fat.data_emissao 
+            || '';
+
           faturasProcessadas.add(rawFatId);
 
           listaEventos.push({
             id: `fat_${rawFatId}`,
             faturaId: rawFatId,
             numeroDocumento: fatDocNum,
+            numeroNF: fat.numero_documento ? String(fat.numero_documento).trim() : undefined,
+            dataSolicitacao: fatDataSolicitacao,
+            categorias: fatCategorias,
             fornecedor: fat.fornecedor || 'Fornecedor não informado',
             cd: fatCd,
             itens: nomesItens,
@@ -496,11 +523,14 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
           cd: string;
           fornecedor: string;
           numeroDocumento: string;
+          numeroNF?: string;
           faturaId?: string;
           dataInicio: string;
           dataFim: string;
           diasMin: number;
           diasMax: number;
+          categorias?: string[];
+          dataSolicitacao?: string;
         }> = {};
 
         for (const m of movsComPrevisao) {
@@ -535,13 +565,23 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
           let fornecedor = '';
 
           // 1. Prioridade: Buscar dados reais da fatura vinculada
+          let linkedFat: any = null;
           const rawMFatId = m && m.fatura_id != null ? String(m.fatura_id) : '';
           if (rawMFatId && faturaMap.has(rawMFatId)) {
-            const linkedFat = faturaMap.get(rawMFatId);
-            if (linkedFat?.fornecedor && linkedFat.fornecedor.trim().toUpperCase() !== 'SAS') {
+            linkedFat = faturaMap.get(rawMFatId);
+          } else if (rawMFatId && faturaMap.has(rawMFatId.toLowerCase())) {
+            linkedFat = faturaMap.get(rawMFatId.toLowerCase());
+          } else if (rawMFatId && rawMFatId.includes('__') && faturaMap.has(rawMFatId.split('__')[0])) {
+            linkedFat = faturaMap.get(rawMFatId.split('__')[0]);
+          } else if (rawMFatId && faturaMap.has(rawMFatId.replace(/^F-/i, ''))) {
+            linkedFat = faturaMap.get(rawMFatId.replace(/^F-/i, ''));
+          }
+
+          if (linkedFat) {
+            if (linkedFat.fornecedor && linkedFat.fornecedor.trim().toUpperCase() !== 'SAS') {
               fornecedor = linkedFat.fornecedor.trim();
             }
-            if (linkedFat?.numero_documento) {
+            if (linkedFat.numero_documento) {
               docNum = linkedFat.numero_documento;
             }
           }
@@ -551,7 +591,14 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
             const parts = textoLegivel.split('|').map((p: string) => p.trim());
             for (const p of parts) {
               if (p.startsWith('Fatura ') && docNum === 'Solicitação') {
-                docNum = p.replace('Fatura ', '').trim();
+                const parsedNum = p.replace('Fatura ', '').trim();
+                docNum = parsedNum;
+                if (!linkedFat && faturaMap.has(parsedNum)) {
+                  linkedFat = faturaMap.get(parsedNum);
+                  if (linkedFat?.fornecedor && linkedFat.fornecedor.trim().toUpperCase() !== 'SAS') {
+                    fornecedor = linkedFat.fornecedor.trim();
+                  }
+                }
               } else if (p.toLowerCase().includes('fornecedor')) {
                 const parsedForn = p.replace(/fornecedor:?/i, '').trim();
                 if (parsedForn && parsedForn.toUpperCase() !== 'SAS' && !fornecedor) {
@@ -563,7 +610,7 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
 
           // 3. Se ainda sem fornecedor mas tiver docNum, buscar no faturaMap
           if (!fornecedor && docNum && docNum !== 'Solicitação' && faturaMap.has(docNum)) {
-            const linkedFat = faturaMap.get(docNum);
+            linkedFat = faturaMap.get(docNum);
             if (linkedFat?.fornecedor && linkedFat.fornecedor.trim().toUpperCase() !== 'SAS') {
               fornecedor = linkedFat.fornecedor.trim();
             }
@@ -571,6 +618,25 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
 
           if (rawMFatId && docNum === 'Solicitação') {
             docNum = rawMFatId.includes('__') ? rawMFatId.split('__')[0] : rawMFatId;
+          }
+
+          let movCategorias: string[] = [];
+          let movDataSolicitacao: string = '';
+          if (linkedFat) {
+            const rawLInsumos = Array.isArray(linkedFat.insumos) ? linkedFat.insumos : [];
+            const lMeta = rawLInsumos.find((i: any) => i && i._meta) || {};
+            movCategorias = Array.isArray(linkedFat.categorias) && linkedFat.categorias.length > 0
+              ? linkedFat.categorias
+              : (Array.isArray(lMeta.categorias) ? lMeta.categorias : []);
+            movDataSolicitacao = linkedFat.data_solicitacao
+              || lMeta.data_solicitacao
+              || lMeta.previsao_recebimento?.data_criacao_original
+              || meta.data_criacao_original
+              || linkedFat.data_recebimento
+              || linkedFat.data_emissao
+              || '';
+          } else {
+            movDataSolicitacao = meta.data_criacao_original || m.data_hora || '';
           }
 
           // Nunca usar 'SAS' ou deixar vazio como fornecedor
@@ -585,11 +651,14 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
               cd: mCd,
               fornecedor,
               numeroDocumento: docNum,
+              numeroNF: linkedFat?.numero_documento || (docNum !== 'Solicitação' && !docNum.startsWith('F-') ? docNum : undefined),
               faturaId: m.fatura_id,
               dataInicio: cleanInicio,
               dataFim: cleanFim,
               diasMin: Number(mDiasMin) || 1,
-              diasMax: Number(mDiasMax) || 1
+              diasMax: Number(mDiasMax) || 1,
+              categorias: movCategorias,
+              dataSolicitacao: movDataSolicitacao
             };
           }
           agrupadasPorChave[chave].movs.push(m);
@@ -630,6 +699,9 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
             id: `mov_${chave}`,
             faturaId: grupo.faturaId,
             numeroDocumento: grupo.numeroDocumento,
+            numeroNF: (grupo as any).numeroNF,
+            dataSolicitacao: (grupo as any).dataSolicitacao,
+            categorias: (grupo as any).categorias,
             fornecedor: grupo.fornecedor,
             cd: grupo.cd,
             itens: itensUnicos,
@@ -1116,17 +1188,19 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
 
             {/* Conteúdo */}
             <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-              {/* Card de Informações Principais */}
-              <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200/80 space-y-3">
-                <div className="flex items-start justify-between gap-2">
+              <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200/80 space-y-4">
+                {/* 1. Fornecedor e CD */}
+                <div className="flex items-start justify-between gap-2 pb-3 border-b border-zinc-200/60">
                   <div>
                     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
                       Fornecedor
                     </span>
-                    <p className="text-sm font-bold text-zinc-900">{selectedEventModal.fornecedor}</p>
+                    <p className="text-base font-bold text-zinc-900 leading-tight mt-0.5">
+                      {selectedEventModal.fornecedor}
+                    </p>
                   </div>
 
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={cn(
                       "text-[10px] font-bold px-2 py-0.5 rounded-full border",
                       getCdConfig(selectedEventModal.cd).badgeBg,
@@ -1152,24 +1226,71 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                   </div>
                 </div>
 
-                {/* Período Estimado em Destaque */}
+                {/* 2. NF e Data da Solicitação */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-white rounded-lg border border-zinc-200/80">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                      NF (Nota Fiscal)
+                    </span>
+                    <p className="text-xs font-bold text-zinc-800 mt-0.5">
+                      {selectedEventModal.numeroNF || (selectedEventModal.numeroDocumento && selectedEventModal.numeroDocumento !== 'Sem número' && selectedEventModal.numeroDocumento !== 'Solicitação' ? selectedEventModal.numeroDocumento : 'Não informada')}
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-white rounded-lg border border-zinc-200/80">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                      Data da Solicitação
+                    </span>
+                    <p className="text-xs font-bold text-zinc-800 mt-0.5">
+                      {formatBrDate(selectedEventModal.dataSolicitacao) || 'Não informada'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Período Previsto de Chegada */}
                 <div className="p-3 bg-white rounded-lg border border-purple-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-purple-600" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-purple-100 text-purple-700 rounded-md">
+                      <CalendarIcon className="w-4 h-4" />
+                    </div>
                     <div>
                       <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                        Janela Estimada de Entrega
+                        Período Previsto de Chegada
                       </span>
-                      <p className="text-xs font-bold text-purple-900">
-                        {formatBrDate(selectedEventModal.dataInicio)} até {formatBrDate(selectedEventModal.dataFim)}
+                      <p className="text-xs font-bold text-purple-900 mt-0.5">
+                        {formatBrDate(selectedEventModal.dataInicio)} a {formatBrDate(selectedEventModal.dataFim)}
                       </p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-1 rounded-md">
+                  <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-1 rounded-md border border-purple-200">
                     {selectedEventModal.diasMin === selectedEventModal.diasMax
                       ? `${selectedEventModal.diasMin} dias úteis`
                       : `${selectedEventModal.diasMin} a ${selectedEventModal.diasMax} dias úteis`}
                   </span>
+                </div>
+
+                {/* 4. Categorias */}
+                <div className="p-3 bg-white rounded-lg border border-zinc-200/80 space-y-1.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-3 h-3 text-purple-600" /> Categorias dos Materiais
+                  </span>
+                  {selectedEventModal.categorias && selectedEventModal.categorias.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {selectedEventModal.categorias.map((cat, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md bg-purple-50 border border-purple-200 text-purple-800 shadow-2xs"
+                        >
+                          <Tag className="w-2.5 h-2.5 text-purple-600" />
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic">
+                      Nenhuma categoria vinculada a esta fatura.
+                    </p>
+                  )}
                 </div>
 
                 {/* Aviso explicativo de previsão */}
@@ -1274,6 +1395,16 @@ export function SolicitacoesCalendario({ cd, userRole: propRole, userCD: propCD 
                     <span>Período: <strong>{formatBrDate(ev.dataInicio)} a {formatBrDate(ev.dataFim)}</strong></span>
                     <span className="text-[11px] text-purple-700 font-medium">({ev.diasMin} a {ev.diasMax} dias úteis)</span>
                   </div>
+
+                  {ev.categorias && ev.categorias.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {ev.categorias.map((cat, cIdx) => (
+                        <span key={cIdx} className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                          <Tag className="w-2.5 h-2.5" /> {cat}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

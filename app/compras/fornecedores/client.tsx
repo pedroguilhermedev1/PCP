@@ -212,10 +212,15 @@ export function FornecedoresClient({ tipo }: { tipo: 'Material' | 'Serviço' }) 
       <ConfirmDeleteModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (itemToDelete) {
-            deleteFornecedor(itemToDelete);
-            toast.success("Fornecedor excluído com sucesso.");
+            const res = await deleteFornecedor(itemToDelete);
+            if (res && res.success === false) {
+              toast.error(res.error || "Não foi possível excluir o fornecedor.");
+            } else {
+              toast.success("Fornecedor excluído com sucesso.");
+              setItemToDelete(null);
+            }
           }
         }}
       />

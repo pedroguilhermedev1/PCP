@@ -71,6 +71,16 @@ export class SupabaseFaturaRepository implements FaturaRepository {
           const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta && i.previsao_recebimento);
           return meta?.previsao_recebimento?.historico || [];
         })(),
+        categorias: (() => {
+          if (Array.isArray(d.categorias) && d.categorias.length > 0) return d.categorias;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.categorias || [];
+        })(),
+        data_solicitacao: (() => {
+          if (d.data_solicitacao) return d.data_solicitacao;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.data_solicitacao || meta?.previsao_recebimento?.data_criacao_original || d.data_recebimento || d.data_emissao || undefined;
+        })(),
       };
     }) as Fatura[];
   }
@@ -148,23 +158,47 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       nexa_rc_data: faturaData.nexa_rc_data || null
     };
     
-    // Empacotar previsao_recebimento dentro de insumos (_meta) para garantir persistência sem quebrar caso coluna SQL não exista
+    // Empacotar previsao_recebimento, categorias e data_solicitacao dentro de insumos (_meta) para garantir persistência sem quebrar caso coluna SQL não exista
     const cleanInsumos = (sanitizedData.insumos || []).filter((i: any) => !(i && i._meta));
+    const existingMeta: any = (Array.isArray(fatura.insumos) ? fatura.insumos : []).find((i: any) => i && i._meta) || {};
+    
+    // Data da solicitação: registrada automaticamente na criação/primeiro salvamento e preservada nas edições posteriores
+    const dataSolicitacaoGravada = faturaData.data_solicitacao 
+      || existingMeta.data_solicitacao 
+      || existingMeta.previsao_recebimento?.data_criacao_original 
+      || (faturaData.id && !String(faturaData.id).startsWith('F-') ? undefined : new Date().toISOString());
+
+    const metaObj: any = {
+      _meta: true,
+      cd: faturaData.cd || existingMeta.cd,
+      codigo_fornecedor: faturaData.codigo_fornecedor || existingMeta.codigo_fornecedor,
+      categorias: Array.isArray(faturaData.categorias) ? faturaData.categorias : (existingMeta.categorias || []),
+      data_solicitacao: dataSolicitacaoGravada || new Date().toISOString()
+    };
+
     if (faturaData.previsao_recebimento_dias_min && faturaData.previsao_recebimento_dias_max) {
-      cleanInsumos.push({
-        _meta: true,
-        previsao_recebimento: {
-          dias_min: faturaData.previsao_recebimento_dias_min,
-          dias_max: faturaData.previsao_recebimento_dias_max,
-          data_inicio: faturaData.previsao_recebimento_data_inicio,
-          data_fim: faturaData.previsao_recebimento_data_fim,
-          historico: faturaData.historico_previsao || []
-        }
-      });
+      metaObj.previsao_recebimento = {
+        dias_min: faturaData.previsao_recebimento_dias_min,
+        dias_max: faturaData.previsao_recebimento_dias_max,
+        data_inicio: faturaData.previsao_recebimento_data_inicio,
+        data_fim: faturaData.previsao_recebimento_data_fim,
+        historico: faturaData.historico_previsao || existingMeta.previsao_recebimento?.historico || []
+      };
+      metaObj.previsao_recebimento_dias_min = faturaData.previsao_recebimento_dias_min;
+      metaObj.previsao_recebimento_dias_max = faturaData.previsao_recebimento_dias_max;
+      metaObj.previsao_recebimento_data_inicio = faturaData.previsao_recebimento_data_inicio;
+      metaObj.previsao_recebimento_data_fim = faturaData.previsao_recebimento_data_fim;
+      metaObj.historico_previsao = faturaData.historico_previsao || [];
+    } else if (existingMeta.previsao_recebimento) {
+      metaObj.previsao_recebimento = existingMeta.previsao_recebimento;
     }
+
+    cleanInsumos.push(metaObj);
     sanitizedData.insumos = cleanInsumos;
 
     // Convert undefined to null or omit, as supabase expects certain formats
+    delete sanitizedData.categorias;
+    delete sanitizedData.data_solicitacao;
     delete sanitizedData.pc_nexa_concluido;
     delete sanitizedData.numero_pc_nexa;
     delete sanitizedData.data_pc_nexa;

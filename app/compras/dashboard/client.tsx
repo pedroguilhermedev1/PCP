@@ -374,6 +374,25 @@ export function DashboardClient({
   const previsoesChegadaOperacional = useMemo(() => {
     const cdAlvo = normalizeCd(userRole === 'OPERACIONAL' && userCD ? userCD : (insCD !== 'todos' ? insCD : ''));
     
+    // Data atual no formato YYYY-MM-DD para garantir que não apareçam previsões cujo período já terminou
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    const toIsoDate = (str?: string | null): string => {
+      if (!str) return '';
+      const clean = str.includes('T') ? str.split('T')[0] : str.split(' ')[0];
+      if (clean.includes('/')) {
+        const parts = clean.split('/');
+        if (parts.length === 3 && parts[2].length === 4) {
+          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+      return clean;
+    };
+
     const list: Array<{
       id: string;
       fornecedor: string;
@@ -414,14 +433,18 @@ export function DashboardClient({
 
       if (!dataInicio || !dataFim) continue;
 
-      let cleanInicio = dataInicio.includes('T') ? dataInicio.split('T')[0] : dataInicio.split(' ')[0];
-      let cleanFim = dataFim.includes('T') ? dataFim.split('T')[0] : dataFim.split(' ')[0];
+      let cleanInicio = toIsoDate(dataInicio);
+      let cleanFim = toIsoDate(dataFim);
 
       if (cleanInicio > cleanFim) {
         const temp = cleanInicio;
         cleanInicio = cleanFim;
         cleanFim = temp;
       }
+
+      // Regra: Não exibir previsões cujo período já tenha terminado (fim < hoje).
+      // Considerar a data final do período: se terminar hoje ou no futuro (cleanFim >= todayStr), exibir.
+      if (cleanFim < todayStr) continue;
 
       const validInsumos = rawInsumos.filter((i: any) => i && !i._meta);
       const itensNomes = Array.from(new Set(validInsumos.map((i: any) => i.item || i.descricao || '').filter(Boolean))) as string[];
@@ -449,9 +472,9 @@ export function DashboardClient({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden w-full bg-transparent">
       <header className="glass-panel px-8 py-5 flex items-center justify-between flex-shrink-0 z-10 relative">
-        <div className="flex items-center gap-4">
-          <div className="bg-purple-50 p-2.5 rounded-lg text-purple-700 border border-purple-100">
-            <BarChart2 className="w-6 h-6" strokeWidth={2.5} />
+        <div className="flex items-center gap-3">
+          <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
+            <BarChart2 className="w-7 h-7" strokeWidth={2.5} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-zinc-900 leading-tight">Dashboard</h1>

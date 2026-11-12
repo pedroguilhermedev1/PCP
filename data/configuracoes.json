@@ -1,0 +1,97 @@
+{
+  "cds": [
+    {
+      "id": "cd-fortaleza",
+      "nome": "Fortaleza",
+      "slug": "fortaleza",
+      "ativo": true
+    },
+    {
+      "id": "cd-jundiai",
+      "nome": "Jundiaí",
+      "slug": "jundiai",
+      "ativo": true
+    },
+    {
+      "id": "cd-nse",
+      "nome": "NSE",
+      "slug": "nse",
+      "ativo": true
+    },
+    {
+      "id": "cd-coc",
+      "nome": "COC",
+      "slug": "coc",
+      "ativo": true
+    },
+    {
+      "id": "cd-psd",
+      "nome": "PSD",
+      "slug": "psd",
+      "ativo": true
+    },
+    {
+      "id": "cd-raizes",
+      "nome": "Raízes",
+      "slug": "raizes",
+      "ativo": true
+    }
+  ],
+  "categorias": [
+    {
+      "id": "cat-caixa",
+      "nome": "Caixa",
+      "ativo": true
+    },
+    {
+      "id": "cat-etiquetas",
+      "nome": "Etiquetas",
+      "ativo": true
+    },
+    {
+      "id": "cat-filme-plastico",
+      "nome": "Filme Plástico",
+      "ativo": true
+    },
+    {
+      "id": "cat-fita-adesiva",
+      "nome": "Fita Adesiva",
+      "ativo": true
+    },
+    {
+      "id": "cat-fita-plastica",
+      "nome": "Fita Plástica",
+      "ativo": true
+    },
+    {
+      "id": "cat-fitilho",
+      "nome": "Fitilho",
+      "ativo": true
+    },
+    {
+      "id": "cat-geral",
+      "nome": "Geral",
+      "ativo": true
+    },
+    {
+      "id": "cat-pallet",
+      "nome": "Pallet",
+      "ativo": true
+    },
+    {
+      "id": "cat-papel-office",
+      "nome": "Papel Office",
+      "ativo": true
+    },
+    {
+      "id": "cat-protetor",
+      "nome": "Protetor",
+      "ativo": true
+    },
+    {
+      "id": "cat-ribbon",
+      "nome": "Ribbon",
+      "ativo": true
+    }
+  ]
+}

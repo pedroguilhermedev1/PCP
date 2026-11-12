@@ -43,9 +43,11 @@
     "id": "6",
     "username": "lideranca.arco",
     "nome_completo": "Liderança Arco",
-    "role": "LIDERANCA",
+    "role": "ADMIN",
     "cd_slug": null,
-    "ativo": true
+    "ativo": true,
+    "updated_at": "2026-11-12T14:14:19.219Z",
+    "password_hash": "eeec13cc03ed84cbcc6308da6f2a815f6767f290599dbf4ff124cc20d05e31c3"
   },
   {
     "id": "13",
@@ -96,5 +98,25 @@
     "role": "ADMIN",
     "cd_slug": null,
     "ativo": true
+  },
+  {
+    "id": "7cf7e6c1-1726-4911-81b4-7beb899066a6",
+    "username": "moises.silva",
+    "nome_completo": "Moises Silva",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true,
+    "password_hash": "ab7329dfb694b10805a604688cfb6aedf50e16258b1846e98bfda8352fd82953",
+    "created_at": "2026-11-11T20:13:55.667Z"
+  },
+  {
+    "id": "1d4e4455-6455-4ca6-9320-f92d8e5d6114",
+    "username": "vando.sousa",
+    "nome_completo": "Vando Sousa",
+    "role": "ADMIN",
+    "cd_slug": null,
+    "ativo": true,
+    "password_hash": "8f6e6f425eba16599bba9d9afa43113e3ba6079f042c4e51064c1b6f4e8d4a77",
+    "created_at": "2026-11-12T12:19:04.478Z"
   }
 ]

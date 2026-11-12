@@ -55,12 +55,50 @@ export function useFornecedores(tipoFiltro?: 'Material' | 'Serviço') {
     return null;
   };
 
-  const deleteFornecedor = async (id: string) => {
-    if (!supabase) return;
-    const { error } = await supabase.from("fornecedores").delete().eq("id", id);
-    if (!error) {
-      setFornecedores(prev => prev.filter(f => f.id !== id));
+  const deleteFornecedor = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase) return { success: false, error: "Conexão com banco de dados indisponível." };
+
+    const target = fornecedores.find(f => f.id === id);
+    if (target) {
+      try {
+        const filters: string[] = [];
+        if (target.razao_social && target.razao_social.trim()) {
+          filters.push(`fornecedor.ilike.%${target.razao_social.trim()}%`);
+        }
+        if (target.nome_fantasia && target.nome_fantasia.trim()) {
+          filters.push(`fornecedor.ilike.%${target.nome_fantasia.trim()}%`);
+        }
+        if (target.cnpj && target.cnpj.trim()) {
+          filters.push(`cnpj.eq.${target.cnpj.trim()}`);
+        }
+
+        if (filters.length > 0) {
+          const { count } = await supabase
+            .from("faturas")
+            .select("id", { count: "exact", head: true })
+            .or(filters.join(","));
+
+          if (count && count > 0) {
+            const displayName = target.nome_fantasia || target.razao_social;
+            return {
+              success: false,
+              error: `Não é possível excluir o fornecedor "${displayName}": existem ${count} fatura(s) vinculadas a este fornecedor no histórico. Preservar o histórico dos registros é obrigatório.`
+            };
+          }
+        }
+      } catch (err: any) {
+        console.error("Erro ao checar dependências de fatura:", err);
+      }
     }
+
+    const { error } = await supabase.from("fornecedores").delete().eq("id", id);
+    if (error) {
+      console.error("Erro ao excluir fornecedor:", error);
+      return { success: false, error: error.message };
+    }
+
+    setFornecedores(prev => prev.filter(f => f.id !== id));
+    return { success: true };
   };
 
   const updateFornecedor = async (id: string, updates: Partial<Fornecedor>) => {
