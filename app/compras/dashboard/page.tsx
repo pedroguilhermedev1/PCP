@@ -15,7 +15,11 @@ export default async function DashboardPage() {
   
   // Fetch Insumos
   let insumos: any[] = [];
-  const { data: dataInsumos } = await supabase.from('estoque_insumos').select('*');
+  const { data: dataInsumos } = await supabase
+    .from('estoque_insumos')
+    .select('*')
+    .eq('tipo_envio', 'Principal')
+    .or('excluido.is.null,excluido.eq.false');
   if (dataInsumos) insumos = dataInsumos;
 
   // Fetch Movimentacoes

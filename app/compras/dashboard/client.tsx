@@ -89,9 +89,9 @@ export function DashboardClient({
     }
   };
 
-  // Tabs - Padrão padronizado iniciando em Operacional / Insumos para todos os usuários
-  const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('operacional');
-  const [activeTab, setActiveTab] = useState<'faturas2' | 'insumos' | 'movimentacoes' | 'performance'>('insumos');
+  // Tabs - Gerencial primeiro para administradores, Operacional para operacionais
+  const [mainTab, setMainTab] = useState<'gerencial' | 'operacional'>('gerencial');
+  const [activeTab, setActiveTab] = useState<'faturas2' | 'insumos' | 'movimentacoes' | 'performance'>('faturas2');
   const [selectedViewFatura, setSelectedViewFatura] = useState<any | null>(null);
   const [selectedStage, setSelectedStage] = useState<{fatura: any, stage: string} | null>(null);
   const [faturaPeriodos, setFaturaPeriodos] = useState<any[]>([]);
@@ -132,9 +132,14 @@ export function DashboardClient({
     setUserRole(role);
     const cd = getUserCD(user);
     
-    // Todos os usuários agora iniciam no padrão padronizado do Dashboard (Insumos / Situação do Estoque e Previsões)
-    setMainTab('operacional');
-    setActiveTab('insumos');
+    const admin = !user || (user.startsWith('pedro.queiroz') || user.startsWith('vando.sousa') || user.startsWith('felipe.castro')) || user.startsWith('francisco.edson') || (user.startsWith('debora.mota') || user.startsWith('raphael.ramiro') || user.startsWith('moises'));
+    if (admin) {
+      setMainTab('gerencial');
+      setActiveTab('faturas2');
+    } else {
+      setMainTab('operacional');
+      setActiveTab('insumos');
+    }
     
     if (role === 'OPERACIONAL' && cd) {
       setUserCD(cd);
@@ -164,8 +169,31 @@ export function DashboardClient({
   ];
   const dias = Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0'));
   
-  const uniqueCDs = Array.from(new Set(insumos.map(i => typeof i.cd === 'string' ? i.cd.toUpperCase().trim() : null).filter(Boolean)))
-    .filter(cd => !['raizes', 'curitiba'].includes((cd as string).toLowerCase()));
+  const normalizeCd = (val?: string | null) => {
+    if (!val) return '';
+    return val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  };
+
+  const formatCdLabel = (slug: string) => {
+    const s = normalizeCd(slug);
+    if (s === 'jundiai') return 'JUNDIAÍ';
+    if (s === 'fortaleza') return 'FORTALEZA';
+    if (s === 'nse') return 'NSE';
+    if (s === 'coc') return 'COC';
+    if (s === 'psd') return 'PSD';
+    return slug.toUpperCase();
+  };
+
+  const uniqueCDs = Array.from(new Set(
+    insumos
+      .filter(i => !i.excluido)
+      .map(i => {
+        const n = normalizeCd(i.cd);
+        if (!n || ['raizes', 'curitiba'].includes(n)) return null;
+        return n;
+      })
+      .filter(Boolean)
+  )).sort() as string[];
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
@@ -209,25 +237,32 @@ export function DashboardClient({
       const stat = calcularStatus(f);
       const v = f.valor || 0;
 
-      const isFinalizado = (etapa === 'Aguardando pagamento');
-      const isEmAberto = (etapa !== 'Aguardando pagamento' && etapa !== 'Pago');
-      
-      const isPaid = stat.startsWith('Pago');
+      const isPaid = stat.startsWith('Pago') || f.status_pagamento === 'Pago' || Boolean(f.data_pagamento_real || f.pagamento_data_fim || f.nexa_pagamento_realizado);
+      if (isPaid) return;
+
+      const isAguardando = Boolean(
+        etapa === 'Aguardando pagamento' ||
+        etapa === 'Pagamento efetivo' ||
+        etapa === 'Programação de pagamento' ||
+        f.nexa_pagamento_programado ||
+        f.nexa_data_prevista_pagamento ||
+        f.prog_data_fim ||
+        f.status_pagamento === 'Aguardando pagamento'
+      );
+
       const isAtrasado = stat === 'Vencido';
 
-      if (!isPaid) {
-        if (isEmAberto) {
-          if (isAtrasado) {
-            emAbertoAtraso.count++; emAbertoAtraso.val += v;
-          } else {
-            emAbertoNoPrazo.count++; emAbertoNoPrazo.val += v;
-          }
-        } else if (isFinalizado) {
-          if (isAtrasado) {
-            aguardandoAtraso.count++; aguardandoAtraso.val += v;
-          } else {
-            aguardandoNoPrazo.count++; aguardandoNoPrazo.val += v;
-          }
+      if (isAguardando) {
+        if (isAtrasado) {
+          aguardandoAtraso.count++; aguardandoAtraso.val += v;
+        } else {
+          aguardandoNoPrazo.count++; aguardandoNoPrazo.val += v;
+        }
+      } else {
+        if (isAtrasado) {
+          emAbertoAtraso.count++; emAbertoAtraso.val += v;
+        } else {
+          emAbertoNoPrazo.count++; emAbertoNoPrazo.val += v;
         }
       }
 
@@ -237,7 +272,7 @@ export function DashboardClient({
       else if (sla === 'Atrasado') slaAtrasado++;
 
       // Novo SLA
-      if (etapa !== 'Aguardando pagamento' && !isPaid) {
+      if (!isAguardando && !isPaid) {
         const viabilidade = calcularViabilidadePagamento(f);
         if (viabilidade.statusViabilidade === 'viavel') novoSlaNoPrazo++;
         else if (viabilidade.statusViabilidade === 'risco') novoSlaProximo++;
@@ -256,7 +291,8 @@ export function DashboardClient({
   // Filtered Insumos (Snapshots)
   const filteredInsumos = useMemo(() => {
     return insumos.filter(i => {
-      if (insCD !== "todos" && i.cd !== insCD) return false;
+      if (i.excluido === true) return false;
+      if (insCD !== "todos" && normalizeCd(i.cd) !== normalizeCd(insCD)) return false;
       return true;
     });
   }, [insumos, insCD]);
@@ -266,7 +302,7 @@ export function DashboardClient({
     return movimentacoes.filter(m => {
       
       // Filtrar por CD
-      if (insCD !== "todos" && m.cd !== insCD) return false;
+      if (insCD !== "todos" && normalizeCd(m.cd) !== normalizeCd(insCD)) return false;
 
       // Filtrar por data
       if (!m.data_hora) return false;
@@ -284,7 +320,7 @@ export function DashboardClient({
 
       return true;
     });
-  }, [movimentacoes, insumos, insAno, insMes, insDia, insCD]);
+  }, [movimentacoes, insAno, insMes, insDia, insCD]);
 
 
   // Insumos Stats
@@ -295,7 +331,7 @@ export function DashboardClient({
     filteredInsumos.forEach(i => {
       const cmd = parseFloat(i.cmd) || 10;
       const lt = parseFloat(i.lead_time) || 0;
-      const real = i.estoque_real || 0;
+      const real = parseFloat(i.estoque_real) || 0;
 
       totalEstoque += real;
 
@@ -336,7 +372,7 @@ export function DashboardClient({
   const formatCd = (name: string) => name ? name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-") : '';
 
   const previsoesChegadaOperacional = useMemo(() => {
-    const cdAlvo = (userRole === 'OPERACIONAL' && userCD ? userCD : (insCD !== 'todos' ? insCD : '')).toLowerCase();
+    const cdAlvo = normalizeCd(userRole === 'OPERACIONAL' && userCD ? userCD : (insCD !== 'todos' ? insCD : ''));
     
     const list: Array<{
       id: string;
@@ -360,7 +396,7 @@ export function DashboardClient({
       const subPrevisao: any = metaObj.previsao_recebimento || {};
       const fatCd = formatCd(fat.cd || metaObj.cd || rawInsumos[0]?.cd || '');
 
-      if (cdAlvo && fatCd !== cdAlvo) continue;
+      if (cdAlvo && normalizeCd(fatCd) !== cdAlvo) continue;
 
       let diasMin = fat.previsao_recebimento_dias_min ?? metaObj.previsao_recebimento_dias_min ?? subPrevisao.dias_min;
       let diasMax = fat.previsao_recebimento_dias_max ?? metaObj.previsao_recebimento_dias_max ?? subPrevisao.dias_max;
@@ -445,16 +481,16 @@ export function DashboardClient({
         <div className="px-8 pt-6 pb-0 flex flex-col gap-5">
           <div className="flex gap-6 border-b border-zinc-200 w-full">
             <button
-              onClick={() => handleMainTabChange('operacional')}
-              className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'operacional' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
-            >
-              Operacional
-            </button>
-            <button
               onClick={() => handleMainTabChange('gerencial')}
               className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'gerencial' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
             >
               Gerencial
+            </button>
+            <button
+              onClick={() => handleMainTabChange('operacional')}
+              className={`pb-3 font-semibold text-[15px] transition-all border-b-[3px] -mb-[1px] ${mainTab === 'operacional' ? 'border-purple-600 text-purple-700' : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-zinc-300'}`}
+            >
+              Operacional
             </button>
           </div>
           
@@ -740,7 +776,7 @@ export function DashboardClient({
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-zinc-800">
-                        Situação do Estoque e Previsões {userCD && userCD !== 'todos' ? `— CD ${userCD.toUpperCase()}` : ''}
+                        Situação do Estoque e Previsões {userCD && userCD !== 'todos' ? `— CD ${formatCdLabel(userCD)}` : ''}
                       </h2>
                       <p className="text-xs text-zinc-500">Indicadores de cobertura física e datas previstas de entregas.</p>
                     </div>
@@ -757,7 +793,7 @@ export function DashboardClient({
                       disabled={userRole === 'OPERACIONAL'}
                       options={[
                         { value: "todos", label: "Todos" },
-                        ...uniqueCDs.map(cd => ({ value: cd as string, label: (cd as string).toUpperCase() }))
+                        ...uniqueCDs.map(cd => ({ value: cd as string, label: formatCdLabel(cd as string) }))
                       ]}
                     />
                   </div>
@@ -773,7 +809,7 @@ export function DashboardClient({
                     colorClass="text-emerald-600" 
                     borderClass="border-emerald-200 cursor-pointer hover:shadow-md transition-all" 
                     bgClass="bg-emerald-50/20" 
-                    onClick={() => { const cdPath = userCD !== 'todos' ? userCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`); }} 
+                    onClick={() => { const cdPath = userCD && userCD !== 'todos' ? normalizeCd(userCD) : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CONFORTÁVEL`); }} 
                   />
                   <InsumoCard 
                     title="Itens em Alerta" 
@@ -783,7 +819,7 @@ export function DashboardClient({
                     colorClass="text-amber-500" 
                     borderClass="border-amber-200 cursor-pointer hover:shadow-md transition-all" 
                     bgClass="bg-amber-50/20" 
-                    onClick={() => { const cdPath = userCD !== 'todos' ? userCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} 
+                    onClick={() => { const cdPath = userCD && userCD !== 'todos' ? normalizeCd(userCD) : 'todas'; router.push(`/compras/insumos/${cdPath}?status=ALERTA`); }} 
                   />
                   <InsumoCard 
                     title="Itens Críticos" 
@@ -793,7 +829,7 @@ export function DashboardClient({
                     colorClass="text-red-600" 
                     borderClass="border-red-200 cursor-pointer hover:shadow-md transition-all" 
                     bgClass="bg-red-50/20" 
-                    onClick={() => { const cdPath = userCD !== 'todos' ? userCD.toLowerCase() : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} 
+                    onClick={() => { const cdPath = userCD && userCD !== 'todos' ? normalizeCd(userCD) : 'todas'; router.push(`/compras/insumos/${cdPath}?status=CRÍTICO`); }} 
                   />
                 </div>
 

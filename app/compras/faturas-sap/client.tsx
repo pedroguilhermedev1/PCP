@@ -91,8 +91,18 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
     if (!filterNovoSLA.includes('todos')) {
       const etapa = calcularEtapa(f);
-      const isPaid = calcularStatus(f).startsWith('Pago');
-      if (etapa === 'Aguardando pagamento' || isPaid) return false;
+      const stat = calcularStatus(f);
+      const isPaid = stat.startsWith('Pago') || f.status_pagamento === 'Pago' || Boolean(f.data_pagamento_real || f.pagamento_data_fim || f.nexa_pagamento_realizado);
+      const isAguardando = !isPaid && Boolean(
+        etapa === 'Aguardando pagamento' ||
+        etapa === 'Pagamento efetivo' ||
+        etapa === 'Programação de pagamento' ||
+        f.nexa_pagamento_programado ||
+        f.nexa_data_prevista_pagamento ||
+        f.prog_data_fim ||
+        f.status_pagamento === 'Aguardando pagamento'
+      );
+      if (isAguardando || isPaid) return false;
 
       const viabilidade = calcularViabilidadePagamento(f);
       const matchesNovoSla = filterNovoSLA.some(slaOpt => {
@@ -138,9 +148,19 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
     const filterEtapaUrl = searchParams.get('filtro_etapa');
     if (filterEtapaUrl) {
       const etapa = calcularEtapa(f);
-      const isFinalizado = (etapa === 'Aguardando pagamento' || etapa === 'Pago');
-      if (filterEtapaUrl === 'aguardando' && !isFinalizado) return false;
-      if (filterEtapaUrl === 'em_aberto' && isFinalizado) return false;
+      const stat = calcularStatus(f);
+      const isPaid = stat.startsWith('Pago') || f.status_pagamento === 'Pago' || Boolean(f.data_pagamento_real || f.pagamento_data_fim || f.nexa_pagamento_realizado);
+      const isAguardando = !isPaid && Boolean(
+        etapa === 'Aguardando pagamento' ||
+        etapa === 'Pagamento efetivo' ||
+        etapa === 'Programação de pagamento' ||
+        f.nexa_pagamento_programado ||
+        f.nexa_data_prevista_pagamento ||
+        f.prog_data_fim ||
+        f.status_pagamento === 'Aguardando pagamento'
+      );
+      if (filterEtapaUrl === 'aguardando' && !isAguardando) return false;
+      if (filterEtapaUrl === 'em_aberto' && (isAguardando || isPaid)) return false;
     }
     
     const etapaExata = searchParams.get('etapa_exata');
