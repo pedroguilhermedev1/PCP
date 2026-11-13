@@ -3,6 +3,7 @@ import { Fatura, calcularStatus, calcularEtapa, getEtapasDatas, calcularTempoDia
 import { formatCNPJ, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Copy, ArrowRightLeft, Edit, FileText, Clock, X, Paperclip, Receipt } from "lucide-react";
+import { openAnexo } from "@/lib/anexoUtils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatUserName } from "@/lib/roles";
 

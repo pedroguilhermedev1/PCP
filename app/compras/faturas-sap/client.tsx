@@ -18,6 +18,7 @@ import { TransferModal } from "@/components/faturas/TransferModal";
 import { TimeDetailsModal } from "@/components/faturas/TimeDetailsModal";
 import { FaturaDetailsModal } from "@/components/faturas/FaturaDetailsModal";
 import { getFaturaPeriodosAction } from "./periodos-actions";
+import { openAnexo } from "@/lib/anexoUtils";
 
 export function FaturasTableClient({ initialFaturas, categoria }: { initialFaturas: Fatura[], categoria: 'Serviço' | 'Material' | 'Todas' }) {
   const [faturas, setFaturas] = useState<Fatura[]>(initialFaturas);
@@ -508,7 +509,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                             onClick={(e) => {
                               e.stopPropagation();
                               const targetUrl = (f.anexos && f.anexos.length > 0) ? f.anexos[0].url : f.anexo_url;
-                              if (targetUrl) window.open(targetUrl, '_blank');
+                              const targetNome = (f.anexos && f.anexos.length > 0) ? f.anexos[0].nome : f.anexo_nome;
+                              if (targetUrl) openAnexo(targetUrl, targetNome);
                             }}
                             className="inline-flex items-center gap-0.5 p-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors"
                             title={
@@ -578,7 +580,8 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const targetUrl = (f.anexos && f.anexos.length > 0) ? f.anexos[0].url : f.anexo_url;
-                                if (targetUrl) window.open(targetUrl, '_blank');
+                                const targetNome = (f.anexos && f.anexos.length > 0) ? f.anexos[0].nome : f.anexo_nome;
+                                if (targetUrl) openAnexo(targetUrl, targetNome);
                               }}
                               className="text-purple-700 hover:text-purple-900 hover:bg-purple-100/60"
                               title={

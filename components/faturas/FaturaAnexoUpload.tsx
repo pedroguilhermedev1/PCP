@@ -5,19 +5,12 @@ import { UploadCloud, FileText, Trash2, ExternalLink, Receipt, CheckCircle2, Loa
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FaturaAnexoItem } from "@/modules/compras/domain/Fatura";
+import { openAnexo, formatBytes } from "@/lib/anexoUtils";
 
 interface FaturaAnexoUploadProps {
   anexos?: FaturaAnexoItem[];
   onChange: (anexos: FaturaAnexoItem[]) => void;
   disabled?: boolean;
-}
-
-function formatBytes(bytes?: number): string {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 export function FaturaAnexoUpload({
@@ -36,6 +29,15 @@ export function FaturaAnexoUpload({
   const docsList = anexos.filter(a => a.categoria === 'documento');
   const compList = anexos.filter(a => a.categoria === 'comprovante');
 
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error(`Erro ao ler o arquivo "${file.name}"`));
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleUploadFiles = async (files: FileList | null, categoria: 'documento' | 'comprovante') => {
     if (!files || files.length === 0) return;
 
@@ -44,58 +46,40 @@ export function FaturaAnexoUpload({
     else setUploadingComp(true);
 
     try {
-      const formData = new FormData();
-      formData.append('categoria', categoria);
+      const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+      const newUploadedItems: FaturaAnexoItem[] = [];
 
-      let totalSize = 0;
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (file.size > 25 * 1024 * 1024) {
-          toast.error(`O arquivo "${file.name}" excede 25MB e foi ignorado.`);
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`O arquivo "${file.name}" excede 15MB e foi ignorado.`);
           continue;
         }
-        totalSize += file.size;
-        formData.append('files', file);
+
+        const dataUrl = await readFileAsDataUrl(file);
+        newUploadedItems.push({
+          id: `anexo-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          nome: file.name,
+          url: dataUrl,
+          tamanho: file.size,
+          tipo: file.type || 'application/pdf',
+          data_upload: new Date().toISOString(),
+          categoria
+        });
       }
-
-      if (totalSize === 0) {
-        return;
-      }
-
-      const res = await fetch('/api/faturas/anexo', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Erro ao realizar upload dos anexos.');
-      }
-
-      const newUploadedItems: FaturaAnexoItem[] = Array.isArray(data.anexos)
-        ? data.anexos.map((item: any) => ({
-            id: item.id || `anexo-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            nome: item.nome,
-            url: item.url,
-            tamanho: item.tamanho,
-            tipo: item.tipo,
-            data_upload: item.data_upload,
-            categoria
-          }))
-        : [];
 
       if (newUploadedItems.length > 0) {
         const updatedList = [...anexos, ...newUploadedItems];
         onChange(updatedList);
         toast.success(
           newUploadedItems.length === 1
-            ? `Arquivo "${newUploadedItems[0].nome}" anexado com sucesso!`
+            ? `"${newUploadedItems[0].nome}" anexado com sucesso!`
             : `${newUploadedItems.length} arquivos anexados com sucesso!`
         );
       }
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Erro ao fazer upload.');
+      toast.error(err.message || 'Erro ao processar anexos.');
     } finally {
       if (isDoc) {
         setUploadingDoc(false);
@@ -107,20 +91,7 @@ export function FaturaAnexoUpload({
     }
   };
 
-  const handleRemoveAnexo = async (itemToRemove: FaturaAnexoItem) => {
-    try {
-      // Extrair nome para deletar do backend se possível
-      const urlObj = new URL(itemToRemove.url, window.location.origin);
-      const fileName = urlObj.searchParams.get("file");
-      if (fileName) {
-        await fetch(`/api/faturas/anexo?file=${encodeURIComponent(fileName)}`, {
-          method: "DELETE"
-        });
-      }
-    } catch (e) {
-      console.error("Erro ao remover arquivo físico:", e);
-    }
-
+  const handleRemoveAnexo = (itemToRemove: FaturaAnexoItem) => {
     const updated = anexos.filter(a => a.id !== itemToRemove.id && a.url !== itemToRemove.url);
     onChange(updated);
     toast.success(`"${itemToRemove.nome}" removido.`);
@@ -179,7 +150,7 @@ export function FaturaAnexoUpload({
             {uploadingDoc ? (
               <div className="flex items-center justify-center gap-2 py-2 text-xs font-medium text-purple-700">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Enviando arquivo(s)...
+                Processando arquivo(s)...
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-1.5">
@@ -218,15 +189,14 @@ export function FaturaAnexoUpload({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => openAnexo(item.url, item.nome)}
                     className="p-1 text-zinc-500 hover:text-purple-700 hover:bg-purple-50 rounded transition-colors"
                     title="Visualizar arquivo"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  </button>
                   {!disabled && (
                     <button
                       type="button"
@@ -295,7 +265,7 @@ export function FaturaAnexoUpload({
             {uploadingComp ? (
               <div className="flex items-center justify-center gap-2 py-2 text-xs font-medium text-emerald-700">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Enviando comprovante(s)...
+                Processando comprovante(s)...
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-1.5">
@@ -334,15 +304,14 @@ export function FaturaAnexoUpload({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0">
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => openAnexo(item.url, item.nome)}
                     className="p-1 text-zinc-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors"
                     title="Visualizar comprovante"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  </button>
                   {!disabled && (
                     <button
                       type="button"
