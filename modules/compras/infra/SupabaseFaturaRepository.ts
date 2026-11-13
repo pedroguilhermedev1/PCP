@@ -131,7 +131,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
   async saveFatura(fatura: Fatura): Promise<void> {
     if (!supabase) return;
     
-    const { categoria, identificador, codigo_fornecedor, status, data_pagamento_ideal, etapa, tipo_servico, codigo_fatura, ...faturaData } = fatura as any;
+    const { categoria, identificador, codigo_fornecedor, status, data_pagamento_ideal, etapa, tipo_servico, codigo_fatura, anexos, ...faturaData } = fatura as any;
 
     let nextCodigoFatura = codigo_fatura;
     if (!nextCodigoFatura && !faturaData.id?.includes('FAT-') && !faturaData.id?.match(/^[a-zA-Z0-9-]+$/)) {
@@ -217,7 +217,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       codigo_fornecedor: faturaData.codigo_fornecedor || existingMeta.codigo_fornecedor,
       categorias: Array.isArray(faturaData.categorias) ? faturaData.categorias : (existingMeta.categorias || []),
       data_solicitacao: dataSolicitacaoGravada || new Date().toISOString(),
-      anexos: faturaData.anexos !== undefined ? faturaData.anexos : (existingMeta.anexos || []),
+      anexos: anexos !== undefined ? anexos : (existingMeta.anexos || []),
       anexo_nome: faturaData.anexo_nome !== undefined ? faturaData.anexo_nome : existingMeta.anexo_nome,
       anexo_url: faturaData.anexo_url !== undefined ? faturaData.anexo_url : existingMeta.anexo_url,
       anexo_tamanho: faturaData.anexo_tamanho !== undefined ? faturaData.anexo_tamanho : existingMeta.anexo_tamanho,
@@ -259,6 +259,7 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     delete sanitizedData.previsao_recebimento_data_inicio;
     delete sanitizedData.previsao_recebimento_data_fim;
     delete sanitizedData.historico_previsao;
+    delete sanitizedData.anexos;
     delete sanitizedData.anexo_nome;
     delete sanitizedData.anexo_url;
     delete sanitizedData.anexo_tamanho;
