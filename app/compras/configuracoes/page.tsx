@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Settings, AlertCircle, Edit2, Trash2, Check, X, ShieldAlert } from "lucide-react"
+import { Plus, Settings, AlertCircle, Edit2, Trash2, Check, X, ShieldAlert, Download, HardDrive, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2, Archive } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RoleGuard } from "@/components/auth/RoleGuard"
@@ -9,10 +9,16 @@ import { toast } from "sonner"
 import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal"
 
 export default function ConfiguracoesPage() {
-  const [activeTab, setActiveTab] = useState<'cds' | 'categorias'>('cds')
+  const [activeTab, setActiveTab] = useState<'cds' | 'categorias' | 'backup'>('cds')
   const [cds, setCds] = useState<any[]>([])
   const [categorias, setCategorias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Estatísticas e Gerenciamento de Backup
+  const [backupStats, setBackupStats] = useState({ totalFiles: 0, totalBytes: 0, totalMB: '0.00', limitFiles: 500 })
+  const [loadingBackup, setLoadingBackup] = useState(false)
+  const [confirmDeleteBackupOpen, setConfirmDeleteBackupOpen] = useState(false)
+  const [isClearingBackup, setIsClearingBackup] = useState(false)
 
   // Forms de criação
   const [newCd, setNewCd] = useState({ nome: '', slug: '' })
@@ -45,9 +51,50 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  const loadBackupStats = async () => {
+    setLoadingBackup(true)
+    try {
+      const res = await fetch('/api/faturas/anexo?action=stats')
+      if (res.ok) {
+        const data = await res.json()
+        setBackupStats(data)
+      }
+    } catch (e) {
+      console.error('Erro ao carregar estatísticas de backup:', e)
+    } finally {
+      setLoadingBackup(false)
+    }
+  }
+
   useEffect(() => {
     loadData()
+    loadBackupStats()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'backup') {
+      loadBackupStats()
+    }
+  }, [activeTab])
+
+  // Limpeza total de arquivos pós-backup
+  const handleClearBackup = async () => {
+    setIsClearingBackup(true)
+    try {
+      const res = await fetch('/api/faturas/anexo?action=clear_all', {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao excluir arquivos de anexo.')
+      toast.success(data.message || 'Arquivos físicos excluídos e espaço liberado com sucesso!')
+      setConfirmDeleteBackupOpen(false)
+      await loadBackupStats()
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao liberar espaço de anexos.')
+    } finally {
+      setIsClearingBackup(false)
+    }
+  }
 
   // Criar CD
   const handleAddCd = async () => {
@@ -332,6 +379,69 @@ export default function ConfiguracoesPage() {
           description={`Tem certeza que deseja excluir "${itemToDelete?.nome}"? O sistema verificará automaticamente se existem registros vinculados antes de confirmar a exclusão.`}
         />
 
+        {/* Modal de Confirmação para Excluir Dados do Servidor após Backup */}
+        {confirmDeleteBackupOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-zinc-200">
+              <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-red-50/70">
+                <div className="flex items-center gap-2.5 text-red-700 font-semibold">
+                  <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                  <span>Excluir Anexos e Liberar Espaço</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteBackupOpen(false)}
+                  className="text-zinc-400 hover:text-zinc-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-zinc-700 leading-relaxed">
+                  Esta ação irá <strong className="text-red-700">excluir definitivamente todos os {backupStats.totalFiles} arquivos físicos</strong> ({backupStats.totalMB} MB) de documentos e comprovantes armazenados no servidor para liberar espaço em disco.
+                </p>
+
+                <div className="p-3.5 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-800 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-amber-600" />
+                    Você já baixou o arquivo .ZIP?
+                  </p>
+                  <p>
+                    Certifique-se de ter clicado em <strong>&ldquo;Baixar Backup (.ZIP)&rdquo;</strong> e salvo o arquivo no seu computador antes de prosseguir. Esta ação não poderá ser desfeita.
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirmDeleteBackupOpen(false)}
+                  disabled={isClearingBackup}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleClearBackup}
+                  disabled={isClearingBackup}
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+                >
+                  {isClearingBackup ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      Excluindo arquivos...
+                    </>
+                  ) : (
+                    'Sim, Excluir e Liberar Espaço'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <header className="bg-white border-b border-zinc-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-purple-200 p-3 rounded-xl text-purple-900">
@@ -364,6 +474,13 @@ export default function ConfiguracoesPage() {
                 className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'categorias' ? 'border-purple-600 text-purple-600' : 'border-transparent text-zinc-500 hover:text-zinc-800'}`}
               >
                 Categorias de Insumos ({categorias.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('backup')}
+                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'backup' ? 'border-purple-600 text-purple-600' : 'border-transparent text-zinc-500 hover:text-zinc-800'}`}
+              >
+                <Archive className="w-4 h-4" />
+                Backup ({backupStats.totalFiles})
               </button>
             </div>
 
@@ -557,6 +674,144 @@ export default function ConfiguracoesPage() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Backup Content */}
+            {activeTab === 'backup' && (
+              <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-5">
+                  <div>
+                    <h2 className="text-base font-semibold text-zinc-900 flex items-center gap-2">
+                      <Archive className="w-5 h-5 text-purple-700" />
+                      Backup e Gerenciamento de Anexos
+                    </h2>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Baixe todos os documentos anexados (NFs, boletos e comprovantes) em um arquivo consolidado .ZIP e libere espaço com segurança.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadBackupStats}
+                    disabled={loadingBackup}
+                    className="text-xs text-zinc-600 hover:text-purple-700 self-start sm:self-auto"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loadingBackup ? 'animate-spin' : ''}`} />
+                    Atualizar
+                  </Button>
+                </div>
+
+                {/* Card da Barra de Progresso do Limite de Armazenamento */}
+                <div className="p-5 rounded-xl bg-purple-50/40 border border-purple-100 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-purple-900">
+                        Uso de Armazenamento Local
+                      </span>
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-2xl font-black text-zinc-900">
+                          {backupStats.totalFiles}
+                        </span>
+                        <span className="text-sm font-medium text-zinc-500">
+                          / {backupStats.limitFiles || 500} documentos cadastrados
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-left sm:text-right">
+                      <span className="text-xs font-medium text-zinc-500 block">Tamanho Total em Disco</span>
+                      <span className="text-lg font-bold text-purple-950 font-mono">
+                        {backupStats.totalMB} MB
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Barra de Progresso */}
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-full bg-zinc-200/80 rounded-full overflow-hidden p-0.5">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          (backupStats.totalFiles / (backupStats.limitFiles || 500)) >= 0.85
+                            ? 'bg-rose-500'
+                            : (backupStats.totalFiles / (backupStats.limitFiles || 500)) >= 0.60
+                            ? 'bg-amber-500'
+                            : 'bg-purple-600'
+                        }`}
+                        style={{
+                          width: `${Math.min(100, Math.max(backupStats.totalFiles > 0 ? 3 : 0, Math.round((backupStats.totalFiles / (backupStats.limitFiles || 500)) * 100)))}%`
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] text-zinc-500">
+                      <span>
+                        {Math.round((backupStats.totalFiles / (backupStats.limitFiles || 500)) * 100)}% da capacidade sugerida utilizada
+                      </span>
+                      <span>Limite sugerido: {backupStats.limitFiles || 500} arquivos</span>
+                    </div>
+                  </div>
+
+                  {/* Dica / Alerta situacional */}
+                  <div className="flex items-start gap-2.5 pt-1 text-xs">
+                    <div className="mt-0.5">
+                      {backupStats.totalFiles === 0 ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (backupStats.totalFiles / (backupStats.limitFiles || 500)) >= 0.85 ? (
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      ) : (
+                        <HardDrive className="w-4 h-4 text-purple-600 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-zinc-600 leading-relaxed">
+                      {backupStats.totalFiles === 0 ? (
+                        <span>Nenhum documento armazenado no momento. Espaço 100% liberado.</span>
+                      ) : (backupStats.totalFiles / (backupStats.limitFiles || 500)) >= 0.85 ? (
+                        <span className="text-rose-700 font-medium">
+                          Você está próximo do limite sugerido de 500 arquivos. Recomendamos baixar o arquivo .ZIP para seu computador e em seguida excluir os dados para liberar espaço.
+                        </span>
+                      ) : (
+                        <span>
+                          Recomenda-se realizar o backup periódico clicando em <strong>Baixar Backup (.ZIP)</strong>. Após salvar o arquivo compactado em seu computador, você pode utilizar o botão <strong>Excluir Dados do Servidor</strong> para manter o sistema leve.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botões de Ação lado a lado */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                  <Button
+                    onClick={() => {
+                      if (backupStats.totalFiles === 0) {
+                        toast.error('Não há arquivos armazenados para realizar backup.');
+                        return;
+                      }
+                      window.open('/api/faturas/anexo?action=backup_zip', '_blank');
+                      toast.success('Download do backup consolidado (.ZIP) iniciado!');
+                    }}
+                    disabled={backupStats.totalFiles === 0}
+                    className="w-full sm:w-auto bg-purple-700 hover:bg-purple-800 text-white font-semibold flex items-center justify-center gap-2 h-10 px-5 shadow-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Baixar Backup (.ZIP)
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (backupStats.totalFiles === 0) {
+                        toast.error('Nenhum arquivo para excluir no momento.');
+                        return;
+                      }
+                      setConfirmDeleteBackupOpen(true);
+                    }}
+                    disabled={backupStats.totalFiles === 0}
+                    className="w-full sm:w-auto border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 font-semibold flex items-center justify-center gap-2 h-10 px-5"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                    Excluir Dados do Servidor
+                  </Button>
                 </div>
               </div>
             )}

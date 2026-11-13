@@ -10,6 +10,7 @@ import { useFornecedores } from "@/hooks/useFornecedores";
 import { supabase } from "@/lib/supabase";
 import { formatUserName, getUserRole } from "@/lib/roles";
 import { calcularDatasPrevisao, formatarPeriodoEstimado } from "@/lib/previsaoRecebimento";
+import { FaturaAnexoUpload } from "./FaturaAnexoUpload";
 
 interface FaturaModalProps {
   isOpen: boolean;
@@ -53,6 +54,20 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
     cd: fatura?.cd || metaInsumo.cd || fatura?.insumos?.[0]?.cd || '',
     codigo_fornecedor: fatura?.codigo_fornecedor || metaInsumo.codigo_fornecedor || fatura?.insumos?.[0]?.codigo_fornecedor || '',
     insumos: fatura?.insumos?.filter(i => !(i as any)._meta) || [],
+    anexos: fatura?.anexos || metaInsumo.anexos || (fatura?.anexo_url ? [{
+      id: 'leg-1',
+      nome: fatura.anexo_nome || 'documento.pdf',
+      url: fatura.anexo_url,
+      tamanho: fatura.anexo_tamanho,
+      tipo: fatura.anexo_tipo,
+      data_upload: fatura.anexo_data_upload,
+      categoria: 'documento' as const
+    }] : []),
+    anexo_nome: fatura?.anexo_nome || metaInsumo.anexo_nome,
+    anexo_url: fatura?.anexo_url || metaInsumo.anexo_url,
+    anexo_tamanho: fatura?.anexo_tamanho || metaInsumo.anexo_tamanho,
+    anexo_tipo: fatura?.anexo_tipo || metaInsumo.anexo_tipo,
+    anexo_data_upload: fatura?.anexo_data_upload || metaInsumo.anexo_data_upload,
   });
 
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
@@ -252,7 +267,12 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
       previsao_recebimento_data_fim: finalDataFim,
       historico_previsao: historicoPrev,
       categorias: formData.categorias || [],
-      data_solicitacao: dataSolicitacaoFinal
+      data_solicitacao: dataSolicitacaoFinal,
+      anexo_nome: formData.anexo_nome,
+      anexo_url: formData.anexo_url,
+      anexo_tamanho: formData.anexo_tamanho,
+      anexo_tipo: formData.anexo_tipo,
+      anexo_data_upload: formData.anexo_data_upload
     };
     
     const safeCategoria = categoriaAtiva === 'Serviço' ? 'Servico' : categoriaAtiva;
@@ -450,6 +470,26 @@ export function FaturaSAPModal({ isOpen, onClose, fatura, categoriaAtiva, onSave
                   <label className="text-sm font-medium">Valor Total (Previsto / RC / Documento)</label>
                   <Input type="number" step="0.01" value={formData.valor || ""} onChange={handleInputChange('valor')} />
                 </div>
+              </div>
+
+              {/* Campo de Anexo da Nota Fiscal e Comprovante de Pagamento */}
+              <div className="pt-1 pb-1">
+                <FaturaAnexoUpload
+                  anexos={formData.anexos || []}
+                  disabled={isReadOnly}
+                  onChange={(novosAnexos) => {
+                    const firstDoc = novosAnexos.find(a => a.categoria === 'documento') || novosAnexos[0];
+                    setFormData(prev => ({
+                      ...prev,
+                      anexos: novosAnexos,
+                      anexo_nome: firstDoc?.nome || undefined,
+                      anexo_url: firstDoc?.url || undefined,
+                      anexo_tamanho: firstDoc?.tamanho || undefined,
+                      anexo_tipo: firstDoc?.tipo || undefined,
+                      anexo_data_upload: firstDoc?.data_upload || undefined
+                    }));
+                  }}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

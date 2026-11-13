@@ -49,6 +49,16 @@ export interface FaturaInsumo {
   tipo_item?: 'Insumo' | 'Serviço' | 'Imposto/Taxa';
 }
 
+export interface FaturaAnexoItem {
+  id: string;
+  nome: string;
+  url: string;
+  tamanho?: number;
+  tipo?: string;
+  data_upload?: string;
+  categoria: 'documento' | 'comprovante'; // 'documento' = NF/Boleto/XML; 'comprovante' = Comprovante de Pagamento
+}
+
 
 export interface Ocorrencia {
   id: string;
@@ -274,6 +284,14 @@ export interface Fatura {
   // Categorias e Rastreabilidade no Calendário
   categorias?: string[];
   data_solicitacao?: string;
+
+  // Anexos de documentos (NF, Boleto, Comprovante)
+  anexos?: FaturaAnexoItem[];
+  anexo_nome?: string;
+  anexo_url?: string;
+  anexo_tamanho?: number;
+  anexo_tipo?: string;
+  anexo_data_upload?: string;
 
   // Calculados (Opcionais no model para persistência, mas gerados pela view/helper)
   status?: string;

@@ -81,6 +81,49 @@ export class SupabaseFaturaRepository implements FaturaRepository {
           const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
           return meta?.data_solicitacao || meta?.previsao_recebimento?.data_criacao_original || d.data_recebimento || d.data_emissao || undefined;
         })(),
+        anexos: (() => {
+          if (Array.isArray(d.anexos)) return d.anexos;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          if (meta?.anexos && Array.isArray(meta.anexos)) return meta.anexos;
+          const legacyUrl = d.anexo_url || meta?.anexo_url;
+          if (legacyUrl) {
+            return [{
+              id: 'legacy-1',
+              nome: d.anexo_nome || meta?.anexo_nome || 'documento.pdf',
+              url: legacyUrl,
+              tamanho: d.anexo_tamanho || meta?.anexo_tamanho,
+              tipo: d.anexo_tipo || meta?.anexo_tipo,
+              data_upload: d.anexo_data_upload || meta?.anexo_data_upload,
+              categoria: 'documento' as const
+            }];
+          }
+          return [];
+        })(),
+        anexo_nome: (() => {
+          if (d.anexo_nome) return d.anexo_nome;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.anexo_nome || undefined;
+        })(),
+        anexo_url: (() => {
+          if (d.anexo_url) return d.anexo_url;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.anexo_url || undefined;
+        })(),
+        anexo_tamanho: (() => {
+          if (d.anexo_tamanho) return d.anexo_tamanho;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.anexo_tamanho || undefined;
+        })(),
+        anexo_tipo: (() => {
+          if (d.anexo_tipo) return d.anexo_tipo;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.anexo_tipo || undefined;
+        })(),
+        anexo_data_upload: (() => {
+          if (d.anexo_data_upload) return d.anexo_data_upload;
+          const meta = (Array.isArray(d.insumos) ? d.insumos : []).find((i: any) => i && i._meta);
+          return meta?.anexo_data_upload || undefined;
+        })(),
       };
     }) as Fatura[];
   }
@@ -173,7 +216,13 @@ export class SupabaseFaturaRepository implements FaturaRepository {
       cd: faturaData.cd || existingMeta.cd,
       codigo_fornecedor: faturaData.codigo_fornecedor || existingMeta.codigo_fornecedor,
       categorias: Array.isArray(faturaData.categorias) ? faturaData.categorias : (existingMeta.categorias || []),
-      data_solicitacao: dataSolicitacaoGravada || new Date().toISOString()
+      data_solicitacao: dataSolicitacaoGravada || new Date().toISOString(),
+      anexos: faturaData.anexos !== undefined ? faturaData.anexos : (existingMeta.anexos || []),
+      anexo_nome: faturaData.anexo_nome !== undefined ? faturaData.anexo_nome : existingMeta.anexo_nome,
+      anexo_url: faturaData.anexo_url !== undefined ? faturaData.anexo_url : existingMeta.anexo_url,
+      anexo_tamanho: faturaData.anexo_tamanho !== undefined ? faturaData.anexo_tamanho : existingMeta.anexo_tamanho,
+      anexo_tipo: faturaData.anexo_tipo !== undefined ? faturaData.anexo_tipo : existingMeta.anexo_tipo,
+      anexo_data_upload: faturaData.anexo_data_upload !== undefined ? faturaData.anexo_data_upload : existingMeta.anexo_data_upload
     };
 
     if (faturaData.previsao_recebimento_dias_min && faturaData.previsao_recebimento_dias_max) {
@@ -210,6 +259,11 @@ export class SupabaseFaturaRepository implements FaturaRepository {
     delete sanitizedData.previsao_recebimento_data_inicio;
     delete sanitizedData.previsao_recebimento_data_fim;
     delete sanitizedData.historico_previsao;
+    delete sanitizedData.anexo_nome;
+    delete sanitizedData.anexo_url;
+    delete sanitizedData.anexo_tamanho;
+    delete sanitizedData.anexo_tipo;
+    delete sanitizedData.anexo_data_upload;
     // delete sanitizedData.usuario_nexa_lancamento;
     // delete sanitizedData.usuario_nexa_programacao;
     // delete sanitizedData.usuario_nexa_pagamento;

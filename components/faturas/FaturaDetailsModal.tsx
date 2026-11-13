@@ -2,7 +2,7 @@ import React from 'react';
 import { Fatura, calcularStatus, calcularEtapa, getEtapasDatas, calcularTempoDias, parseObservacoes, isFaturaEfetivamentePaga } from "@/modules/compras/domain/Fatura";
 import { formatCNPJ, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Copy, ArrowRightLeft, Edit, FileText, Clock, X } from "lucide-react";
+import { Copy, ArrowRightLeft, Edit, FileText, Clock, X, Paperclip, Receipt } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatUserName } from "@/lib/roles";
 
@@ -98,6 +98,50 @@ export function FaturaDetailsModal({
                                     <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Documento</span>
                                     <span className="text-sm font-medium text-zinc-900">{fatura.numero_documento}</span>
                                   </div>
+                                  {/* Arquivos Anexos (Documentos / Boletos / Comprovantes) */}
+                                  {((fatura.anexos && fatura.anexos.length > 0) || fatura.anexo_url) && (
+                                    <div className="space-y-1">
+                                      <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Arquivos Anexos</span>
+                                      <div className="flex flex-col gap-1.5 pt-0.5">
+                                        {fatura.anexos && fatura.anexos.length > 0 ? (
+                                          fatura.anexos.map((anx) => (
+                                            <a
+                                              key={anx.id || anx.url}
+                                              href={anx.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded border transition-colors ${
+                                                anx.categoria === 'comprovante'
+                                                  ? 'text-emerald-700 hover:text-emerald-900 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
+                                                  : 'text-purple-700 hover:text-purple-900 bg-purple-50 border-purple-200 hover:bg-purple-100'
+                                              }`}
+                                              title={`Abrir ${anx.categoria === 'comprovante' ? 'comprovante' : 'documento'}: ${anx.nome}`}
+                                            >
+                                              {anx.categoria === 'comprovante' ? (
+                                                <Receipt className="w-3.5 h-3.5 shrink-0" />
+                                              ) : (
+                                                <Paperclip className="w-3.5 h-3.5 shrink-0" />
+                                              )}
+                                              <span className="truncate max-w-[190px]">{anx.nome}</span>
+                                              <span className="text-[9px] px-1 py-0.2 rounded bg-white/70 uppercase shrink-0">
+                                                {anx.categoria === 'comprovante' ? 'Comprovante' : 'NF/Boleto'}
+                                              </span>
+                                            </a>
+                                          ))
+                                        ) : fatura.anexo_url ? (
+                                          <a
+                                            href={fatura.anexo_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 px-2 py-1 rounded border border-purple-200 hover:bg-purple-100 transition-colors"
+                                          >
+                                            <Paperclip className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate max-w-[190px]">{fatura.anexo_nome || "Visualizar Documento"}</span>
+                                          </a>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  )}
                                   <div>
                                     <span className="text-[11px] text-zinc-500 font-semibold block uppercase">Valor Total</span>
                                     <span className="text-sm font-bold text-zinc-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fatura.valor)}</span>

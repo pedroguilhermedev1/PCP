@@ -68,14 +68,6 @@
     "ativo": true
   },
   {
-    "id": "11",
-    "username": "psd.arco",
-    "nome_completo": "PSD",
-    "role": "OPERACIONAL",
-    "cd_slug": "psd",
-    "ativo": true
-  },
-  {
     "id": "8",
     "username": "rafael.soares",
     "nome_completo": "Rafael Soares",
@@ -118,5 +110,25 @@
     "ativo": true,
     "password_hash": "8f6e6f425eba16599bba9d9afa43113e3ba6079f042c4e51064c1b6f4e8d4a77",
     "created_at": "2026-11-12T12:19:04.478Z"
+  },
+  {
+    "id": "82a3c8a4-d534-4728-a3cb-3aa311b957b5",
+    "username": "josiane.ferreira",
+    "nome_completo": "Josiane Ferreira",
+    "role": "OPERACIONAL",
+    "cd_slug": "jundiai",
+    "ativo": true,
+    "password_hash": "5ba5ad18c4c8901b14b2c9c57723a6bbd6f4dda035d2c435b0ad780f593d24f9",
+    "created_at": "2026-11-12T17:59:37.874Z"
+  },
+  {
+    "id": "d391f297-fca7-49ba-9179-98d0f616c357",
+    "username": "daniel.vieira",
+    "nome_completo": "Daniel Vieira",
+    "role": "OPERACIONAL",
+    "cd_slug": "nse",
+    "ativo": true,
+    "password_hash": "84398a582a4e7f2d53a761f0b5d700e24540511d1a993193709df0bc27043005",
+    "created_at": "2026-11-12T18:00:25.125Z"
   }
 ]

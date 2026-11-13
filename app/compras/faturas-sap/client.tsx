@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, ArrowRight, FileText, Search, DollarSign, Eye, Paperclip, Download } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { FaturaSAPModal } from "@/components/faturas/FaturaSAPModal";
 import { saveFaturaAction, deleteFaturaAction } from "./actions";
@@ -425,12 +425,14 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 mt-8">
         <h2 className="text-lg font-semibold text-purple-900">Lista de Faturas</h2>
-        {categoria !== 'Todas' && (
-          <Button onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Fatura
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {categoria !== 'Todas' && (
+            <Button onClick={handleCreate} className="bg-purple-700 hover:bg-purple-800 text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Fatura
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="w-full overflow-x-auto">
@@ -497,7 +499,32 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                         <span>{f.fornecedor}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{f.numero_documento}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <span>{f.numero_documento}</span>
+                        {((f.anexos && f.anexos.length > 0) || f.anexo_url) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetUrl = (f.anexos && f.anexos.length > 0) ? f.anexos[0].url : f.anexo_url;
+                              if (targetUrl) window.open(targetUrl, '_blank');
+                            }}
+                            className="inline-flex items-center gap-0.5 p-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 transition-colors"
+                            title={
+                              f.anexos && f.anexos.length > 1
+                                ? `${f.anexos.length} arquivos anexados (NFs / Comprovantes)`
+                                : `Visualizar anexo: ${f.anexo_nome || f.anexos?.[0]?.nome || 'Documento'}`
+                            }
+                          >
+                            <Paperclip className="w-3.5 h-3.5" />
+                            {f.anexos && f.anexos.length > 1 && (
+                              <span className="text-[10px] font-bold">{f.anexos.length}</span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(f.valor)}
                     </TableCell>
@@ -543,7 +570,26 @@ export function FaturasTableClient({ initialFaturas, categoria }: { initialFatur
                     </TableCell>
                     {canEditOrDelete && (
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1.5">
+                          {((f.anexos && f.anexos.length > 0) || f.anexo_url) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetUrl = (f.anexos && f.anexos.length > 0) ? f.anexos[0].url : f.anexo_url;
+                                if (targetUrl) window.open(targetUrl, '_blank');
+                              }}
+                              className="text-purple-700 hover:text-purple-900 hover:bg-purple-100/60"
+                              title={
+                                f.anexos && f.anexos.length > 1
+                                  ? `${f.anexos.length} arquivos anexados`
+                                  : `Visualizar Anexo: ${f.anexo_nome || f.anexos?.[0]?.nome || 'Documento'}`
+                              }
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); toggleExpand(f.id); }}>
                             <Eye className="w-4 h-4 text-purple-600" />
                           </Button>
