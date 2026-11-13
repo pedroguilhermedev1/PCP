@@ -106,11 +106,10 @@ export function FaturaDetailsModal({
                                       <div className="flex flex-col gap-1.5 pt-0.5">
                                         {fatura.anexos && fatura.anexos.length > 0 ? (
                                           fatura.anexos.map((anx) => (
-                                            <a
-                                              key={anx.id || anx.url}
-                                              href={anx.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
+                                            <button
+                                               type="button"
+                                               key={anx.id || anx.url}
+                                               onClick={() => openAnexo(anx.url, anx.nome)}
                                               className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded border transition-colors ${
                                                 anx.categoria === 'comprovante'
                                                   ? 'text-emerald-700 hover:text-emerald-900 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
@@ -127,19 +126,18 @@ export function FaturaDetailsModal({
                                               <span className="text-[9px] px-1 py-0.2 rounded bg-white/70 uppercase shrink-0">
                                                 {anx.categoria === 'comprovante' ? 'Comprovante' : 'NF/Boleto'}
                                               </span>
-                                            </a>
-                                          ))
-                                        ) : fatura.anexo_url ? (
-                                          <a
-                                            href={fatura.anexo_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                             </button>
+                                           ))
+                                         ) : fatura.anexo_url ? (
+                                          <button
+                                             type="button"
+                                             onClick={() => openAnexo(fatura.anexo_url, fatura.anexo_nome)}
                                             className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 px-2 py-1 rounded border border-purple-200 hover:bg-purple-100 transition-colors"
                                           >
                                             <Paperclip className="w-3.5 h-3.5 shrink-0" />
                                             <span className="truncate max-w-[190px]">{fatura.anexo_nome || "Visualizar Documento"}</span>
-                                          </a>
-                                        ) : null}
+                                           </button>
+                                         ) : null}
                                       </div>
                                     </div>
                                   )}
